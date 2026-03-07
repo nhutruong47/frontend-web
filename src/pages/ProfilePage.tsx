@@ -4,11 +4,10 @@ export default function ProfilePage() {
     const { user } = useAuth();
 
     const profileFields = [
-        { icon: '🆔', label: 'User ID', value: user?.id?.toString() || '—' },
         { icon: '👤', label: 'Tên đăng nhập', value: user?.username || '—' },
         { icon: '📝', label: 'Họ tên', value: user?.fullName || '—' },
         { icon: '📧', label: 'Email', value: user?.email || '—' },
-        { icon: '👤', label: 'Vai trò', value: 'Thành viên (Member)' },
+        { icon: '🎖️', label: 'Vai trò', value: 'Thành viên (Member)' },
     ];
 
     return (
@@ -33,26 +32,6 @@ export default function ProfilePage() {
                             </div>
                         </div>
                     ))}
-                </div>
-            </div>
-
-            <div className="profile-section">
-                <h2 className="section-title">🔒 Bảo mật</h2>
-                <div className="security-info">
-                    <div className="security-item">
-                        <span className="security-icon">✅</span>
-                        <div>
-                            <span className="security-label">Mật khẩu</span>
-                            <span className="security-value">Được mã hóa BCrypt</span>
-                        </div>
-                    </div>
-                    <div className="security-item">
-                        <span className="security-icon">✅</span>
-                        <div>
-                            <span className="security-label">Xác thực</span>
-                            <span className="security-value">JWT Token đang hoạt động</span>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
