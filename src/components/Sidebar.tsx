@@ -11,6 +11,7 @@ export default function Sidebar() {
         { path: '/marketplace', label: 'Thị trường', icon: '🛒' },
         { path: '/orders', label: 'Đơn hàng', icon: '📦' },
         { path: '/profile', label: 'Hồ sơ', icon: '👤' },
+        { path: '/settings', label: 'Cài đặt', icon: '⚙️' },
     ];
 
     return (

@@ -1,0 +1,247 @@
+.settings-page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 1rem 0;
+}
+
+.settings-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+}
+
+/* Card */
+.settings-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    transition: background 0.3s, border-color 0.3s;
+}
+
+.settings-card-header h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.3rem;
+}
+
+.settings-card-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0 0 1.2rem;
+}
+
+/* Row */
+.settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1.2rem;
+}
+
+.settings-row-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.settings-row-label {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.settings-row-hint {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* Toggle Button */
+.theme-toggle-btn {
+    width: 56px;
+    height: 30px;
+    border-radius: 15px;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.3s;
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+}
+
+.theme-toggle-btn.dark {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+}
+
+.theme-toggle-btn.light {
+    background: linear-gradient(135deg, #f0c27f, #e5b376);
+}
+
+.toggle-icon {
+    position: absolute;
+    font-size: 0.7rem;
+    z-index: 1;
+}
+
+.theme-toggle-btn.dark .toggle-icon {
+    right: 8px;
+}
+
+.theme-toggle-btn.light .toggle-icon {
+    left: 8px;
+}
+
+.toggle-knob {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    position: absolute;
+    transition: left 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.theme-toggle-btn.dark .toggle-knob {
+    left: 4px;
+}
+
+.theme-toggle-btn.light .toggle-knob {
+    left: 30px;
+}
+
+/* Theme Preview Cards */
+.theme-preview-row {
+    display: flex;
+    gap: 1rem;
+}
+
+.theme-preview-card {
+    flex: 1;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.8rem;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.25s;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.theme-preview-card.selected {
+    border-color: #d49c57;
+    box-shadow: 0 0 0 2px rgba(212, 156, 87, 0.3);
+}
+
+.theme-preview-card:hover {
+    border-color: rgba(212, 156, 87, 0.5);
+}
+
+.theme-preview {
+    display: flex;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 70px;
+    margin-bottom: 0.6rem;
+}
+
+.dark-preview {
+    background: #0d1117;
+}
+
+.dark-preview .preview-sidebar {
+    width: 30%;
+    background: #161b22;
+    border-right: 1px solid #30363d;
+}
+
+.dark-preview .preview-content {
+    flex: 1;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.dark-preview .preview-bar {
+    height: 8px;
+    background: #21262d;
+    border-radius: 3px;
+}
+
+.dark-preview .preview-block {
+    height: 14px;
+    background: #21262d;
+    border-radius: 3px;
+}
+
+.dark-preview .preview-block.short {
+    width: 60%;
+}
+
+.light-preview {
+    background: #f6f8fa;
+}
+
+.light-preview .preview-sidebar {
+    width: 30%;
+    background: #ffffff;
+    border-right: 1px solid #d0d7de;
+}
+
+.light-preview .preview-content {
+    flex: 1;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.light-preview .preview-bar {
+    height: 8px;
+    background: #d0d7de;
+    border-radius: 3px;
+}
+
+.light-preview .preview-block {
+    height: 14px;
+    background: #d0d7de;
+    border-radius: 3px;
+}
+
+.light-preview .preview-block.short {
+    width: 60%;
+}
+
+/* Info Grid */
+.settings-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.settings-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.info-value {
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.role-badge-inline {
+    color: #d49c57;
+    font-weight: 600;
+}
