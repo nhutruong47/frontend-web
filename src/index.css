@@ -1,42 +1,47 @@
 /* ===================================================
    ORCA Management System - Global Styles
-   Dark theme with premium design
+   Modern Dark Theme with Indigo/Emerald Palette
    =================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* ===== CSS Variables / Design Tokens ===== */
 :root {
-  /* Colors — Coffee Brown Palette */
+  /* Colors — Dark Navy / Space Theme with Coffee Gold Accents */
   --bg-primary: #0a0e17;
-  --bg-secondary: #111827;
-  --bg-tertiary: #1f2937;
-  --bg-card: rgba(17, 24, 39, 0.8);
-  --bg-card-hover: rgba(31, 41, 55, 0.9);
-  --bg-input: rgba(10, 14, 23, 0.8);
+  /* Deep navy space */
+  --bg-secondary: #0f1524;
+  /* Slightly lighter navy */
+  --bg-tertiary: #1a2235;
+  --bg-card: rgba(15, 21, 36, 0.85);
+  --bg-card-hover: rgba(26, 34, 53, 0.95);
+  --bg-input: rgba(255, 255, 255, 0.03);
 
-  --text-primary: #f5f0eb;
-  --text-secondary: #a89585;
-  --text-muted: #6b5b4f;
-  --text-accent: #e8c09a;
+  --text-primary: #fdf8f4;
+  /* Crema white */
+  --text-secondary: #d1bfae;
+  /* Latte */
+  --text-muted: #8c7765;
+  --text-accent: #e5b376;
 
   --accent-primary: #d4a574;
+  /* Gold/Caramel */
   --accent-secondary: #8b5e3c;
-  --accent-gradient: linear-gradient(135deg, #d4a574 0%, #8b5e3c 100%);
+  --accent-gradient: linear-gradient(135deg, #d4a574 0%, #a67b4c 50%, #8b5e3c 100%);
   --accent-glow: rgba(212, 165, 116, 0.25);
 
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --info: #06b6d4;
+  --success: #3fb950;
+  --warning: #d49c57;
+  --danger: #e24b4b;
+  --info: #6a96bd;
 
-  --border: rgba(212, 165, 116, 0.08);
-  --border-focus: rgba(212, 165, 116, 0.4);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(212, 165, 116, 0.5);
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(212, 165, 116, 0.1);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.8);
+  --shadow-glow: 0 0 20px rgba(212, 165, 116, 0.15);
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -44,10 +49,45 @@
   --radius-xl: 24px;
 
   --font: 'Inter', system-ui, -apple-system, sans-serif;
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
   --sidebar-width: 260px;
-  --topbar-height: 70px;
+  --topbar-height: 64px;
+
+  /* Aliases for component CSS */
+  --card-bg: var(--bg-card);
+  --border-color: var(--border);
+}
+
+/* ===== Light Theme Override ===== */
+body.theme-light {
+  --bg-primary: #f4f1ee;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e8e2dc;
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-card-hover: rgba(245, 240, 235, 1);
+  --bg-input: rgba(0, 0, 0, 0.03);
+
+  --text-primary: #1a1410;
+  --text-secondary: #6b5b4e;
+  --text-muted: #9a8a7c;
+  --text-accent: #8b5e3c;
+
+  --accent-primary: #8b5e3c;
+  --accent-secondary: #d4a574;
+  --accent-gradient: linear-gradient(135deg, #8b5e3c 0%, #a67b4c 50%, #d4a574 100%);
+  --accent-glow: rgba(139, 94, 60, 0.15);
+
+  --border: rgba(0, 0, 0, 0.1);
+  --border-focus: rgba(139, 94, 60, 0.5);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 0 20px rgba(139, 94, 60, 0.08);
+
+  --card-bg: var(--bg-card);
+  --border-color: var(--border);
 }
 
 /* ===== Reset & Base ===== */
@@ -100,4 +140,39 @@ a {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+}
+
+/* ===== Animations ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(88, 166, 255, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px rgba(88, 166, 255, 0);
+  }
 }

@@ -13,6 +13,8 @@ export const teamService = {
     removeMember: (teamId: string, userId: string) =>
         api.delete(`/api/teams/${teamId}/members/${userId}`),
     deleteTeam: (id: string) => api.delete(`/api/teams/${id}`),
+    joinByCode: (inviteCode: string) =>
+        api.post<Team>('/api/teams/join', { inviteCode }).then(r => r.data),
 
     // Advertisement
     advertise: (teamId: string, data: Partial<Team>) =>
@@ -59,3 +61,20 @@ export const taskService = {
 export const getTrialStatus = () =>
     api.get<{ aiTrialActive: boolean; daysRemaining: number }>('/api/auth/trial-status').then(r => r.data);
 
+// === AI Service ===
+export interface AiParseResult {
+    title: string;
+    description: string;
+    quantity: string | null;
+    quantityNumber: number | null;
+    unit: string | null;
+    deadline: string | null;
+    priority: string;
+    needsClarification: boolean;
+    source: string;
+}
+
+export const aiService = {
+    parseText: (text: string) =>
+        api.post<AiParseResult>('/api/ai/parse', { text }).then(r => r.data),
+};

@@ -66,6 +66,9 @@ export interface Team {
     cancelledOrders?: number;
     totalOrders?: number;
     trustScore?: number;
+
+    // Invite
+    inviteCode?: string;
 }
 
 // === Goals & Tasks ===

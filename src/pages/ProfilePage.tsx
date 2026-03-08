@@ -8,7 +8,7 @@ export default function ProfilePage() {
         { icon: '👤', label: 'Tên đăng nhập', value: user?.username || '—' },
         { icon: '📝', label: 'Họ tên', value: user?.fullName || '—' },
         { icon: '📧', label: 'Email', value: user?.email || '—' },
-        { icon: '👤', label: 'Vai trò', value: 'Thành viên (Member)' },
+        { icon: '🎖️', label: 'Vai trò', value: 'Thành viên (Member)' },
     ];
 
     return (

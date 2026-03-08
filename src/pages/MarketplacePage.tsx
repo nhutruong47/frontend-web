@@ -3,14 +3,16 @@ import { teamService } from '../services/groupService';
 import { interGroupOrderService } from '../services/interGroupOrderService';
 import type { Team, InterGroupOrder } from '../types/types';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import './Marketplace.css';
 
-const MOCK_IMAGES = [
+const TEAM_IMAGES = [
     'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&q=80&w=600',
     'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=600',
     'https://images.unsplash.com/photo-1620189507195-68309c04c4d0?auto=format&fit=crop&q=80&w=600',
-    'https://images.unsplash.com/photo-1587595431973-160d0d94add1?auto=format&fit=crop&q=80&w=600'
+    'https://images.unsplash.com/photo-1587595431973-160d0d94add1?auto=format&fit=crop&q=80&w=600',
+    'https://images.unsplash.com/photo-1611854779393-1b2da9d400fe?auto=format&fit=crop&q=80&w=600',
+    'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?auto=format&fit=crop&q=80&w=600',
 ];
 
 export default function MarketplacePage() {
@@ -20,23 +22,26 @@ export default function MarketplacePage() {
     const [myTeams, setMyTeams] = useState<Team[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-
-    const [selectedSeller, setSelectedSeller] = useState<Team | null>(null);
-    const [showOrderModal, setShowOrderModal] = useState(false);
-
-    // Filter states
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterRegion, setFilterRegion] = useState('All');
-    const [filterSpecialty, setFilterSpecialty] = useState('All');
-    const [filterCapacity, setFilterCapacity] = useState('All');
 
-    // Form state
+    // Order Modal
+    const [showOrderModal, setShowOrderModal] = useState(false);
+    const [selectedSeller, setSelectedSeller] = useState<Team | null>(null);
     const [buyerTeamId, setBuyerTeamId] = useState('');
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [quantity, setQuantity] = useState(1);
-    const [deadline, setDeadline] = useState('');
+    const [orderTitle, setOrderTitle] = useState('');
+    const [orderDesc, setOrderDesc] = useState('');
+    const [orderQty, setOrderQty] = useState(1);
+    const [orderDeadline, setOrderDeadline] = useState('');
     const [submitting, setSubmitting] = useState(false);
+
+    // Publish Modal
+    const [showPublishModal, setShowPublishModal] = useState(false);
+    const [publishTeamId, setPublishTeamId] = useState('');
+    const [pubSpecialty, setPubSpecialty] = useState('');
+    const [pubCapacity, setPubCapacity] = useState('');
+    const [pubRegion, setPubRegion] = useState('');
+    const [pubDescription, setPubDescription] = useState('');
+    const [publishing, setPublishing] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -45,21 +50,17 @@ export default function MarketplacePage() {
                     teamService.getAllTeams(),
                     teamService.getMyTeams()
                 ]);
-
-                // Exclude teams the user owns from the marketplace list (can't order from yourself)
-                const filteredAll = teamsAll.filter(t => t.ownerId !== user?.id);
-                setAllTeams(filteredAll);
-
-                // Only teams the user owns can place outbound orders
+                const publishedTeams = teamsAll.filter(t => t.isPublished && t.ownerId !== user?.id);
+                setAllTeams(publishedTeams);
                 const ownedTeams = teamsMine.filter(t => t.ownerId === user?.id);
                 setMyTeams(ownedTeams);
-
                 if (ownedTeams.length > 0) {
                     setBuyerTeamId(ownedTeams[0].id);
+                    setPublishTeamId(ownedTeams[0].id);
                 }
             } catch (err) {
-                console.error("Failed to load marketplace data", err);
-                setError("Có lỗi xảy ra khi tải danh sách xưởng.");
+                console.error("Failed to load marketplace", err);
+                setError("Có lỗi xảy ra khi tải dữ liệu thị trường.");
             } finally {
                 setLoading(false);
             }
@@ -67,345 +68,321 @@ export default function MarketplacePage() {
         fetchData();
     }, [user]);
 
-    const handlePlaceOrderClick = (seller: Team) => {
-        if (!user) {
-            navigate('/login');
-            return;
-        }
+    const handleOrderClick = (seller: Team) => {
         if (myTeams.length === 0) {
-            alert('Bạn phải là Chủ của ít nhất một Xưởng để có thể đi đặt hàng!');
+            alert('Bạn cần sở hữu ít nhất 1 xưởng để đặt hàng!');
             return;
         }
         setSelectedSeller(seller);
+        setOrderTitle('');
+        setOrderDesc('');
+        setOrderQty(1);
+        setOrderDeadline('');
         setShowOrderModal(true);
     };
 
     const handleSubmitOrder = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!buyerTeamId || !title || !quantity || !deadline || !selectedSeller) return;
-
+        if (!buyerTeamId || !orderTitle || !orderDeadline || !selectedSeller) return;
         try {
             setSubmitting(true);
             const dto: Partial<InterGroupOrder> = {
                 buyerTeamId,
                 sellerTeamId: selectedSeller.id,
-                title,
-                description,
-                quantity,
-                deadline
+                title: orderTitle,
+                description: orderDesc,
+                quantity: orderQty,
+                deadline: orderDeadline,
             };
             await interGroupOrderService.placeOrder(dto);
             setShowOrderModal(false);
-            alert('Đặt hàng thành công! Vui lòng vào mục "Đơn hàng" để theo dõi.');
+            alert('✅ Đặt hàng thành công! Chuyển sang trang Đơn hàng để theo dõi.');
             navigate('/orders');
-        } catch (err) {
-            console.error("Order failed", err);
-            alert('Không thể đặt hàng. Vui lòng thử lại.');
+        } catch {
+            alert('❌ Không thể đặt hàng. Vui lòng thử lại.');
         } finally {
             setSubmitting(false);
         }
     };
 
-    const displayedTeams = allTeams.filter(team => {
-        // Search query
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            const matchName = team.name.toLowerCase().includes(query);
-            const matchSpecialty = (team.specialty || '').toLowerCase().includes(query);
-            if (!matchName && !matchSpecialty) return false;
+    const handlePublish = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!publishTeamId) return;
+        try {
+            setPublishing(true);
+            await teamService.advertise(publishTeamId, {
+                specialty: pubSpecialty,
+                capacity: pubCapacity,
+                region: pubRegion,
+                description: pubDescription,
+            } as Partial<Team>);
+            setShowPublishModal(false);
+            alert('✅ Xưởng đã được đăng tải lên thị trường!');
+            // Refresh
+            const teamsAll = await teamService.getAllTeams();
+            setAllTeams(teamsAll.filter(t => t.isPublished && t.ownerId !== user?.id));
+        } catch {
+            alert('❌ Không thể đăng tải. Vui lòng thử lại.');
+        } finally {
+            setPublishing(false);
         }
+    };
 
-        // Region
-        if (filterRegion !== 'All' && team.region !== filterRegion) return false;
+    const handleUnpublish = async (teamId: string) => {
+        if (!confirm('Bạn có chắc muốn gỡ xưởng này khỏi thị trường?')) return;
+        try {
+            await teamService.unpublish(teamId);
+            alert('Đã gỡ xưởng khỏi thị trường.');
+            const teamsAll = await teamService.getAllTeams();
+            setAllTeams(teamsAll.filter(t => t.isPublished && t.ownerId !== user?.id));
+        } catch {
+            alert('Không thể gỡ xưởng.');
+        }
+    };
 
-        // Specialty
-        if (filterSpecialty !== 'All' && team.specialty !== filterSpecialty) return false;
-
-        // Capacity
-        if (filterCapacity !== 'All' && team.capacity !== filterCapacity) return false;
-
-        return true;
+    const displayedTeams = allTeams.filter(team => {
+        if (!searchQuery) return true;
+        const q = searchQuery.toLowerCase();
+        return team.name.toLowerCase().includes(q) ||
+            (team.specialty || '').toLowerCase().includes(q) ||
+            (team.region || '').toLowerCase().includes(q);
     });
 
-    if (loading) return <div className="marketplace-body" style={{ display: 'flex', alignItems: 'center', justifyItems: 'center', height: '100vh', justifyContent: 'center' }}><div className="btn-spinner"></div></div>;
+    // My published teams
+    const myPublishedTeams = myTeams.filter(t => t.isPublished);
+
+    if (loading) {
+        return (
+            <div className="mp-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+                <div className="btn-spinner" />
+            </div>
+        );
+    }
 
     return (
-        <div className="marketplace-body">
+        <div className="mp-body">
             {/* Header */}
             <header className="mp-header">
                 <div className="mp-logo">
-                    <span style={{ fontSize: '1.4rem' }}>🏭</span> ORCA MARKETPLACE
+                    <span style={{ fontSize: '1.3rem' }}>🐋</span> ORCA MARKETPLACE
                 </div>
-                <nav className="mp-nav">
-                    <a href="#home">Home</a>
-                    <a href="#marketplace" className="active">Marketplace</a>
-                    <a href="#services">Services</a>
-                    <a href="#partners">Partners</a>
-                </nav>
                 <div className="mp-actions">
-                    <div className="mp-search-btn">
-                        <span>🔍</span> Search workshops...
-                    </div>
-                    {user ? (
-                        <Link to="/dashboard" className="mp-login-btn" style={{ background: '#222', color: '#fff' }}>Dashboard</Link>
-                    ) : (
-                        <Link to="/login" className="mp-login-btn">Login</Link>
-                    )}
+                    <button className="mp-publish-btn" onClick={() => {
+                        if (myTeams.length === 0) {
+                            alert('Bạn cần tạo ít nhất 1 nhóm xưởng trước khi đăng tải!\nVào Dashboard → Nhóm xưởng → Tạo nhóm mới.');
+                            return;
+                        }
+                        setShowPublishModal(true);
+                    }}>
+                        📢 Đăng tải xưởng
+                    </button>
+                    <Link to="/dashboard" className="mp-back-btn">← Dashboard</Link>
                 </div>
             </header>
 
-            {/* Hero Section */}
+            {/* Hero */}
             <section className="mp-hero">
-                <div style={{
-                    position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                    width: '300px', height: '500px', border: '2px solid rgba(255,255,255,0.1)',
-                    borderRadius: '24px', zIndex: 1, pointerEvents: 'none'
-                }}></div>
-                <h1>Hệ thống Đối tác Gia công<br />Chuyên nghiệp</h1>
-                <p>Kết nối các nhà rang xay cà phê cao cấp và các cơ sở sản xuất công suất lớn trên toàn cầu.</p>
-                <div className="mp-hero-buttons">
-                    <button className="mp-btn-primary" onClick={() => document.getElementById('marketplace')?.scrollIntoView({ behavior: 'smooth' })}>Explore Marketplace</button>
-                    <button className="mp-btn-secondary" onClick={() => navigate('/dashboard')}>Register Factory</button>
+                <div className="mp-hero-content">
+                    <h1>Thị trường Gia công<br />Cà Phê Chuyên Nghiệp</h1>
+                    <p>Kết nối với các xưởng gia công cà phê uy tín. Đặt hàng trực tiếp, theo dõi đơn hàng real-time.</p>
+                    <div className="mp-hero-stats">
+                        <div className="mp-hero-stat">
+                            <span className="stat-num">{allTeams.length}</span>
+                            <span className="stat-label">Xưởng đang hoạt động</span>
+                        </div>
+                        <div className="mp-hero-stat">
+                            <span className="stat-num">24/7</span>
+                            <span className="stat-label">Hỗ trợ đặt hàng</span>
+                        </div>
+                    </div>
                 </div>
             </section>
 
-            {/* Filter Bar */}
-            <div className="mp-filter-bar">
-                <div className="mp-filter-group" style={{ flex: 2 }}>
-                    <span className="mp-filter-label">Search Workshop</span>
+            {/* Search */}
+            <div className="mp-search-section">
+                <div className="mp-search-wrapper">
+                    <span className="mp-search-icon">🔍</span>
                     <input
                         type="text"
-                        className="mp-filter-input"
-                        placeholder="🔍 Search by name, specialty, or service..."
+                        className="mp-search-input"
+                        placeholder="Tìm xưởng theo tên, chuyên môn, khu vực..."
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <div className="mp-filter-group">
-                    <span className="mp-filter-label">Region</span>
-                    <select className="mp-filter-select" value={filterRegion} onChange={e => setFilterRegion(e.target.value)}>
-                        <option value="All">All Regions</option>
-                        <option value="Central Highlands">Central Highlands (Tây Nguyên)</option>
-                        <option value="North West">North West (Tây Bắc)</option>
-                        <option value="South East">South East (Đông Nam Bộ)</option>
-                        <option value="Mekong Delta">Mekong Delta (ĐBSCL)</option>
-                    </select>
-                </div>
-                <div className="mp-filter-group">
-                    <span className="mp-filter-label">Specialty</span>
-                    <select className="mp-filter-select" value={filterSpecialty} onChange={e => setFilterSpecialty(e.target.value)}>
-                        <option value="All">All Specialties</option>
-                        <option value="Arabica & Robusta Blend">Arabica & Robusta Blend</option>
-                        <option value="Fine Robusta">Fine Robusta</option>
-                        <option value="Specialty Arabica">Specialty Arabica</option>
-                    </select>
-                </div>
-                <div className="mp-filter-group">
-                    <span className="mp-filter-label">Capacity</span>
-                    <select className="mp-filter-select" value={filterCapacity} onChange={e => setFilterCapacity(e.target.value)}>
-                        <option value="All">All Capacities</option>
-                        <option value="> 500kg/day">{'> 500kg/day'}</option>
-                        <option value="100 - 500kg/day">{'100 - 500kg/day'}</option>
-                        <option value="< 100kg/day">{'< 100kg/day'}</option>
-                    </select>
-                </div>
+                <span className="mp-result-count">{displayedTeams.length} xưởng</span>
             </div>
 
-            {/* Featured Workshops */}
-            <section className="mp-section" id="marketplace">
+            {/* My Published Section */}
+            {myPublishedTeams.length > 0 && (
+                <section className="mp-my-published">
+                    <h3>📌 Xưởng của bạn trên thị trường</h3>
+                    <div className="mp-my-published-list">
+                        {myPublishedTeams.map(t => (
+                            <div key={t.id} className="mp-my-pub-item">
+                                <div>
+                                    <strong>{t.name}</strong>
+                                    <span className="mp-pub-badge">Đang hiển thị</span>
+                                </div>
+                                <button className="mp-unpub-btn" onClick={() => handleUnpublish(t.id)}>Gỡ xuống</button>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Teams Grid */}
+            <section className="mp-section">
                 <div className="mp-section-header">
-                    <h2 className="mp-section-title">Featured Workshops</h2>
-                    <a href="#all" className="mp-link">View all partners ➔</a>
+                    <h2>🏭 Danh sách Xưởng Gia công</h2>
                 </div>
 
-                {error && <div className="error-message" style={{ marginBottom: '2rem' }}>{error}</div>}
+                {error && <div className="mp-error">{error}</div>}
 
                 {displayedTeams.length === 0 && !error ? (
-                    <div style={{ textAlign: 'center', padding: '4rem', background: '#1a1a1a', borderRadius: '12px', color: '#888' }}>
-                        Không có xưởng nào phù hợp với điều kiện tìm kiếm.
+                    <div className="mp-empty">
+                        <span style={{ fontSize: '3rem' }}>🏪</span>
+                        <h3>Chưa có xưởng nào trên thị trường</h3>
+                        <p>Hãy là người đầu tiên đăng tải xưởng của bạn lên!</p>
+                        {myTeams.length > 0 && (
+                            <button className="mp-publish-btn" style={{ marginTop: '1rem' }} onClick={() => setShowPublishModal(true)}>
+                                📢 Đăng tải xưởng ngay
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="mp-grid">
-                        {displayedTeams.map((team, index) => {
-                            const imgUrl = MOCK_IMAGES[index % MOCK_IMAGES.length];
-                            return (
-                                <div key={team.id} className="mp-card">
-                                    <div className="mp-card-img-wrapper">
-                                        <img src={imgUrl} alt={team.name} className="mp-card-img" />
-                                        <div className="mp-card-badges">
-                                            {team.capacity && <span className="mp-badge mp-badge-green">{team.capacity}</span>}
-                                            {index % 2 === 0 && <span className="mp-badge mp-badge-orange">CERTIFIED QUALITY</span>}
-                                        </div>
-                                    </div>
-                                    <div className="mp-card-content">
-                                        <div className="mp-card-header">
-                                            <h3 className="mp-card-title">{team.name}</h3>
-                                            <div className="mp-card-rating" style={{
-                                                color: (team.trustScore ?? 100) >= 80 ? '#34d399' : (team.trustScore ?? 100) >= 50 ? '#fbbf24' : '#f87171'
-                                            }}>
-                                                {(team.trustScore ?? 100) >= 80 ? '✅' : (team.trustScore ?? 100) >= 50 ? '⚠️' : '🚫'} {team.trustScore ?? 100}% Uy tín
-                                            </div>
-                                        </div>
-                                        <div className="mp-card-location">
-                                            📍 {team.region || 'Vietnam'} • {team.memberCount} members • {team.completedOrders ?? 0} đơn hoàn thành
-                                        </div>
-                                        <p className="mp-card-desc">
-                                            {team.description || `Cơ sở gia công hiện đại, chuyên gia công ${team.specialty || 'các dòng cà phê'}.`}
-                                        </p>
-                                        <div className="mp-card-tags">
-                                            {team.specialty && <span className="mp-card-tag" style={{ background: 'rgba(212,165,116,0.15)', color: '#d4a574' }}>{team.specialty}</span>}
-                                            <span className="mp-card-tag">ROASTING</span>
-                                            <span className="mp-card-tag">PACKING</span>
-                                        </div>
-                                        <div className="mp-card-actions">
-                                            <button className="mp-btn-outline">View Profile</button>
-                                            <button className="mp-btn-solid" onClick={() => handlePlaceOrderClick(team)}>Contact Now</button>
-                                        </div>
+                        {displayedTeams.map((team, index) => (
+                            <div key={team.id} className="mp-card">
+                                <div className="mp-card-img-wrapper">
+                                    <img src={TEAM_IMAGES[index % TEAM_IMAGES.length]} alt={team.name} className="mp-card-img" />
+                                    <div className="mp-card-overlay">
+                                        {team.trustScore !== undefined && team.trustScore !== null && (
+                                            <span className={`mp-trust-badge ${(team.trustScore ?? 100) >= 80 ? 'high' : (team.trustScore ?? 100) >= 50 ? 'mid' : 'low'}`}>
+                                                {(team.trustScore ?? 100) >= 80 ? '✅' : '⚠️'} {team.trustScore}% Uy tín
+                                            </span>
+                                        )}
+                                        <span className="mp-member-badge">👥 {team.memberCount || 0}</span>
                                     </div>
                                 </div>
-                            );
-                        })}
+                                <div className="mp-card-content">
+                                    <h3 className="mp-card-title">{team.name}</h3>
+                                    <div className="mp-card-meta">
+                                        {team.region && <span>📍 {team.region}</span>}
+                                        {team.specialty && <span>☕ {team.specialty}</span>}
+                                        {team.capacity && <span>⚡ {team.capacity}</span>}
+                                    </div>
+                                    <p className="mp-card-desc">
+                                        {team.description || 'Xưởng gia công cà phê chuyên nghiệp.'}
+                                    </p>
+                                    {team.completedOrders !== undefined && team.completedOrders > 0 && (
+                                        <div className="mp-card-orders">
+                                            ✅ {team.completedOrders} đơn hoàn thành
+                                        </div>
+                                    )}
+                                    <div className="mp-card-actions">
+                                        <button className="mp-order-btn" onClick={() => handleOrderClick(team)}>
+                                            📦 Đặt hàng
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
             </section>
 
-            {/* Stats Section */}
-            <section className="mp-stats">
-                <div>
-                    <div className="mp-stat-number">{allTeams.length > 0 ? allTeams.length * 15 : '150'}+</div>
-                    <div className="mp-stat-label">Active Factories</div>
-                </div>
-                <div>
-                    <div className="mp-stat-number">50,000</div>
-                    <div className="mp-stat-label">Tons Produced / Year</div>
-                </div>
-                <div>
-                    <div className="mp-stat-number">24/7</div>
-                    <div className="mp-stat-label">Operational Support</div>
-                </div>
-                <div>
-                    <div className="mp-stat-number">12</div>
-                    <div className="mp-stat-label">Regions Covered</div>
-                </div>
-            </section>
-
             {/* Footer */}
             <footer className="mp-footer">
-                <div className="mp-footer-grid">
-                    <div className="mp-footer-col">
-                        <div className="mp-logo" style={{ marginBottom: '1rem' }}>
-                            <span style={{ fontSize: '1.2rem' }}>🏭</span> ORCA
-                        </div>
-                        <p>The world's leading platform for coffee manufacturing and factory partnerships. Precision, quality, and scale.</p>
-                        <div className="mp-social-icons">
-                            <a href="#1" className="mp-social-icon">IN</a>
-                            <a href="#2" className="mp-social-icon">FB</a>
-                        </div>
-                    </div>
-                    <div className="mp-footer-col">
-                        <h4>Platform</h4>
-                        <ul className="mp-footer-links">
-                            <li><a href="#1">Marketplace</a></li>
-                            <li><a href="#2">Pricing Models</a></li>
-                            <li><a href="#3">Quality Control</a></li>
-                            <li><a href="#4">Success Stories</a></li>
-                        </ul>
-                    </div>
-                    <div className="mp-footer-col">
-                        <h4>Company</h4>
-                        <ul className="mp-footer-links">
-                            <li><a href="#1">About Us</a></li>
-                            <li><a href="#2">Partnership Program</a></li>
-                            <li><a href="#3">Contact Support</a></li>
-                            <li><a href="#4">Careers</a></li>
-                        </ul>
-                    </div>
-                    <div className="mp-footer-col">
-                        <h4>Contact</h4>
-                        <div className="mp-footer-contact">✉️ info@orca-marketplace.com</div>
-                        <div className="mp-footer-contact">📞 +84 (0) 28 3456 7890</div>
-                        <div className="mp-footer-contact">📍 District 1, Ho Chi Minh City, Vietnam</div>
-                    </div>
-                </div>
-                <div className="mp-footer-bottom">
-                    © 2024 ORCA Marketplace System. All rights reserved. <br /> System Version: v2.4.1-PRO
-                </div>
+                <p>© 2026 ORCA Marketplace — Nền tảng Gia công Cà Phê Thông minh</p>
             </footer>
 
             {/* Order Modal */}
             {showOrderModal && selectedSeller && (
-                <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '600px', background: '#1c1c1c', color: '#fff' }}>
-                        <div className="modal-header" style={{ borderBottom: '1px solid #333' }}>
-                            <h2>Gửi đơn đặt hàng</h2>
-                            <button className="btn-close" style={{ color: '#fff' }} onClick={() => setShowOrderModal(false)}>×</button>
+                <div className="mp-modal-overlay" onClick={() => setShowOrderModal(false)}>
+                    <div className="mp-modal" onClick={e => e.stopPropagation()}>
+                        <div className="mp-modal-header">
+                            <h2>📦 Đặt đơn hàng</h2>
+                            <button className="mp-modal-close" onClick={() => setShowOrderModal(false)}>×</button>
                         </div>
-                        <p style={{ margin: '1.5rem 0', color: '#aaa' }}>
-                            Bạn đang đặt hàng tại xưởng: <strong style={{ color: '#cda37f' }}>{selectedSeller.name}</strong>
-                        </p>
-                        <form onSubmit={handleSubmitOrder} className="login-form">
-                            <div className="form-group">
-                                <label style={{ color: '#ccc' }}>Từ Xưởng của bạn (Nguồn tiền/nơi nhận)</label>
-                                <select
-                                    className="mp-filter-select"
-                                    value={buyerTeamId}
-                                    onChange={e => setBuyerTeamId(e.target.value)}
-                                    required
-                                >
+                        <div className="mp-modal-seller">
+                            Đặt hàng tại: <strong>{selectedSeller.name}</strong>
+                        </div>
+                        <form onSubmit={handleSubmitOrder}>
+                            <div className="mp-form-group">
+                                <label>Từ xưởng của bạn</label>
+                                <select value={buyerTeamId} onChange={e => setBuyerTeamId(e.target.value)} required>
                                     {myTeams.map(t => (
                                         <option key={t.id} value={t.id}>{t.name}</option>
                                     ))}
                                 </select>
                             </div>
-                            <div className="form-group">
-                                <label style={{ color: '#ccc' }}>Tên / Tiêu đề đơn hàng</label>
-                                <input
-                                    type="text"
-                                    className="mp-filter-input"
-                                    placeholder="VD: Gia công 500 nắp ly cà phê"
-                                    value={title}
-                                    onChange={e => setTitle(e.target.value)}
-                                    required
-                                />
+                            <div className="mp-form-group">
+                                <label>Tiêu đề đơn hàng</label>
+                                <input type="text" placeholder="VD: Gia công 500kg cà phê Arabica" value={orderTitle} onChange={e => setOrderTitle(e.target.value)} required />
                             </div>
-                            <div className="form-group">
-                                <label style={{ color: '#ccc' }}>Mô tả yêu cầu chi tiết</label>
-                                <textarea
-                                    className="mp-filter-input"
-                                    rows={4}
-                                    placeholder="Mô tả chất liệu, quy cách đóng gói, lưu ý..."
-                                    value={description}
-                                    onChange={e => setDescription(e.target.value)}
-                                    required
-                                />
+                            <div className="mp-form-group">
+                                <label>Mô tả chi tiết</label>
+                                <textarea rows={3} placeholder="Yêu cầu cụ thể, quy cách, lưu ý..." value={orderDesc} onChange={e => setOrderDesc(e.target.value)} />
                             </div>
-                            <div className="form-row" style={{ display: 'flex', gap: '1rem' }}>
-                                <div className="form-group" style={{ flex: 1 }}>
-                                    <label style={{ color: '#ccc' }}>Số lượng</label>
-                                    <input
-                                        type="number"
-                                        className="mp-filter-input"
-                                        min="1"
-                                        value={quantity}
-                                        onChange={e => setQuantity(parseInt(e.target.value))}
-                                        required
-                                    />
+                            <div className="mp-form-row">
+                                <div className="mp-form-group">
+                                    <label>Số lượng</label>
+                                    <input type="number" min="1" value={orderQty} onChange={e => setOrderQty(parseInt(e.target.value) || 1)} required />
                                 </div>
-                                <div className="form-group" style={{ flex: 1 }}>
-                                    <label style={{ color: '#ccc' }}>Hạn chót mong muốn</label>
-                                    <input
-                                        type="datetime-local"
-                                        className="mp-filter-input"
-                                        value={deadline}
-                                        onChange={e => setDeadline(e.target.value)}
-                                        required
-                                    />
+                                <div className="mp-form-group">
+                                    <label>Hạn chót</label>
+                                    <input type="datetime-local" value={orderDeadline} onChange={e => setOrderDeadline(e.target.value)} required />
                                 </div>
                             </div>
-                            <div className="modal-actions" style={{ borderTop: '1px solid #333', paddingTop: '1.5rem' }}>
-                                <button type="button" className="mp-btn-outline" onClick={() => setShowOrderModal(false)}>Hủy</button>
-                                <button type="submit" className="mp-btn-solid" disabled={submitting}>
-                                    {submitting ? 'Đang gửi...' : 'Gửi đơn hàng'}
+                            <div className="mp-modal-actions">
+                                <button type="button" className="mp-cancel-btn" onClick={() => setShowOrderModal(false)}>Hủy</button>
+                                <button type="submit" className="mp-submit-btn" disabled={submitting}>
+                                    {submitting ? 'Đang gửi...' : '📦 Gửi đơn hàng'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Publish Modal */}
+            {showPublishModal && (
+                <div className="mp-modal-overlay" onClick={() => setShowPublishModal(false)}>
+                    <div className="mp-modal" onClick={e => e.stopPropagation()}>
+                        <div className="mp-modal-header">
+                            <h2>📢 Đăng tải xưởng lên thị trường</h2>
+                            <button className="mp-modal-close" onClick={() => setShowPublishModal(false)}>×</button>
+                        </div>
+                        <form onSubmit={handlePublish}>
+                            <div className="mp-form-group">
+                                <label>Chọn xưởng muốn đăng</label>
+                                <select value={publishTeamId} onChange={e => setPublishTeamId(e.target.value)} required>
+                                    {myTeams.map(t => (
+                                        <option key={t.id} value={t.id}>{t.name} {t.isPublished ? '(Đã đăng)' : ''}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="mp-form-group">
+                                <label>Chuyên môn</label>
+                                <input type="text" placeholder="VD: Arabica & Robusta Blend, Fine Robusta..." value={pubSpecialty} onChange={e => setPubSpecialty(e.target.value)} />
+                            </div>
+                            <div className="mp-form-group">
+                                <label>Năng suất</label>
+                                <input type="text" placeholder="VD: > 500kg/ngày, 100-500kg/ngày..." value={pubCapacity} onChange={e => setPubCapacity(e.target.value)} />
+                            </div>
+                            <div className="mp-form-group">
+                                <label>Khu vực</label>
+                                <input type="text" placeholder="VD: Tây Nguyên, Đông Nam Bộ..." value={pubRegion} onChange={e => setPubRegion(e.target.value)} />
+                            </div>
+                            <div className="mp-form-group">
+                                <label>Mô tả xưởng</label>
+                                <textarea rows={3} placeholder="Giới thiệu ngắn về xưởng, dịch vụ, thế mạnh..." value={pubDescription} onChange={e => setPubDescription(e.target.value)} />
+                            </div>
+                            <div className="mp-modal-actions">
+                                <button type="button" className="mp-cancel-btn" onClick={() => setShowPublishModal(false)}>Hủy</button>
+                                <button type="submit" className="mp-submit-btn" disabled={publishing}>
+                                    {publishing ? 'Đang đăng...' : '📢 Đăng tải ngay'}
                                 </button>
                             </div>
                         </form>

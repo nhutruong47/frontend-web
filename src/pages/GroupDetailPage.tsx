@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { teamService, goalService, taskService, getTrialStatus } from '../services/groupService';
+import type { AiParseResult } from '../services/groupService';
 import type { Team, Goal, Task } from '../types/types';
+import AiAssistantPanel from '../components/AiAssistantPanel';
 
 function getInitials(name: string) {
     return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -179,8 +181,8 @@ export default function GroupDetailPage() {
         <div className="page-container">
             {/* ===== HEADER ===== */}
             <div style={{
-                background: 'linear-gradient(135deg, rgba(212,165,116,0.12) 0%, rgba(212,165,116,0.04) 100%)',
-                border: '1px solid rgba(212,165,116,0.2)',
+                background: 'linear-gradient(135deg, rgba(88,166,255,0.08) 0%, rgba(139,92,246,0.04) 100%)',
+                border: '1px solid rgba(88,166,255,0.15)',
                 borderRadius: 16,
                 padding: '28px 32px',
                 marginBottom: 24,
@@ -197,6 +199,23 @@ export default function GroupDetailPage() {
                     <p style={{ margin: '6px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>
                         {team.description || 'Nhóm xưởng cà phê'} &nbsp;•&nbsp; <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{team.memberCount} thành viên</span>
                     </p>
+                    {team.inviteCode && (
+                        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>🔑 Mã mời:</span>
+                            <span
+                                onClick={() => navigator.clipboard.writeText(team.inviteCode || '')}
+                                title="Bấm để copy"
+                                style={{
+                                    fontSize: 14, fontWeight: 800, letterSpacing: 4,
+                                    padding: '3px 12px', borderRadius: 8,
+                                    background: 'rgba(34,197,94,0.15)', color: '#22c55e',
+                                    cursor: 'pointer', userSelect: 'all',
+                                    border: '1px solid rgba(34,197,94,0.3)',
+                                }}
+                            >{team.inviteCode}</span>
+                            <span style={{ fontSize: 10, color: 'var(--text-secondary)', opacity: 0.6 }}>📋 Bấm để copy</span>
+                        </div>
+                    )}
                 </div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     {isAdmin && (
@@ -224,6 +243,19 @@ export default function GroupDetailPage() {
                     )}
                 </div>
             </div>
+
+            {/* ===== AI ASSISTANT ===== */}
+            {isAdmin && (
+                <AiAssistantPanel
+                    trialActive={trialActive}
+                    trialDays={trialDays}
+                    onCreateGoal={(result: AiParseResult) => {
+                        setGoalTitle(result.title || '');
+                        setGoalTarget(result.quantity || result.title || '');
+                        setShowCreateGoal(true);
+                    }}
+                />
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 20, alignItems: 'start' }}>
                 {/* ===== MEMBERS PANEL ===== */}

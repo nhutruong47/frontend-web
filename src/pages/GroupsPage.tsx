@@ -9,12 +9,9 @@ function getInitials(name: string) {
 }
 
 const CARD_COLORS = [
-    'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-    'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-    'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
-    'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-    'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-    'linear-gradient(135deg, #06b6d4 0%, #0284c7 100%)',
+    'linear-gradient(135deg, rgba(212,156,87,0.06) 0%, rgba(0,0,0,0) 100%)',
+    'linear-gradient(135deg, rgba(140,119,101,0.06) 0%, rgba(0,0,0,0) 100%)',
+    'linear-gradient(135deg, rgba(156,92,31,0.06) 0%, rgba(0,0,0,0) 100%)',
 ];
 
 function cardColor(name: string) {
@@ -31,6 +28,11 @@ export default function GroupsPage() {
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
     const [hovered, setHovered] = useState<string | null>(null);
+    const [joinCode, setJoinCode] = useState('');
+    const [joinError, setJoinError] = useState('');
+    const [joinSuccess, setJoinSuccess] = useState('');
+    const [joining, setJoining] = useState(false);
+    const [createError, setCreateError] = useState('');
     const navigate = useNavigate();
     const { user } = useAuth();
 
@@ -43,12 +45,40 @@ export default function GroupsPage() {
     const handleCreate = async () => {
         if (!name.trim()) return;
         setCreating(true);
+        setCreateError('');
         try {
             const team = await teamService.create({ name, description: desc });
             setTeams([...teams, team]);
             setShowCreate(false);
             setName(''); setDesc('');
+        } catch (e: any) {
+            const msg = e?.response?.data?.message
+                || e?.response?.data?.error
+                || e?.message
+                || 'Có lỗi xảy ra khi tạo nhóm';
+            setCreateError(msg);
+            console.error('Create team error:', e?.response?.status, e?.response?.data || e);
         } finally { setCreating(false); }
+    };
+
+    const handleJoinByCode = async () => {
+        if (!joinCode.trim() || joinCode.trim().length < 4) {
+            setJoinError('Mã mời phải có ít nhất 4 ký tự');
+            return;
+        }
+        setJoining(true);
+        setJoinError('');
+        setJoinSuccess('');
+        try {
+            const team = await teamService.joinByCode(joinCode.trim());
+            setJoinSuccess(`✅ Đã tham gia nhóm "${team.name}" thành công!`);
+            setJoinCode('');
+            setTeams(await teamService.getMyTeams());
+        } catch (e: any) {
+            setJoinError(e?.response?.data?.error || 'Mã mời không hợp lệ');
+        } finally {
+            setJoining(false);
+        }
     };
 
     if (loading) return (
@@ -72,6 +102,48 @@ export default function GroupsPage() {
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px' }}>
                     <span style={{ fontSize: 18 }}>+</span> Tạo nhóm mới
                 </button>
+            </div>
+
+            {/* === JOIN BY INVITE CODE === */}
+            <div style={{
+                background: 'linear-gradient(135deg, rgba(212,156,87,0.1) 0%, rgba(0,0,0,0.2) 100%)',
+                border: '1px solid var(--border-focus)',
+                borderRadius: 14, padding: '16px 20px', marginBottom: 20,
+                boxShadow: 'var(--shadow-md)'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <span style={{ fontSize: 20 }}>🔑</span>
+                    <div>
+                        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Tham gia bằng mã mời</h3>
+                        <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)' }}>Nhập mã 6 ký tự từ trưởng nhóm để tham gia</p>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                        className="form-input"
+                        value={joinCode}
+                        onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                        onKeyDown={e => e.key === 'Enter' && handleJoinByCode()}
+                        placeholder="VD: AB12CD"
+                        maxLength={6}
+                        style={{
+                            flex: 1, fontSize: 16, fontWeight: 700, letterSpacing: 6, textAlign: 'center',
+                            textTransform: 'uppercase',
+                            background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)',
+                            color: 'var(--text-primary)'
+                        }}
+                    />
+                    <button
+                        className="btn btn-primary"
+                        onClick={handleJoinByCode}
+                        disabled={joining || !joinCode.trim()}
+                        style={{ whiteSpace: 'nowrap', padding: '8px 18px', background: 'var(--accent-gradient)', color: '#1a1410', border: 'none', fontWeight: 600 }}
+                    >
+                        {joining ? '⏳...' : '🚀 Tham gia'}
+                    </button>
+                </div>
+                {joinError && <div style={{ marginTop: 8, fontSize: 12, color: '#f87171' }}>⚠️ {joinError}</div>}
+                {joinSuccess && <div style={{ marginTop: 8, fontSize: 12, color: '#34d399' }}>{joinSuccess}</div>}
             </div>
 
             {/* Empty state */}
@@ -154,7 +226,7 @@ export default function GroupsPage() {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                             <div style={{
                                                 width: 26, height: 26, borderRadius: '50%',
-                                                background: 'rgba(212,165,116,0.3)',
+                                                background: 'rgba(212,156,87,0.15)',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 fontSize: 11, fontWeight: 700, color: 'var(--accent-primary)',
                                             }}>
@@ -184,8 +256,8 @@ export default function GroupsPage() {
                                 {/* Hover arrow hint */}
                                 {isHov && (
                                     <div style={{
-                                        background: 'rgba(212,165,116,0.08)',
-                                        borderTop: '1px solid rgba(212,165,116,0.15)',
+                                        background: 'rgba(212,156,87,0.08)',
+                                        borderTop: '1px solid rgba(212,156,87,0.15)',
                                         padding: '8px 20px',
                                         fontSize: 12, color: 'var(--accent-primary)',
                                         fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6
@@ -219,8 +291,17 @@ export default function GroupsPage() {
                                 placeholder="Mô tả ngắn về nhóm..." rows={3}
                                 style={{ resize: 'none' }} />
                         </div>
+                        {createError && (
+                            <div style={{
+                                marginTop: 8, padding: '10px 14px', borderRadius: 8,
+                                background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)',
+                                fontSize: 13, color: '#f87171', lineHeight: 1.4
+                            }}>
+                                ⚠️ {createError}
+                            </div>
+                        )}
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-                            <button className="btn" onClick={() => setShowCreate(false)}>Hủy</button>
+                            <button className="btn" onClick={() => { setShowCreate(false); setCreateError(''); }}>Hủy</button>
                             <button className="btn btn-primary" onClick={handleCreate} disabled={creating}>
                                 {creating ? '⏳ Đang tạo...' : '✅ Tạo nhóm'}
                             </button>

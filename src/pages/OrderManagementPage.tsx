@@ -103,12 +103,12 @@ export default function OrderManagementPage() {
 
     const getStatusBadge = (status: string) => {
         switch (status) {
-            case 'PENDING': return <span className="role-badge" style={{ background: '#f59e0b', color: '#fff' }}>⏳ Chờ xử lý</span>;
-            case 'ACCEPTED': return <span className="role-badge" style={{ background: '#3b82f6', color: '#fff' }}>✅ Đã nhận làm</span>;
-            case 'REJECTED': return <span className="role-badge" style={{ background: '#ef4444', color: '#fff' }}>❌ Bị từ chối</span>;
-            case 'COMPLETED': return <span className="role-badge" style={{ background: '#10b981', color: '#fff' }}>🎉 Hoàn thành</span>;
-            case 'CANCELED': return <span className="role-badge" style={{ background: '#6b7280', color: '#fff' }}>🚫 Đã hủy</span>;
-            default: return <span className="role-badge">{status}</span>;
+            case 'PENDING': return <span className="status-badge status-pending">⏳ Chờ xử lý</span>;
+            case 'ACCEPTED': return <span className="status-badge status-accepted">✅ Đã nhận làm</span>;
+            case 'REJECTED': return <span className="status-badge status-rejected">❌ Bị từ chối</span>;
+            case 'COMPLETED': return <span className="status-badge status-completed">🎉 Hoàn thành</span>;
+            case 'CANCELED': return <span className="status-badge status-canceled">🚫 Đã hủy</span>;
+            default: return <span className="status-badge">{status}</span>;
         }
     };
 
@@ -119,7 +119,8 @@ export default function OrderManagementPage() {
                     <h1 className="page-title">📦 Quản lý đơn hàng</h1>
                 </header>
                 <div className="empty-state">
-                    Bạn phải là Chủ của ít nhất một phân xưởng để xem và quản lý đơn đặt hàng.
+                    <div className="empty-icon">🏭</div>
+                    <p>Bạn phải là Chủ của ít nhất một phân xưởng để xem và quản lý đơn đặt hàng.</p>
                 </div>
             </div>
         );
@@ -135,8 +136,8 @@ export default function OrderManagementPage() {
                 <div>
                     <label style={{ marginRight: '10px', color: 'var(--text-secondary)' }}>Chọn Xưởng của bạn:</label>
                     <select
-                        className="form-control"
-                        style={{ display: 'inline-block', width: 'auto' }}
+                        className="form-input"
+                        style={{ display: 'inline-block', width: 'auto', padding: '8px 16px', cursor: 'pointer' }}
                         value={selectedTeam}
                         onChange={e => setSelectedTeam(e.target.value)}
                     >
@@ -165,9 +166,14 @@ export default function OrderManagementPage() {
             </div>
 
             {loading ? (
-                <p>Đang tải đơn hàng...</p>
+                <div className="empty-state" style={{ padding: '40px 20px' }}>
+                    <p>Đang tải đơn hàng...</p>
+                </div>
             ) : orders.length === 0 ? (
-                <div className="empty-state">Chưa có đơn hàng nào.</div>
+                <div className="empty-state">
+                    <div className="empty-icon">📦</div>
+                    <p>Chưa có đơn hàng nào trong thư mục này.</p>
+                </div>
             ) : (
                 <div className="table-responsive">
                     <table className="goals-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -199,13 +205,7 @@ export default function OrderManagementPage() {
                                     </td>
                                     {activeTab === 'inbound' && (
                                         <td style={{ padding: '12px', textAlign: 'center' }}>
-                                            <span style={{
-                                                padding: '4px 10px', borderRadius: 12, fontSize: '0.8rem', fontWeight: 700,
-                                                background: (order.buyerTrustScore ?? 100) >= 80 ? 'rgba(16,185,129,0.15)'
-                                                    : (order.buyerTrustScore ?? 100) >= 50 ? 'rgba(251,191,36,0.15)' : 'rgba(239,68,68,0.15)',
-                                                color: (order.buyerTrustScore ?? 100) >= 80 ? '#34d399'
-                                                    : (order.buyerTrustScore ?? 100) >= 50 ? '#fbbf24' : '#f87171',
-                                            }}>
+                                            <span className={`status-badge ${(order.buyerTrustScore ?? 100) >= 80 ? 'status-completed' : (order.buyerTrustScore ?? 100) >= 50 ? 'status-pending' : 'status-rejected'}`}>
                                                 {(order.buyerTrustScore ?? 100) >= 80 ? '✅' : (order.buyerTrustScore ?? 100) >= 50 ? '⚠️' : '🚫'} {order.buyerTrustScore ?? 100}%
                                             </span>
                                         </td>
@@ -230,11 +230,11 @@ export default function OrderManagementPage() {
                                             )}
                                             {/* Inbound ACCEPTED: Complete */}
                                             {activeTab === 'inbound' && order.status === 'ACCEPTED' && (
-                                                <button className="btn" onClick={() => handleComplete(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: 'rgba(16,185,129,0.15)', color: '#34d399', border: '1px solid rgba(16,185,129,0.3)' }}>🎉 Hoàn thành</button>
+                                                <button className="btn btn-primary" onClick={() => handleComplete(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>🎉 Hoàn thành</button>
                                             )}
                                             {/* Both: Cancel (PENDING or ACCEPTED) */}
                                             {(order.status === 'PENDING' || order.status === 'ACCEPTED') && (
-                                                <button className="btn" onClick={() => handleCancel(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}>🚫 Hủy</button>
+                                                <button className="btn btn-secondary" onClick={() => handleCancel(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>🚫 Hủy</button>
                                             )}
                                             {/* Show canceller */}
                                             {order.status === 'CANCELED' && order.cancelledBy && (

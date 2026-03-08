@@ -4,10 +4,8 @@ import Sidebar from './Sidebar';
 
 export default function Layout() {
     const { user, logout } = useAuth();
-    const isLight = user?.role === 'MEMBER';
-
     return (
-        <div className={`layout ${isLight ? 'theme-light' : ''}`}>
+        <div className="layout">
             <Sidebar />
             <div className="layout-main">
                 {/* Top bar */}
