@@ -94,7 +94,7 @@ export default function InviteAcceptPage() {
                         margin: '0 auto 20px',
                         fontSize: 36
                     }}>
-                        {error ? '❌' : done ? '✅' : '✉️'}
+                        {error ? <ion-icon name="close-circle-outline" style={{ fontSize: '36px', color: '#ef4444' }}></ion-icon> : done ? <ion-icon name="checkmark-circle-outline" style={{ fontSize: '36px', color: '#22c55e' }}></ion-icon> : <ion-icon name="mail-open-outline" style={{ fontSize: '36px', color: 'var(--accent-primary)' }}></ion-icon>}
                     </div>
 
                     {done ? (
@@ -135,7 +135,7 @@ export default function InviteAcceptPage() {
                                     fontSize: 13,
                                     color: 'var(--text-secondary)'
                                 }}>
-                                    📧 Gửi đến: <strong style={{ color: 'var(--accent-primary)' }}>{tokenInfo.email}</strong>
+                                    Gửi đến: <strong style={{ color: 'var(--accent-primary)' }}>{tokenInfo.email}</strong>
                                 </div>
                             )}
                         </>
@@ -155,7 +155,7 @@ export default function InviteAcceptPage() {
                                 borderRadius: 10,
                                 border: '1px dashed rgba(212,165,116,0.3)'
                             }}>
-                                💡 Bạn cần <strong>đăng nhập</strong> hoặc <strong>tạo tài khoản</strong> để tham gia nhóm.
+                                Bạn cần <strong>đăng nhập</strong> hoặc <strong>tạo tài khoản</strong> để tham gia nhóm.
                             </p>
                         )}
 
@@ -176,7 +176,7 @@ export default function InviteAcceptPage() {
                                 marginBottom: 12
                             }}
                         >
-                            {loading ? '⏳ Đang xử lý...' : isAuthenticated ? '✅ Chấp nhận & Tham gia' : '🔐 Đăng nhập để tham gia'}
+                            {loading ? <><ion-icon name="sync-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 6 }}></ion-icon> Đang xử lý...</> : isAuthenticated ? <><ion-icon name="checkmark-circle-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 6 }}></ion-icon> Chấp nhận & Tham gia</> : <><ion-icon name="log-in-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 6 }}></ion-icon> Đăng nhập để tham gia</>}
                         </button>
 
                         {!isAuthenticated && (
@@ -194,7 +194,7 @@ export default function InviteAcceptPage() {
                                     cursor: 'pointer',
                                 }}
                             >
-                                Chưa có tài khoản? Đăng ký ngay
+                                <ion-icon name="person-add-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 6 }}></ion-icon> Chưa có tài khoản? Đăng ký ngay
                             </button>
                         )}
                     </>
@@ -209,7 +209,7 @@ export default function InviteAcceptPage() {
                             color: '#1a0f00', fontWeight: 700, fontSize: 16, cursor: 'pointer'
                         }}
                     >
-                        Về trang đăng nhập
+                        <ion-icon name="arrow-back-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 6 }}></ion-icon> Về trang đăng nhập
                     </button>
                 )}
 

@@ -96,10 +96,10 @@ export default function MarketplacePage() {
             };
             await interGroupOrderService.placeOrder(dto);
             setShowOrderModal(false);
-            alert('✅ Đặt hàng thành công! Chuyển sang trang Đơn hàng để theo dõi.');
+            alert('Đặt hàng thành công! Chuyển sang trang Đơn hàng để theo dõi.');
             navigate('/orders');
         } catch {
-            alert('❌ Không thể đặt hàng. Vui lòng thử lại.');
+            alert('Không thể đặt hàng. Vui lòng thử lại.');
         } finally {
             setSubmitting(false);
         }
@@ -117,12 +117,12 @@ export default function MarketplacePage() {
                 description: pubDescription,
             } as Partial<Team>);
             setShowPublishModal(false);
-            alert('✅ Xưởng đã được đăng tải lên thị trường!');
+            alert('Xưởng đã được đăng tải lên thị trường!');
             // Refresh
             const teamsAll = await teamService.getAllTeams();
             setAllTeams(teamsAll.filter(t => t.isPublished && t.ownerId !== user?.id));
         } catch {
-            alert('❌ Không thể đăng tải. Vui lòng thử lại.');
+            alert('Không thể đăng tải. Vui lòng thử lại.');
         } finally {
             setPublishing(false);
         }
@@ -164,7 +164,7 @@ export default function MarketplacePage() {
             {/* Header */}
             <header className="mp-header">
                 <div className="mp-logo">
-                    <span style={{ fontSize: '1.3rem' }}>🐋</span> ORCA MARKETPLACE
+                    <span style={{ fontSize: '1.3rem' }}><ion-icon name="globe-outline" style={{ fontSize: '20px', verticalAlign: 'middle', marginRight: 6 }}></ion-icon></span> ORCA MARKETPLACE
                 </div>
                 <div className="mp-actions">
                     <button className="mp-publish-btn" onClick={() => {
@@ -174,9 +174,9 @@ export default function MarketplacePage() {
                         }
                         setShowPublishModal(true);
                     }}>
-                        📢 Đăng tải xưởng
+                        <ion-icon name="megaphone-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 6 }}></ion-icon> Đăng tải xưởng
                     </button>
-                    <Link to="/dashboard" className="mp-back-btn">← Dashboard</Link>
+                    <Link to="/dashboard" className="mp-back-btn"><ion-icon name="arrow-back-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Dashboard</Link>
                 </div>
             </header>
 
@@ -187,11 +187,11 @@ export default function MarketplacePage() {
                     <p>Kết nối với các xưởng gia công cà phê uy tín. Đặt hàng trực tiếp, theo dõi đơn hàng real-time.</p>
                     <div className="mp-hero-stats">
                         <div className="mp-hero-stat">
-                            <span className="stat-num">{allTeams.length}</span>
+                            <span className="stat-num"><ion-icon name="business-outline" style={{ fontSize: '18px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> {allTeams.length}</span>
                             <span className="stat-label">Xưởng đang hoạt động</span>
                         </div>
                         <div className="mp-hero-stat">
-                            <span className="stat-num">24/7</span>
+                            <span className="stat-num"><ion-icon name="headset-outline" style={{ fontSize: '18px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> 24/7</span>
                             <span className="stat-label">Hỗ trợ đặt hàng</span>
                         </div>
                     </div>
@@ -201,7 +201,7 @@ export default function MarketplacePage() {
             {/* Search */}
             <div className="mp-search-section">
                 <div className="mp-search-wrapper">
-                    <span className="mp-search-icon">🔍</span>
+                    <span className="mp-search-icon"><ion-icon name="search-outline" style={{ fontSize: '18px' }}></ion-icon></span>
                     <input
                         type="text"
                         className="mp-search-input"
@@ -216,15 +216,15 @@ export default function MarketplacePage() {
             {/* My Published Section */}
             {myPublishedTeams.length > 0 && (
                 <section className="mp-my-published">
-                    <h3>📌 Xưởng của bạn trên thị trường</h3>
+                    <h3><ion-icon name="storefront-outline" style={{ fontSize: '18px', verticalAlign: 'middle', marginRight: 6 }}></ion-icon> Xưởng của bạn trên thị trường</h3>
                     <div className="mp-my-published-list">
                         {myPublishedTeams.map(t => (
                             <div key={t.id} className="mp-my-pub-item">
                                 <div>
-                                    <strong>{t.name}</strong>
-                                    <span className="mp-pub-badge">Đang hiển thị</span>
+                                    <strong><ion-icon name="business-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> {t.name}</strong>
+                                    <span className="mp-pub-badge"><ion-icon name="checkmark-circle-outline" style={{ fontSize: '12px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Đang hiển thị</span>
                                 </div>
-                                <button className="mp-unpub-btn" onClick={() => handleUnpublish(t.id)}>Gỡ xuống</button>
+                                <button className="mp-unpub-btn" onClick={() => handleUnpublish(t.id)}><ion-icon name="close-circle-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Gỡ xuống</button>
                             </div>
                         ))}
                     </div>
@@ -234,19 +234,19 @@ export default function MarketplacePage() {
             {/* Teams Grid */}
             <section className="mp-section">
                 <div className="mp-section-header">
-                    <h2>🏭 Danh sách Xưởng Gia công</h2>
+                    <h2><ion-icon name="list-outline" style={{ fontSize: '20px', verticalAlign: 'middle', marginRight: 8 }}></ion-icon> Danh sách Xưởng Gia công</h2>
                 </div>
 
                 {error && <div className="mp-error">{error}</div>}
 
                 {displayedTeams.length === 0 && !error ? (
                     <div className="mp-empty">
-                        <span style={{ fontSize: '3rem' }}>🏪</span>
+                        <span style={{ fontSize: '3rem', opacity: 0.4 }}><ion-icon name="file-tray-outline" style={{ fontSize: '48px' }}></ion-icon></span>
                         <h3>Chưa có xưởng nào trên thị trường</h3>
                         <p>Hãy là người đầu tiên đăng tải xưởng của bạn lên!</p>
                         {myTeams.length > 0 && (
                             <button className="mp-publish-btn" style={{ marginTop: '1rem' }} onClick={() => setShowPublishModal(true)}>
-                                📢 Đăng tải xưởng ngay
+                                Đăng tải xưởng ngay
                             </button>
                         )}
                     </div>
@@ -259,30 +259,32 @@ export default function MarketplacePage() {
                                     <div className="mp-card-overlay">
                                         {team.trustScore !== undefined && team.trustScore !== null && (
                                             <span className={`mp-trust-badge ${(team.trustScore ?? 100) >= 80 ? 'high' : (team.trustScore ?? 100) >= 50 ? 'mid' : 'low'}`}>
-                                                {(team.trustScore ?? 100) >= 80 ? '✅' : '⚠️'} {team.trustScore}% Uy tín
+                                                <ion-icon name="shield-checkmark-outline" style={{ fontSize: '12px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon>
+                                                {(team.trustScore ?? 100) >= 80 ? 'Tốt' : 'Trung bình'} {team.trustScore}% Uy tín
                                             </span>
                                         )}
-                                        <span className="mp-member-badge">👥 {team.memberCount || 0}</span>
+                                        <span className="mp-member-badge"><ion-icon name="people-outline" style={{ fontSize: '12px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> {team.memberCount || 0} thành viên</span>
                                     </div>
                                 </div>
                                 <div className="mp-card-content">
                                     <h3 className="mp-card-title">{team.name}</h3>
                                     <div className="mp-card-meta">
-                                        {team.region && <span>📍 {team.region}</span>}
-                                        {team.specialty && <span>☕ {team.specialty}</span>}
-                                        {team.capacity && <span>⚡ {team.capacity}</span>}
+                                        {team.region && <span><ion-icon name="location-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> {team.region}</span>}
+                                        {team.specialty && <span><ion-icon name="flask-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> {team.specialty}</span>}
+                                        {team.capacity && <span><ion-icon name="speedometer-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Công suất: {team.capacity}</span>}
                                     </div>
                                     <p className="mp-card-desc">
                                         {team.description || 'Xưởng gia công cà phê chuyên nghiệp.'}
                                     </p>
                                     {team.completedOrders !== undefined && team.completedOrders > 0 && (
                                         <div className="mp-card-orders">
-                                            ✅ {team.completedOrders} đơn hoàn thành
+                                            <ion-icon name="checkmark-done-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon>
+                                            {team.completedOrders} đơn hoàn thành
                                         </div>
                                     )}
                                     <div className="mp-card-actions">
                                         <button className="mp-order-btn" onClick={() => handleOrderClick(team)}>
-                                            📦 Đặt hàng
+                                            <ion-icon name="cart-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 6 }}></ion-icon> Đặt hàng
                                         </button>
                                     </div>
                                 </div>
@@ -294,7 +296,7 @@ export default function MarketplacePage() {
 
             {/* Footer */}
             <footer className="mp-footer">
-                <p>© 2026 ORCA Marketplace — Nền tảng Gia công Cà Phê Thông minh</p>
+                <p><ion-icon name="globe-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> © 2026 ORCA Marketplace — Nền tảng Gia công Cà Phê Thông minh</p>
             </footer>
 
             {/* Order Modal */}
@@ -302,15 +304,15 @@ export default function MarketplacePage() {
                 <div className="mp-modal-overlay" onClick={() => setShowOrderModal(false)}>
                     <div className="mp-modal" onClick={e => e.stopPropagation()}>
                         <div className="mp-modal-header">
-                            <h2>📦 Đặt đơn hàng</h2>
-                            <button className="mp-modal-close" onClick={() => setShowOrderModal(false)}>×</button>
+                            <h2><ion-icon name="cart-outline" style={{ fontSize: '20px', verticalAlign: 'middle', marginRight: 8 }}></ion-icon> Đặt đơn hàng</h2>
+                            <button className="mp-modal-close" onClick={() => setShowOrderModal(false)}><ion-icon name="close-outline" style={{ fontSize: '20px' }}></ion-icon></button>
                         </div>
                         <div className="mp-modal-seller">
-                            Đặt hàng tại: <strong>{selectedSeller.name}</strong>
+                            <ion-icon name="storefront-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Đặt hàng tại: <strong>{selectedSeller.name}</strong>
                         </div>
                         <form onSubmit={handleSubmitOrder}>
                             <div className="mp-form-group">
-                                <label>Từ xưởng của bạn</label>
+                                <label><ion-icon name="business-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Từ xưởng của bạn</label>
                                 <select value={buyerTeamId} onChange={e => setBuyerTeamId(e.target.value)} required>
                                     {myTeams.map(t => (
                                         <option key={t.id} value={t.id}>{t.name}</option>
@@ -318,27 +320,27 @@ export default function MarketplacePage() {
                                 </select>
                             </div>
                             <div className="mp-form-group">
-                                <label>Tiêu đề đơn hàng</label>
+                                <label><ion-icon name="document-text-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Tiêu đề đơn hàng</label>
                                 <input type="text" placeholder="VD: Gia công 500kg cà phê Arabica" value={orderTitle} onChange={e => setOrderTitle(e.target.value)} required />
                             </div>
                             <div className="mp-form-group">
-                                <label>Mô tả chi tiết</label>
+                                <label><ion-icon name="chatbox-ellipses-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Mô tả chi tiết</label>
                                 <textarea rows={3} placeholder="Yêu cầu cụ thể, quy cách, lưu ý..." value={orderDesc} onChange={e => setOrderDesc(e.target.value)} />
                             </div>
                             <div className="mp-form-row">
                                 <div className="mp-form-group">
-                                    <label>Số lượng</label>
+                                    <label><ion-icon name="layers-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Số lượng</label>
                                     <input type="number" min="1" value={orderQty} onChange={e => setOrderQty(parseInt(e.target.value) || 1)} required />
                                 </div>
                                 <div className="mp-form-group">
-                                    <label>Hạn chót</label>
+                                    <label><ion-icon name="calendar-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Hạn chót</label>
                                     <input type="datetime-local" value={orderDeadline} onChange={e => setOrderDeadline(e.target.value)} required />
                                 </div>
                             </div>
                             <div className="mp-modal-actions">
-                                <button type="button" className="mp-cancel-btn" onClick={() => setShowOrderModal(false)}>Hủy</button>
+                                <button type="button" className="mp-cancel-btn" onClick={() => setShowOrderModal(false)}><ion-icon name="close-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Hủy</button>
                                 <button type="submit" className="mp-submit-btn" disabled={submitting}>
-                                    {submitting ? 'Đang gửi...' : '📦 Gửi đơn hàng'}
+                                    {submitting ? 'Đang gửi...' : <><ion-icon name="send-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Gửi đơn hàng</>}
                                 </button>
                             </div>
                         </form>
@@ -351,12 +353,12 @@ export default function MarketplacePage() {
                 <div className="mp-modal-overlay" onClick={() => setShowPublishModal(false)}>
                     <div className="mp-modal" onClick={e => e.stopPropagation()}>
                         <div className="mp-modal-header">
-                            <h2>📢 Đăng tải xưởng lên thị trường</h2>
-                            <button className="mp-modal-close" onClick={() => setShowPublishModal(false)}>×</button>
+                            <h2><ion-icon name="megaphone-outline" style={{ fontSize: '20px', verticalAlign: 'middle', marginRight: 8 }}></ion-icon> Đăng tải xưởng lên thị trường</h2>
+                            <button className="mp-modal-close" onClick={() => setShowPublishModal(false)}><ion-icon name="close-outline" style={{ fontSize: '20px' }}></ion-icon></button>
                         </div>
                         <form onSubmit={handlePublish}>
                             <div className="mp-form-group">
-                                <label>Chọn xưởng muốn đăng</label>
+                                <label><ion-icon name="business-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Chọn xưởng muốn đăng</label>
                                 <select value={publishTeamId} onChange={e => setPublishTeamId(e.target.value)} required>
                                     {myTeams.map(t => (
                                         <option key={t.id} value={t.id}>{t.name} {t.isPublished ? '(Đã đăng)' : ''}</option>
@@ -364,25 +366,25 @@ export default function MarketplacePage() {
                                 </select>
                             </div>
                             <div className="mp-form-group">
-                                <label>Chuyên môn</label>
+                                <label><ion-icon name="flask-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Chuyên môn</label>
                                 <input type="text" placeholder="VD: Arabica & Robusta Blend, Fine Robusta..." value={pubSpecialty} onChange={e => setPubSpecialty(e.target.value)} />
                             </div>
                             <div className="mp-form-group">
-                                <label>Năng suất</label>
+                                <label><ion-icon name="speedometer-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Năng suất</label>
                                 <input type="text" placeholder="VD: > 500kg/ngày, 100-500kg/ngày..." value={pubCapacity} onChange={e => setPubCapacity(e.target.value)} />
                             </div>
                             <div className="mp-form-group">
-                                <label>Khu vực</label>
+                                <label><ion-icon name="location-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Khu vực</label>
                                 <input type="text" placeholder="VD: Tây Nguyên, Đông Nam Bộ..." value={pubRegion} onChange={e => setPubRegion(e.target.value)} />
                             </div>
                             <div className="mp-form-group">
-                                <label>Mô tả xưởng</label>
+                                <label><ion-icon name="chatbox-ellipses-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Mô tả xưởng</label>
                                 <textarea rows={3} placeholder="Giới thiệu ngắn về xưởng, dịch vụ, thế mạnh..." value={pubDescription} onChange={e => setPubDescription(e.target.value)} />
                             </div>
                             <div className="mp-modal-actions">
-                                <button type="button" className="mp-cancel-btn" onClick={() => setShowPublishModal(false)}>Hủy</button>
+                                <button type="button" className="mp-cancel-btn" onClick={() => setShowPublishModal(false)}><ion-icon name="close-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Hủy</button>
                                 <button type="submit" className="mp-submit-btn" disabled={publishing}>
-                                    {publishing ? 'Đang đăng...' : '📢 Đăng tải ngay'}
+                                    {publishing ? 'Đang đăng...' : <><ion-icon name="rocket-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Đăng tải ngay</>}
                                 </button>
                             </div>
                         </form>

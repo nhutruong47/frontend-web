@@ -58,7 +58,7 @@ export default function RegisterPage() {
 
             <div className="auth-card">
                 <div className="auth-logo">
-                    <div className="auth-logo-icon">☕</div>
+                    <div className="auth-logo-icon">ORCA</div>
                     <h1 className="auth-logo-text">ORCA</h1>
                     <p className="auth-subtitle">Tạo tài khoản mới</p>
                 </div>
@@ -67,7 +67,7 @@ export default function RegisterPage() {
                     <div className="form-group">
                         <label className="form-label">Tài khoản</label>
                         <div className="input-container">
-                            <span className="input-icon">👤</span>
+                            <span className="input-icon"><ion-icon name="person-outline" style={{ fontSize: '16px' }}></ion-icon></span>
                             <input
                                 id="register-username"
                                 type="text"
@@ -83,7 +83,7 @@ export default function RegisterPage() {
                     <div className="form-group">
                         <label className="form-label">Mật khẩu</label>
                         <div className="input-container">
-                            <span className="input-icon">🔒</span>
+                            <span className="input-icon"><ion-icon name="lock-closed-outline" style={{ fontSize: '16px' }}></ion-icon></span>
                             <input
                                 id="register-password"
                                 type="password"
@@ -99,7 +99,7 @@ export default function RegisterPage() {
                     <div className="form-group">
                         <label className="form-label">Xác nhận mật khẩu</label>
                         <div className="input-container">
-                            <span className="input-icon">🔒</span>
+                            <span className="input-icon"><ion-icon name="shield-checkmark-outline" style={{ fontSize: '16px' }}></ion-icon></span>
                             <input
                                 id="register-confirm-password"
                                 type="password"
@@ -114,7 +114,7 @@ export default function RegisterPage() {
 
                     {error && (
                         <div className="form-error">
-                            <span>⚠️</span> {error}
+                            <ion-icon name="alert-circle-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> {error}
                         </div>
                     )}
 

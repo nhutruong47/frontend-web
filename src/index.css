@@ -42,6 +42,12 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
   --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.8);
   --shadow-glow: 0 0 20px rgba(212, 165, 116, 0.15);
+  --shadow-neon: 0 0 15px rgba(212, 165, 116, 0.4);
+  --shadow-neon-strong: 0 0 25px rgba(212, 165, 116, 0.6);
+
+  --bg-glass: rgba(15, 21, 36, 0.4);
+  --bg-glass-hover: rgba(15, 21, 36, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.1);
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -59,32 +65,43 @@
   --border-color: var(--border);
 }
 
-/* ===== Light Theme Override ===== */
+/* ===== Light Theme Override — White & Brown ===== */
 body.theme-light {
-  --bg-primary: #f4f1ee;
-  --bg-secondary: #ffffff;
-  --bg-tertiary: #e8e2dc;
-  --bg-card: rgba(255, 255, 255, 0.95);
-  --bg-card-hover: rgba(245, 240, 235, 1);
-  --bg-input: rgba(0, 0, 0, 0.03);
+  --bg-primary: #f5efe8;
+  --bg-secondary: #fefcfa;
+  --bg-tertiary: #e8ddd0;
+  --bg-card: rgba(254, 250, 245, 0.97);
+  --bg-card-hover: rgba(245, 237, 226, 1);
+  --bg-input: rgba(139, 94, 60, 0.06);
 
-  --text-primary: #1a1410;
-  --text-secondary: #6b5b4e;
-  --text-muted: #9a8a7c;
-  --text-accent: #8b5e3c;
+  --text-primary: #2c1f14;
+  --text-secondary: #5c4a3a;
+  --text-muted: #8a7565;
+  --text-accent: #7a4f2b;
 
-  --accent-primary: #8b5e3c;
-  --accent-secondary: #d4a574;
-  --accent-gradient: linear-gradient(135deg, #8b5e3c 0%, #a67b4c 50%, #d4a574 100%);
-  --accent-glow: rgba(139, 94, 60, 0.15);
+  --accent-primary: #7a4f2b;
+  --accent-secondary: #c4955e;
+  --accent-gradient: linear-gradient(135deg, #7a4f2b 0%, #9a6b42 50%, #c4955e 100%);
+  --accent-glow: rgba(122, 79, 43, 0.15);
 
-  --border: rgba(0, 0, 0, 0.1);
-  --border-focus: rgba(139, 94, 60, 0.5);
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #7a4f2b;
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
-  --shadow-glow: 0 0 20px rgba(139, 94, 60, 0.08);
+  --border: rgba(122, 79, 43, 0.15);
+  --border-focus: rgba(122, 79, 43, 0.5);
+
+  --shadow-sm: 0 1px 3px rgba(44, 31, 20, 0.08);
+  --shadow-md: 0 4px 12px rgba(44, 31, 20, 0.10);
+  --shadow-lg: 0 10px 30px rgba(44, 31, 20, 0.12);
+  --shadow-glow: 0 0 20px rgba(122, 79, 43, 0.10);
+  --shadow-neon: 0 0 15px rgba(122, 79, 43, 0.3);
+  --shadow-neon-strong: 0 0 25px rgba(122, 79, 43, 0.5);
+
+  --bg-glass: rgba(254, 250, 245, 0.6);
+  --bg-glass-hover: rgba(254, 250, 245, 0.9);
+  --glass-border: rgba(122, 79, 43, 0.15);
 
   --card-bg: var(--bg-card);
   --border-color: var(--border);

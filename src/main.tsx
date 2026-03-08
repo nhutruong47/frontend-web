@@ -3,6 +3,11 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
+// Register ionicons web components
+// @ts-ignore - ionicons loader
+import { defineCustomElements } from 'ionicons/loader';
+defineCustomElements(window);
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

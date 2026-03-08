@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { teamService, taskService } from '../services/groupService';
 import type { Team, Task } from '../types/types';
 
+import { type ReactNode } from 'react';
+
 export default function DashboardPage() {
     const { user } = useAuth();
     const [teams, setTeams] = useState<Team[]>([]);
@@ -68,7 +70,7 @@ export default function DashboardPage() {
                     <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                                <span style={{ fontSize: 32, filter: 'drop-shadow(0 0 10px rgba(212,156,87,0.5))' }}>☕</span>
+                                <span style={{ fontSize: 32, filter: 'drop-shadow(0 0 10px rgba(212,156,87,0.5))' }}><ion-icon name="locate-outline" style={{ fontSize: '32px' }}></ion-icon></span>
                                 <h1 style={{
                                     margin: 0, fontSize: 36, fontWeight: 800, color: '#fff',
                                     letterSpacing: '-0.5px', textShadow: '0 2px 10px rgba(0,0,0,0.8)'
@@ -107,23 +109,20 @@ export default function DashboardPage() {
             <div style={{ padding: '0 48px' }}>
                 {/* Stats Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginBottom: 32 }}>
-                    <StatCard icon="📋" label="Tổng lượng Task" value={myTasks.length} color="var(--accent-primary)" bg="linear-gradient(135deg, rgba(212,156,87,0.15), rgba(0,0,0,0))" />
-                    <StatCard icon="⏳" label="Đang chờ máy/nguyên liệu" value={pendingTasks.length} color="#d29922" bg="linear-gradient(135deg, rgba(210,153,34,0.15), rgba(0,0,0,0))" />
-                    <StatCard icon="🔥" label="Đang rang/Gia công" value={inProgressTasks.length} color="#f85149" bg="linear-gradient(135deg, rgba(248,81,73,0.15), rgba(0,0,0,0))" />
-                    <StatCard icon="📦" label="Đã hoàn thiện & Đóng gói" value={completedTasks.length} color="#3fb950" bg="linear-gradient(135deg, rgba(63,185,80,0.15), rgba(0,0,0,0))" />
+                    <StatCard icon={<ion-icon name="clipboard-outline" style={{ fontSize: '22px' }}></ion-icon>} label="Tổng lượng Task" value={myTasks.length} color="var(--accent-primary)" bg="linear-gradient(135deg, rgba(212,156,87,0.15), rgba(0,0,0,0))" />
+                    <StatCard icon={<ion-icon name="time-outline" style={{ fontSize: '22px' }}></ion-icon>} label="Đang chờ máy/nguyên liệu" value={pendingTasks.length} color="#d29922" bg="linear-gradient(135deg, rgba(210,153,34,0.15), rgba(0,0,0,0))" />
+                    <StatCard icon={<ion-icon name="flame-outline" style={{ fontSize: '22px' }}></ion-icon>} label="Đang rang/Gia công" value={inProgressTasks.length} color="#f85149" bg="linear-gradient(135deg, rgba(248,81,73,0.15), rgba(0,0,0,0))" />
+                    <StatCard icon={<ion-icon name="checkmark-done-outline" style={{ fontSize: '22px' }}></ion-icon>} label="Đã hoàn thiện & Đóng gói" value={completedTasks.length} color="#3fb950" bg="linear-gradient(135deg, rgba(63,185,80,0.15), rgba(0,0,0,0))" />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
                     {/* Left Column */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                         {/* Member Performance */}
-                        <div style={{
-                            background: 'var(--bg-card)', border: '1px solid var(--border)',
-                            borderRadius: 20, padding: 24, boxShadow: 'var(--shadow-md)'
-                        }}>
+                        <div className="glass-panel" style={{ padding: 24 }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                                <h2 style={{ fontSize: 18, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <span style={{ color: 'var(--accent-primary)' }}>⚡</span> Hiệu suất phân xưởng
+                                <h2 className="text-glow-active" style={{ fontSize: 18, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span className="icon-container glow" style={{ width: 32, height: 32, fontSize: 18 }}><ion-icon name="flash-outline"></ion-icon></span> Hiệu suất phân xưởng
                                 </h2>
                             </div>
 
@@ -134,7 +133,7 @@ export default function DashboardPage() {
                                     {teams.filter(t => t.members && t.members.length > 0).map(t => (
                                         <div key={t.id}>
                                             <h3 style={{ fontSize: 13, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
-                                                🏭 {t.name}
+                                                <ion-icon name="business-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> {t.name}
                                             </h3>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                                 {t.members?.map(m => {
@@ -181,14 +180,11 @@ export default function DashboardPage() {
                     {/* Right Column */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                         {/* Actions Card */}
-                        <div style={{
-                            background: 'var(--bg-card)', border: '1px solid var(--border)',
-                            borderRadius: 20, padding: 24, boxShadow: 'var(--shadow-md)'
-                        }}>
-                            <h2 style={{ fontSize: 16, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ color: 'var(--accent-primary)' }}>🛠</span> Thao tác nhanh
+                        <div className="glass-panel" style={{ padding: 24 }}>
+                            <h2 className="text-glow-active" style={{ fontSize: 16, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span className="icon-container glow" style={{ width: 28, height: 28, fontSize: 14 }}><ion-icon name="build-outline"></ion-icon></span> Thao tác nhanh
                             </h2>
-                            <button onClick={() => navigate('/groups')} style={{
+                            <button className="hover-lift" onClick={() => navigate('/groups')} style={{
                                 width: '100%', padding: '14px', borderRadius: 12, background: 'var(--accent-gradient)',
                                 color: '#fff', border: 'none', fontWeight: 600, fontSize: 14, cursor: 'pointer',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12,
@@ -203,24 +199,21 @@ export default function DashboardPage() {
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s'
                             }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.borderColor = 'var(--text-secondary)'; }}
                                 onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
-                                <span>🛒</span> Vào thị trường gia công
+                                <span><ion-icon name="storefront-outline" style={{ fontSize: '14px' }}></ion-icon></span> Vào thị trường gia công
                             </button>
                         </div>
 
                         {/* Recent Tasks */}
-                        <div style={{
-                            background: 'var(--bg-card)', border: '1px solid var(--border)',
-                            borderRadius: 20, padding: 24, boxShadow: 'var(--shadow-md)', flex: 1
-                        }}>
+                        <div className="glass-panel" style={{ padding: 24, flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                                <h2 style={{ fontSize: 16, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <span style={{ color: 'var(--accent-primary)' }}>🎯</span> Nhiệm vụ của bạn
+                                <h2 className="text-glow-active" style={{ fontSize: 16, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span className="icon-container glow" style={{ width: 28, height: 28, fontSize: 14 }}><ion-icon name="locate-outline"></ion-icon></span> Nhiệm vụ của bạn
                                 </h2>
                             </div>
 
                             {myTasks.length === 0 ? (
                                 <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-muted)' }}>
-                                    <div style={{ fontSize: 32, marginBottom: 8, opacity: 0.5 }}>🍃</div>
+                                    <div style={{ fontSize: 32, marginBottom: 8, opacity: 0.5 }}>—</div>
                                     Máy móc đang rảnh rỗi.
                                 </div>
                             ) : (
@@ -245,8 +238,8 @@ export default function DashboardPage() {
                                                     }}>{st.label}</span>
                                                 </div>
                                                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', gap: 12 }}>
-                                                    <span>🎯 {t.goalTitle}</span>
-                                                    <span>📊 {t.completionPercentage || 0}%</span>
+                                                    <span><ion-icon name="locate-outline" style={{ fontSize: '12px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> {t.goalTitle}</span>
+                                                    <span><ion-icon name="bar-chart-outline" style={{ fontSize: '12px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> {t.completionPercentage || 0}%</span>
                                                 </div>
                                             </div>
                                         );
@@ -261,21 +254,19 @@ export default function DashboardPage() {
     );
 }
 
-function StatCard({ icon, label, value, color, bg }: { icon: string; label: string; value: number; color: string; bg: string }) {
+function StatCard({ icon, label, value, color, bg }: { icon: ReactNode; label: string; value: number; color: string; bg: string }) {
     return (
-        <div style={{
-            background: 'var(--bg-card)', borderRadius: 20, padding: 24,
-            border: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', gap: 16,
-            boxShadow: 'var(--shadow-md)', position: 'relative', overflow: 'hidden'
+        <div className="glass-panel hover-lift" style={{
+            padding: 24, display: 'flex', alignItems: 'flex-start', gap: 16,
+            position: 'relative', overflow: 'hidden'
         }}>
             {/* Background glowing gradient */}
             <div style={{ position: 'absolute', inset: 0, background: bg, zIndex: 0, opacity: 0.5 }} />
 
-            <div style={{
-                width: 48, height: 48, borderRadius: 14, background: `rgba(0,0,0,0.3)`,
-                border: `1px solid ${color}40`, color, zIndex: 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
-                boxShadow: `inset 0 2px 10px ${color}20`
+            <div className="icon-container glow" style={{
+                width: 48, height: 48, background: `rgba(0,0,0,0.3)`,
+                borderColor: `${color}40`, color, zIndex: 1,
+                fontSize: 24, boxShadow: `inset 0 2px 10px ${color}20`, borderRadius: 14
             }}>{icon}</div>
             <div style={{ zIndex: 1 }}>
                 <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>{value}</div>

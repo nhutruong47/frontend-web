@@ -3,12 +3,12 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const COFFEE_BRANDS = [
-    { name: 'Trung Nguyên Legend', desc: 'Thương hiệu cà phê số 1 Việt Nam', emoji: '🏆' },
-    { name: 'Highlands Coffee', desc: 'Chuỗi cà phê hiện đại hàng đầu', emoji: '🏔️' },
-    { name: 'Phúc Long Heritage', desc: 'Di sản cà phê & trà Việt', emoji: '🍃' },
-    { name: 'The Coffee House', desc: 'Không gian cà phê sáng tạo', emoji: '🏡' },
-    { name: 'Cà Phê Đắk Lắk', desc: 'Thủ phủ cà phê Tây Nguyên', emoji: '🌄' },
-    { name: 'Lavazza (Italy)', desc: 'Hương vị Espresso đỉnh cao', emoji: '🇮🇹' },
+    { name: 'Trung Nguyên Legend', desc: 'Thương hiệu cà phê số 1 Việt Nam', emoji: 'TN' },
+    { name: 'Highlands Coffee', desc: 'Chuỗi cà phê hiện đại hàng đầu', emoji: 'HC' },
+    { name: 'Phúc Long Heritage', desc: 'Di sản cà phê & trà Việt', emoji: 'PL' },
+    { name: 'The Coffee House', desc: 'Không gian cà phê sáng tạo', emoji: 'CH' },
+    { name: 'Cà Phê Đắk Lắk', desc: 'Thủ phủ cà phê Tây Nguyên', emoji: 'DL' },
+    { name: 'Lavazza (Italy)', desc: 'Hương vị Espresso đỉnh cao', emoji: 'LV' },
 ];
 
 export default function LoginPage() {
@@ -63,7 +63,7 @@ export default function LoginPage() {
                 <img src="/coffee-hero.png" alt="Coffee Workshop" className="login-hero-img" />
 
                 <div className="login-hero-content">
-                    <div className="login-hero-badge">☕ ORCA Coffee Platform</div>
+                    <div className="login-hero-badge">ORCA Coffee Platform</div>
                     <h1 className="login-hero-title">
                         Nền tảng Quản lý<br />
                         <span className="login-hero-highlight">Xưởng Cà Phê</span> Thông minh
@@ -75,7 +75,7 @@ export default function LoginPage() {
 
                     {/* Famous coffee brands carousel */}
                     <div className="login-brands">
-                        <p className="login-brands-label">🌟 Đối tác & Xưởng cà phê nổi bật</p>
+                        <p className="login-brands-label">Đối tác & Xưởng cà phê nổi bật</p>
                         <div className="login-brands-list">
                             {COFFEE_BRANDS.map((brand, i) => (
                                 <div
@@ -121,7 +121,7 @@ export default function LoginPage() {
                 <div className="login-form-container">
                     <div className="login-form-header">
                         <div className="login-logo-row">
-                            <span className="login-logo-icon">☕</span>
+                            <span className="login-logo-icon">O</span>
                             <span className="login-logo-text">ORCA</span>
                         </div>
                         <h2 className="login-form-title">Chào mừng trở lại!</h2>
@@ -206,13 +206,13 @@ export default function LoginPage() {
 
                     {/* Demo accounts */}
                     <div className="login-demo">
-                        <p className="login-demo-label">🔑 Tài khoản demo</p>
+                        <p className="login-demo-label">Tài khoản demo</p>
                         <div className="login-demo-accounts">
                             {[
-                                { user: 'admin', role: 'Manager', icon: '👑' },
-                                { user: 'member', role: 'Member', icon: '👤' },
-                                { user: 'ai_eng', role: 'AI Engineer', icon: '🤖' },
-                                { user: 'dealer', role: 'Dealer', icon: '🤝' },
+                                { user: 'admin', role: 'Manager', icon: 'Ad' },
+                                { user: 'member', role: 'Member', icon: 'M' },
+                                { user: 'ai_eng', role: 'AI Engineer', icon: 'AI' },
+                                { user: 'dealer', role: 'Dealer', icon: 'D' },
                             ].map(acc => (
                                 <button key={acc.user} className="login-demo-btn"
                                     onClick={() => { setUsername(acc.user); setPassword('123456'); }}

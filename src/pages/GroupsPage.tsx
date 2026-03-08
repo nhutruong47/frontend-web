@@ -4,6 +4,7 @@ import { teamService } from '../services/groupService';
 import { useAuth } from '../context/AuthContext';
 import type { Team } from '../types/types';
 
+
 function getInitials(name: string) {
     return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
@@ -71,7 +72,7 @@ export default function GroupsPage() {
         setJoinSuccess('');
         try {
             const team = await teamService.joinByCode(joinCode.trim());
-            setJoinSuccess(`✅ Đã tham gia nhóm "${team.name}" thành công!`);
+            setJoinSuccess(`Đã tham gia nhóm "${team.name}" thành công!`);
             setJoinCode('');
             setTeams(await teamService.getMyTeams());
         } catch (e: any) {
@@ -84,7 +85,7 @@ export default function GroupsPage() {
     if (loading) return (
         <div className="page-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
             <div style={{ textAlign: 'center', opacity: 0.5 }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>⏳</div>
+                <div style={{ fontSize: 40, marginBottom: 12 }}><ion-icon name="sync-outline" style={{ fontSize: '40px' }}></ion-icon></div>
                 <p>Đang tải nhóm...</p>
             </div>
         </div>
@@ -95,7 +96,7 @@ export default function GroupsPage() {
             {/* Header */}
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">🏭 Nhóm xưởng</h1>
+                    <h1 className="page-title"><ion-icon name="business-outline" style={{ fontSize: '22px', verticalAlign: 'middle', marginRight: 8 }}></ion-icon> Nhóm xưởng</h1>
                     <p className="page-subtitle">Bạn đang trong <strong>{teams.length}</strong> nhóm làm việc</p>
                 </div>
                 <button className="btn btn-primary" onClick={() => setShowCreate(true)}
@@ -105,14 +106,12 @@ export default function GroupsPage() {
             </div>
 
             {/* === JOIN BY INVITE CODE === */}
-            <div style={{
+            <div className="glass-panel" style={{
                 background: 'linear-gradient(135deg, rgba(212,156,87,0.1) 0%, rgba(0,0,0,0.2) 100%)',
-                border: '1px solid var(--border-focus)',
-                borderRadius: 14, padding: '16px 20px', marginBottom: 20,
-                boxShadow: 'var(--shadow-md)'
+                padding: '16px 20px', marginBottom: 20
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <span style={{ fontSize: 20 }}>🔑</span>
+                    <span className="icon-container glow" style={{ width: 36, height: 36, fontSize: 20 }}><ion-icon name="key-outline"></ion-icon></span>
                     <div>
                         <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Tham gia bằng mã mời</h3>
                         <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)' }}>Nhập mã 6 ký tự từ trưởng nhóm để tham gia</p>
@@ -139,21 +138,20 @@ export default function GroupsPage() {
                         disabled={joining || !joinCode.trim()}
                         style={{ whiteSpace: 'nowrap', padding: '8px 18px', background: 'var(--accent-gradient)', color: '#1a1410', border: 'none', fontWeight: 600 }}
                     >
-                        {joining ? '⏳...' : '🚀 Tham gia'}
+                        {joining ? 'Đang tham gia...' : 'Tham gia'}
                     </button>
                 </div>
-                {joinError && <div style={{ marginTop: 8, fontSize: 12, color: '#f87171' }}>⚠️ {joinError}</div>}
+                {joinError && <div style={{ marginTop: 8, fontSize: 12, color: '#f87171' }}><ion-icon name="warning-outline" style={{ fontSize: '12px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> {joinError}</div>}
                 {joinSuccess && <div style={{ marginTop: 8, fontSize: 12, color: '#34d399' }}>{joinSuccess}</div>}
             </div>
 
             {/* Empty state */}
             {teams.length === 0 ? (
-                <div style={{
+                <div className="glass-panel" style={{
                     textAlign: 'center', padding: '80px 40px',
-                    background: 'var(--bg-card)', borderRadius: 16,
-                    border: '1px dashed var(--border)'
+                    borderStyle: 'dashed'
                 }}>
-                    <div style={{ fontSize: 56, marginBottom: 16 }}>🏭</div>
+                    <div style={{ fontSize: 56, marginBottom: 16 }}><ion-icon name="business-outline" style={{ fontSize: '56px' }}></ion-icon></div>
                     <h3 style={{ color: 'var(--text-primary)', marginBottom: 8 }}>Chưa có nhóm nào</h3>
                     <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>Tạo nhóm đầu tiên hoặc chờ được mời vào nhóm</p>
                     <button className="btn btn-primary" onClick={() => setShowCreate(true)}>+ Tạo nhóm ngay</button>
@@ -165,19 +163,14 @@ export default function GroupsPage() {
                         const bg = cardColor(t.name);
                         const isOwner = t.ownerId === user?.id;
                         return (
-                            <div key={t.id}
+                            <div key={t.id} className="glass-panel hover-lift"
                                 onClick={() => navigate(`/groups/${t.id}`)}
                                 onMouseEnter={() => setHovered(t.id)}
                                 onMouseLeave={() => setHovered(null)}
                                 style={{
-                                    background: 'var(--bg-card)',
-                                    borderRadius: 16,
-                                    border: `1px solid ${isHov ? 'var(--accent-primary)' : 'var(--border)'}`,
+                                    border: `1px solid ${isHov ? 'var(--accent-primary)' : 'var(--glass-border)'}`,
                                     cursor: 'pointer',
                                     overflow: 'hidden',
-                                    transition: 'all 0.25s ease',
-                                    transform: isHov ? 'translateY(-3px)' : 'none',
-                                    boxShadow: isHov ? '0 8px 32px rgba(0,0,0,0.25)' : '0 2px 8px rgba(0,0,0,0.1)',
                                 }}>
                                 {/* Banner màu */}
                                 <div style={{
@@ -240,14 +233,14 @@ export default function GroupsPage() {
                                         {/* Right: member count + role */}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                             <span style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                👥 {t.memberCount}
+                                                <ion-icon name="people-outline" style={{ fontSize: '14px' }}></ion-icon> {t.memberCount}
                                             </span>
                                             <span style={{
                                                 fontSize: 11, padding: '2px 8px', borderRadius: 10, fontWeight: 600,
                                                 background: isOwner ? 'rgba(245,158,11,0.15)' : 'rgba(99,102,241,0.15)',
                                                 color: isOwner ? '#f59e0b' : '#818cf8',
                                             }}>
-                                                {isOwner ? '👑 Admin' : '👤 Member'}
+                                                {isOwner ? <><ion-icon name="shield-outline" style={{ fontSize: '12px' }}></ion-icon> Admin</> : <><ion-icon name="person-outline" style={{ fontSize: '12px' }}></ion-icon> Member</>}
                                             </span>
                                         </div>
                                     </div>
@@ -275,7 +268,7 @@ export default function GroupsPage() {
             {showCreate && (
                 <div className="modal-overlay" onClick={() => setShowCreate(false)}>
                     <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
-                        <h2 style={{ marginBottom: 4 }}>🏭 Tạo nhóm mới</h2>
+                        <h2 style={{ marginBottom: 4 }}><ion-icon name="business-outline" style={{ fontSize: '18px', verticalAlign: 'middle', marginRight: 6 }}></ion-icon> Tạo nhóm mới</h2>
                         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>Bạn sẽ là Admin của nhóm này.</p>
                         <div className="form-group">
                             <label className="form-label">Tên nhóm *</label>
@@ -297,13 +290,13 @@ export default function GroupsPage() {
                                 background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)',
                                 fontSize: 13, color: '#f87171', lineHeight: 1.4
                             }}>
-                                ⚠️ {createError}
+                                <ion-icon name="warning-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> {createError}
                             </div>
                         )}
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
                             <button className="btn" onClick={() => { setShowCreate(false); setCreateError(''); }}>Hủy</button>
                             <button className="btn btn-primary" onClick={handleCreate} disabled={creating}>
-                                {creating ? '⏳ Đang tạo...' : '✅ Tạo nhóm'}
+                                {creating ? 'Đang tạo...' : 'Tạo nhóm'}
                             </button>
                         </div>
                     </div>

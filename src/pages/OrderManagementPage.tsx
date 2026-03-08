@@ -4,6 +4,7 @@ import { teamService } from '../services/groupService';
 import { interGroupOrderService } from '../services/interGroupOrderService';
 import type { Team, InterGroupOrder } from '../types/types';
 
+
 export default function OrderManagementPage() {
     const { user } = useAuth();
     const [myTeams, setMyTeams] = useState<Team[]>([]);
@@ -103,11 +104,11 @@ export default function OrderManagementPage() {
 
     const getStatusBadge = (status: string) => {
         switch (status) {
-            case 'PENDING': return <span className="status-badge status-pending">⏳ Chờ xử lý</span>;
-            case 'ACCEPTED': return <span className="status-badge status-accepted">✅ Đã nhận làm</span>;
-            case 'REJECTED': return <span className="status-badge status-rejected">❌ Bị từ chối</span>;
-            case 'COMPLETED': return <span className="status-badge status-completed">🎉 Hoàn thành</span>;
-            case 'CANCELED': return <span className="status-badge status-canceled">🚫 Đã hủy</span>;
+            case 'PENDING': return <span className="status-badge status-pending"><ion-icon name="time-outline" style={{ fontSize: '13px' }}></ion-icon> Chờ xử lý</span>;
+            case 'ACCEPTED': return <span className="status-badge status-accepted"><ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Đã nhận làm</span>;
+            case 'REJECTED': return <span className="status-badge status-rejected"><ion-icon name="close-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Bị từ chối</span>;
+            case 'COMPLETED': return <span className="status-badge status-completed"><ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Hoàn thành</span>;
+            case 'CANCELED': return <span className="status-badge status-canceled"><ion-icon name="ban-outline" style={{ fontSize: '13px' }}></ion-icon> Đã hủy</span>;
             default: return <span className="status-badge">{status}</span>;
         }
     };
@@ -116,10 +117,12 @@ export default function OrderManagementPage() {
         return (
             <div className="page-container">
                 <header className="page-header">
-                    <h1 className="page-title">📦 Quản lý đơn hàng</h1>
+                    <h1 className="page-title text-glow-active" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span className="icon-container glow" style={{ width: 32, height: 32, fontSize: 20 }}><ion-icon name="cube-outline"></ion-icon></span> Quản lý đơn hàng
+                    </h1>
                 </header>
-                <div className="empty-state">
-                    <div className="empty-icon">🏭</div>
+                <div className="empty-state glass-panel" style={{ padding: '80px 20px', borderStyle: 'dashed' }}>
+                    <div className="empty-icon"><span className="icon-container glow" style={{ width: 64, height: 64, fontSize: 40 }}><ion-icon name="file-tray-outline"></ion-icon></span></div>
                     <p>Bạn phải là Chủ của ít nhất một phân xưởng để xem và quản lý đơn đặt hàng.</p>
                 </div>
             </div>
@@ -128,9 +131,11 @@ export default function OrderManagementPage() {
 
     return (
         <div className="page-container">
-            <header className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <header className="page-header glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 32px', marginBottom: 24 }}>
                 <div>
-                    <h1 className="page-title">📦 Quản lý đơn hàng</h1>
+                    <h1 className="page-title text-glow-active" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span className="icon-container glow" style={{ width: 32, height: 32, fontSize: 20 }}><ion-icon name="cube-outline"></ion-icon></span> Quản lý đơn hàng
+                    </h1>
                     <p className="page-subtitle">Theo dõi đơn đi đặt tại xưởng khác và đơn nhận gia công.</p>
                 </div>
                 <div>
@@ -148,19 +153,19 @@ export default function OrderManagementPage() {
                 </div>
             </header>
 
-            <div className="tabs-container" style={{ marginBottom: '20px' }}>
-                <div className="tabs-header">
+            <div className="tabs-container glass-panel" style={{ marginBottom: '20px', display: 'inline-block', padding: 4 }}>
+                <div className="tabs-header" style={{ gap: 8 }}>
                     <button
                         className={`tab-btn ${activeTab === 'outbound' ? 'active' : ''}`}
                         onClick={() => setActiveTab('outbound')}
                     >
-                        📤 Đơn đã đi đặt (Mua)
+                        <ion-icon name="arrow-up-outline" style={{ fontSize: '15px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Đơn đã đi đặt (Mua)
                     </button>
                     <button
                         className={`tab-btn ${activeTab === 'inbound' ? 'active' : ''}`}
                         onClick={() => setActiveTab('inbound')}
                     >
-                        📥 Đơn xưởng khác đặt (Bán/Gia công)
+                        <ion-icon name="arrow-down-outline" style={{ fontSize: '15px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Đơn xưởng khác đặt (Bán/Gia công)
                     </button>
                 </div>
             </div>
@@ -170,12 +175,12 @@ export default function OrderManagementPage() {
                     <p>Đang tải đơn hàng...</p>
                 </div>
             ) : orders.length === 0 ? (
-                <div className="empty-state">
-                    <div className="empty-icon">📦</div>
+                <div className="empty-state glass-panel" style={{ padding: '80px 20px', borderStyle: 'dashed' }}>
+                    <div className="empty-icon"><span className="icon-container glow" style={{ width: 64, height: 64, fontSize: 40 }}><ion-icon name="cube-outline"></ion-icon></span></div>
                     <p>Chưa có đơn hàng nào trong thư mục này.</p>
                 </div>
             ) : (
-                <div className="table-responsive">
+                <div className="table-responsive glass-panel" style={{ padding: 16 }}>
                     <table className="goals-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr>
@@ -199,14 +204,14 @@ export default function OrderManagementPage() {
                                     </td>
                                     <td style={{ padding: '12px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span className="group-icon" style={{ fontSize: '1.2rem', padding: '4px' }}>🏭</span>
+                                            <span className="group-icon" style={{ fontSize: '1rem', padding: '4px' }}><ion-icon name="business-outline" style={{ fontSize: '16px' }}></ion-icon></span>
                                             {activeTab === 'outbound' ? order.sellerTeamName : order.buyerTeamName}
                                         </div>
                                     </td>
                                     {activeTab === 'inbound' && (
                                         <td style={{ padding: '12px', textAlign: 'center' }}>
                                             <span className={`status-badge ${(order.buyerTrustScore ?? 100) >= 80 ? 'status-completed' : (order.buyerTrustScore ?? 100) >= 50 ? 'status-pending' : 'status-rejected'}`}>
-                                                {(order.buyerTrustScore ?? 100) >= 80 ? '✅' : (order.buyerTrustScore ?? 100) >= 50 ? '⚠️' : '🚫'} {order.buyerTrustScore ?? 100}%
+                                                {(order.buyerTrustScore ?? 100) >= 80 ? 'Tốt' : (order.buyerTrustScore ?? 100) >= 50 ? 'TB' : 'Yếu'} {order.buyerTrustScore ?? 100}%
                                             </span>
                                         </td>
                                     )}
@@ -230,11 +235,11 @@ export default function OrderManagementPage() {
                                             )}
                                             {/* Inbound ACCEPTED: Complete */}
                                             {activeTab === 'inbound' && order.status === 'ACCEPTED' && (
-                                                <button className="btn btn-primary" onClick={() => handleComplete(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>🎉 Hoàn thành</button>
+                                                <button className="btn btn-primary" onClick={() => handleComplete(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}><ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Hoàn thành</button>
                                             )}
                                             {/* Both: Cancel (PENDING or ACCEPTED) */}
                                             {(order.status === 'PENDING' || order.status === 'ACCEPTED') && (
-                                                <button className="btn btn-secondary" onClick={() => handleCancel(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>🚫 Hủy</button>
+                                                <button className="btn btn-secondary" onClick={() => handleCancel(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}><ion-icon name="ban-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Hủy</button>
                                             )}
                                             {/* Show canceller */}
                                             {order.status === 'CANCELED' && order.cancelledBy && (

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { teamService, goalService, taskService, getTrialStatus } from '../services/groupService';
 import type { AiParseResult } from '../services/groupService';
 import type { Team, Goal, Task } from '../types/types';
 import AiAssistantPanel from '../components/AiAssistantPanel';
+
 
 function getInitials(name: string) {
     return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -18,14 +19,15 @@ function avatarColor(name: string) {
 }
 
 const STATUS_COLORS: Record<string, { bg: string; color: string; label: string }> = {
-    PENDING: { bg: 'rgba(251,191,36,0.15)', color: '#fbbf24', label: '⏳ Chờ xử lý' },
-    IN_PROGRESS: { bg: 'rgba(99,102,241,0.15)', color: '#818cf8', label: '🔨 Đang làm' },
-    COMPLETED: { bg: 'rgba(16,185,129,0.15)', color: '#34d399', label: '✅ Hoàn thành' },
+    PENDING: { bg: 'rgba(251,191,36,0.15)', color: '#fbbf24', label: 'Chờ xử lý' },
+    IN_PROGRESS: { bg: 'rgba(99,102,241,0.15)', color: '#818cf8', label: 'Đang làm' },
+    COMPLETED: { bg: 'rgba(16,185,129,0.15)', color: '#34d399', label: 'Hoàn thành' },
 };
 
 export default function GroupDetailPage() {
     const { id } = useParams<{ id: string }>();
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [team, setTeam] = useState<Team | null>(null);
     const [goals, setGoals] = useState<Goal[]>([]);
     const [selectedGoalTasks, setSelectedGoalTasks] = useState<Task[]>([]);
@@ -85,11 +87,11 @@ export default function GroupDetailPage() {
             setError(''); setSuccessMsg(''); setInviteLink(null);
             const res = await teamService.addMember(id, inviteEmail);
             if (res.status === 'ADDED') {
-                setSuccessMsg(`✅ ${res.message}`);
+                setSuccessMsg(`${res.message}`);
                 const updated = await teamService.getDetail(id);
                 setTeam(updated);
             } else {
-                setSuccessMsg(`✉️ ${res.message}`);
+                setSuccessMsg(`${res.message}`);
                 if (res.inviteLink) setInviteLink(res.inviteLink);
             }
             setInviteEmail('');
@@ -168,10 +170,23 @@ export default function GroupDetailPage() {
         }
     };
 
+    const handleDeleteTeam = async () => {
+        if (!team) return;
+        const confirmed = confirm(`Bạn có chắc chắn muốn xóa nhóm "${team.name}"?\n\nHành động này không thể hoàn tác. Tất cả mục tiêu, task và thành viên sẽ bị xóa.`);
+        if (!confirmed) return;
+        try {
+            await teamService.deleteTeam(team.id);
+            alert('Đã xóa nhóm thành công!');
+            navigate('/groups');
+        } catch (e: any) {
+            alert(e?.response?.data?.error || 'Không thể xóa nhóm. Chỉ chủ nhóm mới có quyền xóa.');
+        }
+    };
+
     if (!team) return (
         <div className="page-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
             <div style={{ textAlign: 'center', opacity: 0.5 }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>⏳</div>
+                <div style={{ fontSize: 40, marginBottom: 12 }}><ion-icon name="time-outline" style={{ fontSize: '40px' }}></ion-icon></div>
                 <p>Đang tải nhóm...</p>
             </div>
         </div>
@@ -180,10 +195,7 @@ export default function GroupDetailPage() {
     return (
         <div className="page-container">
             {/* ===== HEADER ===== */}
-            <div style={{
-                background: 'linear-gradient(135deg, rgba(88,166,255,0.08) 0%, rgba(139,92,246,0.04) 100%)',
-                border: '1px solid rgba(88,166,255,0.15)',
-                borderRadius: 16,
+            <div className="glass-panel" style={{
                 padding: '28px 32px',
                 marginBottom: 24,
                 display: 'flex',
@@ -193,15 +205,15 @@ export default function GroupDetailPage() {
                 flexWrap: 'wrap'
             }}>
                 <div>
-                    <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                        🏭 {team.name}
+                    <h1 className="text-glow-active" style={{ margin: 0, fontSize: 26, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span className="icon-container glow" style={{ width: 40, height: 40, fontSize: 22 }}><ion-icon name="business-outline"></ion-icon></span> {team.name}
                     </h1>
                     <p style={{ margin: '6px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>
                         {team.description || 'Nhóm xưởng cà phê'} &nbsp;•&nbsp; <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{team.memberCount} thành viên</span>
                     </p>
                     {team.inviteCode && (
                         <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>🔑 Mã mời:</span>
+                            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}><ion-icon name="key-outline" style={{ fontSize: '12px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Mã mời:</span>
                             <span
                                 onClick={() => navigator.clipboard.writeText(team.inviteCode || '')}
                                 title="Bấm để copy"
@@ -213,32 +225,38 @@ export default function GroupDetailPage() {
                                     border: '1px solid rgba(34,197,94,0.3)',
                                 }}
                             >{team.inviteCode}</span>
-                            <span style={{ fontSize: 10, color: 'var(--text-secondary)', opacity: 0.6 }}>📋 Bấm để copy</span>
+                            <span style={{ fontSize: 10, color: 'var(--text-secondary)', opacity: 0.6 }}>Bấm để copy</span>
                         </div>
                     )}
                 </div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     {isAdmin && (
-                        <button className="btn" onClick={() => {
+                        <button className="btn hover-lift" onClick={() => {
                             setAdSpecialty(team.specialty || '');
                             setAdCapacity(team.capacity || '');
                             setAdRegion(team.region || '');
                             setIsPublished(team.isPublished || false);
                             setShowAdSettings(true);
                         }} style={{ gap: 6, display: 'flex', alignItems: 'center' }}>
-                            📢 Chợ {team.isPublished && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', marginLeft: 4 }}></span>}
+                            <ion-icon name="megaphone-outline" style={{ fontSize: '14px' }}></ion-icon> Chợ {team.isPublished && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', marginLeft: 4 }}></span>}
                         </button>
                     )}
                     {isAdmin && (
-                        <button className="btn btn-primary" style={{ gap: 6, display: 'flex', alignItems: 'center' }}
+                        <button className="btn btn-primary hover-lift" style={{ gap: 6, display: 'flex', alignItems: 'center' }}
                             onClick={() => setShowAddMember(true)}>
-                            👥 Thêm thành viên
+                            <ion-icon name="people-outline" style={{ fontSize: '14px' }}></ion-icon> Thêm thành viên
                         </button>
                     )}
                     {isAdmin && (
-                        <button className="btn" onClick={() => setShowCreateGoal(true)}
+                        <button className="btn hover-lift" onClick={() => setShowCreateGoal(true)}
                             style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             + Mục tiêu mới
+                        </button>
+                    )}
+                    {isAdmin && (
+                        <button className="btn hover-lift" onClick={handleDeleteTeam}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}>
+                            <ion-icon name="trash-outline" style={{ fontSize: '14px' }}></ion-icon> Xóa nhóm
                         </button>
                     )}
                 </div>
@@ -266,7 +284,7 @@ export default function GroupDetailPage() {
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                     }}>
                         <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
-                            👥 Thành viên ({team.memberCount})
+                            <ion-icon name="people-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Thành viên ({team.memberCount})
                         </h2>
                     </div>
                     <div style={{ padding: '8px 0' }}>
@@ -309,13 +327,13 @@ export default function GroupDetailPage() {
                                                 background: isOwner ? 'rgba(245,158,11,0.15)' : 'rgba(99,102,241,0.15)',
                                                 color: isOwner ? '#f59e0b' : '#818cf8',
                                             }}>
-                                                {isOwner ? '👑 Admin' : '👤 Member'}
+                                                {isOwner ? <><ion-icon name="shield-outline" style={{ fontSize: '10px' }}></ion-icon> Admin</> : <><ion-icon name="person-outline" style={{ fontSize: '10px' }}></ion-icon> Member</>}
                                             </span>
 
                                             {/* Admin only: Member Progress Stats */}
                                             {isAdmin && m.totalTasks !== undefined && (
                                                 <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 'auto' }}>
-                                                    📊 {m.completedTasks}/{m.totalTasks} ({m.completionRate || 0}%)
+                                                    <ion-icon name="bar-chart-outline" style={{ fontSize: '11px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> {m.completedTasks}/{m.totalTasks} ({m.completionRate || 0}%)
                                                 </span>
                                             )}
                                         </div>
@@ -358,22 +376,22 @@ export default function GroupDetailPage() {
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         }}>
                             <span style={{ fontSize: 13, fontWeight: 600, color: trialActive ? '#818cf8' : '#f87171' }}>
-                                {trialActive ? `🤖 AI chia việc miễn phí: còn ${trialDays} ngày` : '⚠️ AI chia việc đã hết hạn dùng thử — Hãy tạo task thủ công'}
+                                {trialActive ? `AI chia việc miễn phí: còn ${trialDays} ngày` : 'AI chia việc đã hết hạn dùng thử — Hãy tạo task thủ công'}
                             </span>
                         </div>
                     )}
 
                     {/* Goals */}
-                    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
                         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-                            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
-                                🎯 Mục tiêu ({goals.length})
+                            <h2 className="text-glow-active" style={{ margin: 0, fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span className="icon-container glow" style={{ width: 28, height: 28, fontSize: 16 }}><ion-icon name="locate-outline"></ion-icon></span> Mục tiêu ({goals.length})
                             </h2>
                         </div>
                         <div style={{ padding: 12 }}>
                             {goals.length === 0 ? (
                                 <div style={{ textAlign: 'center', padding: '32px 16px', opacity: 0.4 }}>
-                                    <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+                                    <div style={{ fontSize: 32, marginBottom: 8 }}><ion-icon name="clipboard-outline" style={{ fontSize: '32px' }}></ion-icon></div>
                                     <p style={{ margin: 0, fontSize: 14 }}>Chưa có mục tiêu nào</p>
                                 </div>
                             ) : goals.map(g => {
@@ -411,10 +429,10 @@ export default function GroupDetailPage() {
                                             </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>
                                                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                    📊 {g.completedTasks}/{g.totalTasks} tasks
+                                                    <ion-icon name="bar-chart-outline" style={{ fontSize: '11px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> {g.completedTasks}/{g.totalTasks} tasks
                                                     <span style={{ color: 'var(--text-primary)' }}>({pct}%)</span>
                                                 </span>
-                                                {g.deadline && <span style={{ color: '#f87171' }}>⏰ {new Date(g.deadline).toLocaleDateString('vi')}</span>}
+                                                {g.deadline && <span style={{ color: '#f87171' }}><ion-icon name="time-outline" style={{ fontSize: '11px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> {new Date(g.deadline).toLocaleDateString('vi')}</span>}
                                             </div>
                                         </div>
 
@@ -422,7 +440,7 @@ export default function GroupDetailPage() {
                                         {isSelected && (
                                             <div style={{ marginTop: 16, borderTop: '1px dashed rgba(255,255,255,0.15)', paddingTop: 16 }} onClick={e => e.stopPropagation()}>
                                                 <div style={{ padding: '0 0 16px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>📋 Danh sách task ({selectedGoalTasks.length})</h2>
+                                                    <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}><ion-icon name="clipboard-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Danh sách task ({selectedGoalTasks.length})</h2>
                                                     {isAdmin && (
                                                         <button onClick={() => setShowAddTask(!showAddTask)} className="btn btn-primary" style={{ padding: '6px 14px', fontSize: 12, borderRadius: 8 }}>
                                                             {showAddTask ? '✕ Đóng' : '＋ Thêm task'}
@@ -439,7 +457,7 @@ export default function GroupDetailPage() {
                                                             <div style={{ display: 'flex', gap: 8 }}>
                                                                 <input className="input" type="number" placeholder="Giờ làm" value={newTaskWorkload} onChange={e => setNewTaskWorkload(e.target.value)} style={{ fontSize: 13, width: 120 }} />
                                                                 <button onClick={handleAddTask} disabled={loading || !newTaskTitle.trim()} className="btn btn-primary" style={{ fontSize: 12, padding: '6px 16px' }}>
-                                                                    {loading ? '⏳...' : '✅ Tạo task'}
+                                                                    {loading ? 'Đang tạo...' : 'Tạo task'}
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -469,7 +487,7 @@ export default function GroupDetailPage() {
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
                                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                                            {isMyTask && <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 8, background: 'rgba(99,102,241,0.2)', color: '#818cf8', fontWeight: 700 }}>📌 Của bạn</span>}
+                                                                            {isMyTask && <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 8, background: 'rgba(99,102,241,0.2)', color: '#818cf8', fontWeight: 700 }}><ion-icon name="pin-outline" style={{ fontSize: '9px' }}></ion-icon> Của bạn</span>}
                                                                             <strong style={{ fontSize: 14, color: 'var(--text-primary)' }}>{t.title}</strong>
                                                                         </div>
                                                                         {t.description && <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{t.description}</span>}
@@ -493,8 +511,8 @@ export default function GroupDetailPage() {
                                                                     }} />
                                                                 </div>
                                                                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}>
-                                                                    <span>📊 Tiến độ: <b style={{ color: st.color }}>{t.completionPercentage || 0}%</b></span>
-                                                                    {t.deadline && <span style={{ color: '#f87171' }}>⏰ {new Date(t.deadline).toLocaleDateString('vi')}</span>}
+                                                                    <span><ion-icon name="bar-chart-outline" style={{ fontSize: '11px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Tiến độ: <b style={{ color: st.color }}>{t.completionPercentage || 0}%</b></span>
+                                                                    {t.deadline && <span style={{ color: '#f87171' }}><ion-icon name="time-outline" style={{ fontSize: '11px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> {new Date(t.deadline).toLocaleDateString('vi')}</span>}
                                                                 </div>
 
                                                                 {/* Footer: assignee + controls */}
@@ -546,15 +564,15 @@ export default function GroupDetailPage() {
                                                                                     background: st.bg, border: `1px solid ${st.color}40`, color: st.color, fontWeight: 600,
                                                                                 }}
                                                                             >
-                                                                                <option value="PENDING">⏳ Chờ xử lý</option>
-                                                                                <option value="IN_PROGRESS">🔨 Đang làm</option>
-                                                                                <option value="COMPLETED">✅ Hoàn thành</option>
+                                                                                <option value="PENDING">Chờ xử lý</option>
+                                                                                <option value="IN_PROGRESS">Đang làm</option>
+                                                                                <option value="COMPLETED">Hoàn thành</option>
                                                                             </select>
                                                                         )}
 
                                                                         {/* Non-admin, not their task: read-only badge */}
                                                                         {!canEditStatus && (
-                                                                            <span style={{ fontSize: 10, color: 'var(--text-secondary)', fontStyle: 'italic' }}>🔒 Chỉ xem</span>
+                                                                            <span style={{ fontSize: 10, color: 'var(--text-secondary)', fontStyle: 'italic' }}><ion-icon name="lock-closed-outline" style={{ fontSize: '10px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Chỉ xem</span>
                                                                         )}
 
                                                                         {/* Admin: delete task */}
@@ -562,7 +580,7 @@ export default function GroupDetailPage() {
                                                                             <button onClick={() => handleDeleteTask(t.id)} title="Xóa task" style={{
                                                                                 background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
                                                                                 color: '#f87171', borderRadius: 4, padding: '2px 6px', fontSize: 11, cursor: 'pointer'
-                                                                            }}>🗑️</button>
+                                                                            }}><ion-icon name="trash-outline" style={{ fontSize: '12px' }}></ion-icon></button>
                                                                         )}
                                                                     </div>
                                                                 </div>
@@ -584,9 +602,9 @@ export default function GroupDetailPage() {
             {showAddMember && (
                 <div className="modal-overlay" onClick={closeModal}>
                     <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
-                        <h2 style={{ marginBottom: 4 }}>➕ Thêm / Mời thành viên</h2>
+                        <h2 style={{ marginBottom: 4 }}><ion-icon name="people-outline" style={{ fontSize: '18px', verticalAlign: 'middle', marginRight: 6 }}></ion-icon> Thêm / Mời thành viên</h2>
                         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>Nhập email — tự động thêm nếu đã có tài khoản, hoặc gửi link mời.</p>
-                        {error && <div className="form-error" style={{ marginBottom: 12 }}>⚠️ {error}</div>}
+                        {error && <div className="form-error" style={{ marginBottom: 12 }}>{error}</div>}
                         {successMsg && (
                             <div style={{ padding: 12, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, marginBottom: 12, color: '#34d399', fontSize: 14 }}>
                                 {successMsg}
@@ -594,17 +612,17 @@ export default function GroupDetailPage() {
                         )}
                         {inviteLink && (
                             <div style={{ marginBottom: 16 }}>
-                                <p style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>📋 Copy link mời gửi thủ công:</p>
+                                <p style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}><ion-icon name="link-outline" style={{ fontSize: '12px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Copy link mời gửi thủ công:</p>
                                 <div style={{ display: 'flex', gap: 8 }}>
                                     <input className="form-input" readOnly value={inviteLink} style={{ flex: 1, fontSize: 11 }} onClick={e => (e.target as HTMLInputElement).select()} />
                                     <button className="btn btn-primary" style={{ whiteSpace: 'nowrap', fontSize: 12 }}
-                                        onClick={() => navigator.clipboard.writeText(inviteLink!)}>Copy</button>
+                                        onClick={() => navigator.clipboard.writeText(inviteLink!)}><ion-icon name="copy-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Copy</button>
                                 </div>
                             </div>
                         )}
                         {!successMsg && (
                             <div className="form-group">
-                                <label className="form-label">Email người dùng</label>
+                                <label className="form-label"><ion-icon name="mail-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Email người dùng</label>
                                 <input className="form-input" type="email" value={inviteEmail}
                                     onChange={e => setInviteEmail(e.target.value)}
                                     onKeyDown={e => e.key === 'Enter' && handleAddByEmail()}
@@ -612,10 +630,10 @@ export default function GroupDetailPage() {
                             </div>
                         )}
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-                            <button className="btn" onClick={closeModal}>Đóng</button>
+                            <button className="btn" onClick={closeModal}><ion-icon name="close-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Đóng</button>
                             {!successMsg && (
                                 <button className="btn btn-primary" onClick={handleAddByEmail} disabled={loading}>
-                                    {loading ? '...' : '✔ Xác nhận'}
+                                    {loading ? <><ion-icon name="sync-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> ...</> : <><ion-icon name="checkmark-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Xác nhận</>}
                                 </button>
                             )}
                         </div>
@@ -627,31 +645,31 @@ export default function GroupDetailPage() {
             {showCreateGoal && (
                 <div className="modal-overlay" onClick={() => setShowCreateGoal(false)}>
                     <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
-                        <h2 style={{ marginBottom: 4 }}>🎯 Tạo mục tiêu mới</h2>
+                        <h2 style={{ marginBottom: 4 }}><ion-icon name="locate-outline" style={{ fontSize: '18px', verticalAlign: 'middle', marginRight: 6 }}></ion-icon> Tạo mục tiêu mới</h2>
                         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>AI sẽ tự động chia nhỏ thành các task.</p>
-                        {error && <div className="form-error" style={{ marginBottom: 12 }}>⚠️ {error}</div>}
+                        {error && <div className="form-error" style={{ marginBottom: 12 }}>{error}</div>}
                         <div className="form-group">
-                            <label className="form-label">Tên mục tiêu *</label>
+                            <label className="form-label"><ion-icon name="document-text-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Tên mục tiêu *</label>
                             <input className="form-input" value={goalTitle} onChange={e => setGoalTitle(e.target.value)} placeholder="VD: Sản xuất cà phê tháng 3" autoFocus />
                         </div>
                         <div className="form-group">
-                            <label className="form-label">Sản lượng mục tiêu</label>
+                            <label className="form-label"><ion-icon name="cube-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Sản lượng mục tiêu</label>
                             <input className="form-input" value={goalTarget} onChange={e => setGoalTarget(e.target.value)} placeholder="VD: 3 tấn cà phê" />
                         </div>
                         <div className="form-group">
-                            <label className="form-label">Deadline</label>
+                            <label className="form-label"><ion-icon name="calendar-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Deadline</label>
                             <input className="form-input" type="datetime-local" value={goalDeadline} onChange={e => setGoalDeadline(e.target.value)} />
                         </div>
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16, flexWrap: 'wrap' }}>
-                            <button className="btn" onClick={() => setShowCreateGoal(false)}>Hủy</button>
+                            <button className="btn" onClick={() => setShowCreateGoal(false)}><ion-icon name="close-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Hủy</button>
                             <button className="btn" onClick={() => handleCreateGoal(false)} disabled={loading}
                                 style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 600 }}>
-                                {loading ? '⏳...' : '✍️ Tạo thủ công'}
+                                {loading ? 'Đang tạo...' : <><ion-icon name="hammer-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Tạo thủ công</>}
                             </button>
                             <button className="btn btn-primary" onClick={() => handleCreateGoal(true)} disabled={loading || !trialActive}
                                 title={!trialActive ? 'AI đã hết hạn dùng thử 30 ngày' : `AI miễn phí: còn ${trialDays} ngày`}
                                 style={{ opacity: trialActive ? 1 : 0.5 }}>
-                                {loading ? '⏳ Đang tạo...' : trialActive ? `🤖 AI tạo task (còn ${trialDays} ngày)` : '🤖 AI (hết hạn)'}
+                                {loading ? 'Đang tạo...' : trialActive ? <><ion-icon name="sparkles-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> AI tạo task (còn {trialDays} ngày)</> : <><ion-icon name="lock-closed-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> AI (hết hạn)</>}
                             </button>
                         </div>
                     </div>
@@ -662,7 +680,7 @@ export default function GroupDetailPage() {
             {showAdSettings && (
                 <div className="modal-overlay" onClick={() => setShowAdSettings(false)}>
                     <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
-                        <h2 style={{ marginBottom: 4 }}>📢 Cài đặt Marketplace</h2>
+                        <h2 style={{ marginBottom: 4 }}><ion-icon name="megaphone-outline" style={{ fontSize: '18px', verticalAlign: 'middle', marginRight: 6 }}></ion-icon> Cài đặt Marketplace</h2>
                         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
                             Thông tin này sẽ hiển thị công khai trên Thị trường (Marketplace) để các xưởng khác gửi đơn hàng.
                         </p>
@@ -683,7 +701,7 @@ export default function GroupDetailPage() {
                         {isPublished && (
                             <>
                                 <div className="form-group">
-                                    <label className="form-label">Khu vực (Region)</label>
+                                    <label className="form-label"><ion-icon name="location-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Khu vực (Region)</label>
                                     <select className="form-input" value={adRegion} onChange={e => setAdRegion(e.target.value)}>
                                         <option value="">-- Chọn khu vực --</option>
                                         <option value="Central Highlands">Central Highlands (Tây Nguyên)</option>
@@ -693,20 +711,20 @@ export default function GroupDetailPage() {
                                     </select>
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">Chuyên môn (Specialty)</label>
+                                    <label className="form-label"><ion-icon name="flask-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Chuyên môn (Specialty)</label>
                                     <input className="form-input" value={adSpecialty} onChange={e => setAdSpecialty(e.target.value)} placeholder="VD: Arabica & Robusta Blend" />
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">Năng suất (Capacity)</label>
+                                    <label className="form-label"><ion-icon name="speedometer-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Năng suất (Capacity)</label>
                                     <input className="form-input" value={adCapacity} onChange={e => setAdCapacity(e.target.value)} placeholder="VD: > 500kg/day" />
                                 </div>
                             </>
                         )}
 
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 24 }}>
-                            <button className="btn" onClick={() => setShowAdSettings(false)}>Thoát</button>
+                            <button className="btn" onClick={() => setShowAdSettings(false)}><ion-icon name="close-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Thoát</button>
                             <button className="btn btn-primary" onClick={handleSaveAdSettings} disabled={loading}>
-                                {loading ? '⏳ Đang lưu...' : '💾 Lưu cài đặt'}
+                                {loading ? 'Đang lưu...' : <><ion-icon name="save-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Lưu cài đặt</>}
                             </button>
                         </div>
                     </div>

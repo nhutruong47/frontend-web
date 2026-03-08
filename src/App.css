@@ -952,7 +952,7 @@
 
 .logo-icon {
   font-size: 28px;
-  filter: drop-shadow(0 0 8px rgba(88, 166, 255, 0.3));
+  filter: drop-shadow(0 0 10px rgba(212, 165, 116, 0.5));
 }
 
 .logo-text {
@@ -996,14 +996,17 @@
 }
 
 .nav-item:hover {
-  background: rgba(88, 166, 255, 0.06);
+  background: var(--bg-input);
   color: var(--text-primary);
+  transform: translateX(4px);
+  box-shadow: var(--shadow-sm);
 }
 
 .nav-item.active {
-  background: rgba(88, 166, 255, 0.1);
-  color: #58a6ff;
+  background: linear-gradient(90deg, rgba(212, 165, 116, 0.1) 0%, transparent 100%);
+  color: var(--accent-primary);
   font-weight: 600;
+  text-shadow: 0 0 8px rgba(212, 165, 116, 0.4);
 }
 
 .nav-item.active::before {
@@ -1037,7 +1040,7 @@
 }
 
 .sidebar-user:hover {
-  background: rgba(88, 166, 255, 0.04);
+  background: var(--bg-input);
 }
 
 .sidebar-avatar {
@@ -1052,7 +1055,7 @@
   font-weight: 700;
   font-size: 15px;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(88, 166, 255, 0.2);
+  box-shadow: 0 2px 10px rgba(212, 165, 116, 0.3);
 }
 
 .sidebar-user-info {
@@ -1981,4 +1984,73 @@
   .modal-content {
     width: 95%;
   }
+}
+
+/* ============================================
+   NEW UI ENHANCEMENTS (Glass, Glow, Icons)
+   ============================================ */
+
+/* Glass Panel */
+.glass-panel {
+  background: var(--bg-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  transition: var(--transition);
+}
+
+.glass-panel:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
+/* Icon Container */
+.icon-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: rgba(212, 165, 116, 0.1);
+  color: var(--accent-primary);
+  border: 1px solid rgba(212, 165, 116, 0.2);
+  transition: var(--transition);
+}
+
+body.theme-light .icon-container {
+  background: rgba(122, 79, 43, 0.1);
+  border: 1px solid rgba(122, 79, 43, 0.2);
+}
+
+.icon-container.glow {
+  box-shadow: var(--shadow-glow);
+}
+
+/* Hover Lift */
+.hover-lift {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  border-color: var(--border-focus);
+}
+
+/* Active Glow Text */
+.text-glow-active {
+  text-shadow: 0 0 10px rgba(212, 165, 116, 0.5);
+  color: var(--accent-primary);
+}
+
+body.theme-light .text-glow-active {
+  text-shadow: 0 0 10px rgba(122, 79, 43, 0.3);
+}
+
+/* Neon Text */
+.text-neon {
+  color: var(--accent-primary);
+  text-shadow: 0 0 8px rgba(212, 165, 116, 0.4);
 }
