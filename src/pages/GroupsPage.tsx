@@ -93,57 +93,99 @@ export default function GroupsPage() {
 
     return (
         <div className="page-container">
-            {/* Header */}
-            <div className="page-header">
-                <div>
-                    <h1 className="page-title"><ion-icon name="business-outline" style={{ fontSize: '22px', verticalAlign: 'middle', marginRight: 8 }}></ion-icon> Nhóm xưởng</h1>
-                    <p className="page-subtitle">Bạn đang trong <strong>{teams.length}</strong> nhóm làm việc</p>
-                </div>
-                <button className="btn btn-primary" onClick={() => setShowCreate(true)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px' }}>
-                    <span style={{ fontSize: 18 }}>+</span> Tạo nhóm mới
-                </button>
-            </div>
-
-            {/* === JOIN BY INVITE CODE === */}
-            <div className="glass-panel" style={{
-                background: 'linear-gradient(135deg, rgba(212,156,87,0.1) 0%, rgba(0,0,0,0.2) 100%)',
-                padding: '16px 20px', marginBottom: 20
+            {/* NEW SELECTION FLOW UI */}
+            <div style={{
+                textAlign: 'center', marginBottom: 48, marginTop: 20,
+                display: 'flex', flexDirection: 'column', alignItems: 'center'
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <span className="icon-container glow" style={{ width: 36, height: 36, fontSize: 20 }}><ion-icon name="key-outline"></ion-icon></span>
-                    <div>
-                        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Tham gia bằng mã mời</h3>
-                        <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)' }}>Nhập mã 6 ký tự từ trưởng nhóm để tham gia</p>
+                <h1 style={{ fontSize: 32, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 12 }}>Chào mừng bạn trở lại!</h1>
+                <p style={{ fontSize: 16, color: 'var(--text-secondary)', marginBottom: 40, maxWidth: 600 }}>
+                    Vui lòng chọn vai trò để bắt đầu quản lý công việc và cộng tác cùng đội ngũ của bạn.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 24, width: '100%', maxWidth: 900 }}>
+                    {/* Create Team Card */}
+                    <div className="glass-panel hover-lift" style={{ padding: 32, textAlign: 'left', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <div style={{
+                            width: 56, height: 56, borderRadius: 16, background: 'rgba(99,102,241,0.1)',
+                            color: '#818cf8', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 28, marginBottom: 20
+                        }}>
+                            <ion-icon name="person-add-outline"></ion-icon>
+                        </div>
+                        <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 8px' }}>Tạo nhóm mới</h2>
+                        <div style={{ marginBottom: 16 }}>
+                            <span style={{ fontSize: 11, background: 'rgba(99,102,241,0.15)', color: '#818cf8', padding: '4px 10px', borderRadius: 20, fontWeight: 700 }}>
+                                <ion-icon name="ribbon-outline" style={{ verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Bạn sẽ là Trưởng nhóm
+                            </span>
+                        </div>
+                        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 24, flex: 1 }}>
+                            Thiết lập không gian làm việc mới, mời các thành viên và bắt đầu phân bổ nhiệm vụ với sự hỗ trợ từ AI.
+                        </p>
+                        <button className="btn btn-primary" onClick={() => setShowCreate(true)} style={{ width: '100%', padding: '12px', justifyContent: 'center', background: 'var(--accent-gradient)', color: '#1a1410', border: 'none' }}>
+                            Bắt đầu tạo nhóm <span style={{ marginLeft: 8 }}>→</span>
+                        </button>
+                    </div>
+
+                    {/* Join Team Card */}
+                    <div className="glass-panel hover-lift" style={{ padding: 32, textAlign: 'left', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <div style={{
+                            width: 56, height: 56, borderRadius: 16, background: 'rgba(212,156,87,0.1)',
+                            color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 28, marginBottom: 20
+                        }}>
+                            <ion-icon name="log-in-outline"></ion-icon>
+                        </div>
+                        <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 8px' }}>Tham gia nhóm</h2>
+                        <div style={{ marginBottom: 16 }}>
+                            <span style={{ fontSize: 11, background: 'rgba(212,156,87,0.15)', color: 'var(--accent-primary)', padding: '4px 10px', borderRadius: 20, fontWeight: 700 }}>
+                                <ion-icon name="link-outline" style={{ verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Nhập mã mời để tham gia
+                            </span>
+                        </div>
+                        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 24, flex: 1 }}>
+                            Kết nối với đồng nghiệp thông qua mã được chia sẻ từ Trưởng nhóm để bắt đầu nhận và cập nhật công việc.
+                        </p>
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                className="form-input"
+                                value={joinCode}
+                                onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                                onKeyDown={e => e.key === 'Enter' && handleJoinByCode()}
+                                placeholder="Nhập mã mời..."
+                                maxLength={6}
+                                style={{ padding: '12px 100px 12px 16px', background: 'rgba(0,0,0,0.2)' }}
+                            />
+                            <button
+                                className="btn"
+                                onClick={handleJoinByCode}
+                                disabled={joining || !joinCode.trim()}
+                                style={{
+                                    position: 'absolute', right: 6, top: 6, bottom: 6,
+                                    padding: '0 16px', fontSize: 13, background: 'rgba(255,255,255,0.05)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                {joining ? '...' : 'Tham gia →'}
+                            </button>
+                        </div>
+                        {joinError && <div style={{ marginTop: 8, fontSize: 12, color: '#f87171' }}><ion-icon name="warning-outline" style={{ fontSize: '12px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> {joinError}</div>}
+                        {joinSuccess && <div style={{ marginTop: 8, fontSize: 12, color: '#34d399' }}>{joinSuccess}</div>}
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                    <input
-                        className="form-input"
-                        value={joinCode}
-                        onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                        onKeyDown={e => e.key === 'Enter' && handleJoinByCode()}
-                        placeholder="VD: AB12CD"
-                        maxLength={6}
-                        style={{
-                            flex: 1, fontSize: 16, fontWeight: 700, letterSpacing: 6, textAlign: 'center',
-                            textTransform: 'uppercase',
-                            background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)',
-                            color: 'var(--text-primary)'
-                        }}
-                    />
-                    <button
-                        className="btn btn-primary"
-                        onClick={handleJoinByCode}
-                        disabled={joining || !joinCode.trim()}
-                        style={{ whiteSpace: 'nowrap', padding: '8px 18px', background: 'var(--accent-gradient)', color: '#1a1410', border: 'none', fontWeight: 600 }}
-                    >
-                        {joining ? 'Đang tham gia...' : 'Tham gia'}
-                    </button>
+
+                <div style={{ marginTop: 32, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
+                    <ion-icon name="help-circle-outline"></ion-icon>
+                    <span>Bạn cần hỗ trợ? <a href="#" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>Tìm hiểu thêm về vai trò</a></span>
                 </div>
-                {joinError && <div style={{ marginTop: 8, fontSize: 12, color: '#f87171' }}><ion-icon name="warning-outline" style={{ fontSize: '12px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> {joinError}</div>}
-                {joinSuccess && <div style={{ marginTop: 8, fontSize: 12, color: '#34d399' }}>{joinSuccess}</div>}
             </div>
+
+            {/* Existing Teams List Header */}
+            {teams.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                    <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Nhóm của bạn ({teams.length})</h2>
+                    <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, var(--border), transparent)' }}></div>
+                </div>
+            )}
 
             {/* Empty state */}
             {teams.length === 0 ? (

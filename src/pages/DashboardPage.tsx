@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { teamService, taskService } from '../services/groupService';
-import type { Team, Task } from '../types/types';
+import { teamService, taskService, notificationService } from '../services/groupService';
+import type { Team, Task, AppNotification } from '../types/types';
+import SockJS from 'sockjs-client';
+import { Client } from '@stomp/stompjs';
 
 import { type ReactNode } from 'react';
 
@@ -11,7 +13,12 @@ export default function DashboardPage() {
     const [teams, setTeams] = useState<Team[]>([]);
     const [myTasks, setMyTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
+    const [notifications, setNotifications] = useState<AppNotification[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+    const notifRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
+    const stompRef = useRef<Client | null>(null);
 
     useEffect(() => {
         Promise.all([
@@ -22,7 +29,58 @@ export default function DashboardPage() {
             setMyTasks(tasks);
             setLoading(false);
         });
+        // Load notifications
+        notificationService.getAll().then(setNotifications).catch(() => {});
+        notificationService.getUnreadCount().then(r => setUnreadCount(r.count)).catch(() => {});
     }, [user?.id]);
+
+    // WebSocket for realtime notifications
+    useEffect(() => {
+        if (!user?.id) return;
+        const token = localStorage.getItem('token');
+        const socket = new SockJS(`http://localhost:8080/ws?token=${token}`);
+        const client = new Client({
+            webSocketFactory: () => socket as any,
+            onConnect: () => {
+                client.subscribe(`/topic/user/${user.id}/notifications`, (msg) => {
+                    const notif: AppNotification = JSON.parse(msg.body);
+                    setNotifications(prev => [notif, ...prev]);
+                    setUnreadCount(prev => prev + 1);
+                });
+            },
+        });
+        client.activate();
+        stompRef.current = client;
+        return () => { client.deactivate(); };
+    }, [user?.id]);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifDropdown(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const handleAcceptReject = useCallback(async (taskId: string, accepted: boolean, notifId: string) => {
+        try {
+            await taskService.respondToTask(taskId, accepted);
+            await notificationService.markAsRead(notifId);
+            setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+            // Refresh tasks
+            if (user?.id) {
+                taskService.getMyTasks(user.id).then(setMyTasks).catch(() => {});
+            }
+        } catch (err) { console.error(err); }
+    }, [user?.id]);
+
+    const handleMarkAllRead = useCallback(async () => {
+        await notificationService.markAllRead();
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        setUnreadCount(0);
+    }, []);
 
     const pendingTasks = myTasks.filter(t => t.status === 'PENDING');
     const inProgressTasks = myTasks.filter(t => t.status === 'IN_PROGRESS');
@@ -47,6 +105,99 @@ export default function DashboardPage() {
                 marginBottom: 32,
                 boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
             }}>
+
+                {/* 🔔 Notification Bell - positioned top-right */}
+                <div ref={notifRef} style={{ position: 'absolute', top: 20, right: 28, zIndex: 100 }}>
+                    <button onClick={() => setShowNotifDropdown(p => !p)} style={{
+                        background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12,
+                        padding: '8px 12px', cursor: 'pointer', color: '#fff', fontSize: 20,
+                        display: 'flex', alignItems: 'center', gap: 6, position: 'relative'
+                    }}>
+                        <ion-icon name="notifications-outline" style={{ fontSize: '22px' }}></ion-icon>
+                        {unreadCount > 0 && (
+                            <span style={{
+                                position: 'absolute', top: -4, right: -4,
+                                background: '#f43f5e', color: '#fff', fontSize: 10, fontWeight: 800,
+                                borderRadius: 99, minWidth: 18, height: 18,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                padding: '0 4px', border: '2px solid rgba(0,0,0,0.3)'
+                            }}>{unreadCount > 9 ? '9+' : unreadCount}</span>
+                        )}
+                    </button>
+
+                    {/* Notification Dropdown */}
+                    {showNotifDropdown && (
+                        <div style={{
+                            position: 'absolute', top: 48, right: 0, width: 380,
+                            background: 'var(--bg-secondary, #1e1e2e)', border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                            maxHeight: 420, overflow: 'hidden', display: 'flex', flexDirection: 'column'
+                        }}>
+                            <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <strong style={{ fontSize: 15 }}>Thông báo</strong>
+                                {unreadCount > 0 && (
+                                    <button onClick={handleMarkAllRead} style={{
+                                        background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 12, cursor: 'pointer', fontWeight: 600
+                                    }}>Đánh dấu tất cả đã đọc</button>
+                                )}
+                            </div>
+                            <div style={{ overflowY: 'auto', maxHeight: 360, padding: '4px 0' }}>
+                                {notifications.length === 0 ? (
+                                    <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                                        Không có thông báo mới
+                                    </div>
+                                ) : notifications.slice(0, 20).map(n => (
+                                    <div key={n.id} style={{
+                                        padding: '12px 18px', borderBottom: '1px solid rgba(255,255,255,0.04)',
+                                        background: n.read ? 'transparent' : 'rgba(99,102,241,0.08)',
+                                        transition: 'background 0.2s'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                                            <span style={{
+                                                width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                background: n.type === 'TASK_ASSIGNED' ? 'rgba(99,102,241,0.2)'
+                                                    : n.type === 'TASK_ACCEPTED' ? 'rgba(16,185,129,0.2)' : 'rgba(248,81,73,0.2)',
+                                                color: n.type === 'TASK_ASSIGNED' ? '#818cf8'
+                                                    : n.type === 'TASK_ACCEPTED' ? '#34d399' : '#f87171',
+                                                fontSize: 16
+                                            }}>
+                                                <ion-icon name={n.type === 'TASK_ASSIGNED' ? 'notifications' : n.type === 'TASK_ACCEPTED' ? 'checkmark-circle' : 'close-circle'}></ion-icon>
+                                            </span>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{n.title}</div>
+                                                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{n.message}</div>
+                                                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                                                    {new Date(n.createdAt).toLocaleString('vi-VN')}
+                                                </div>
+                                                {/* Accept / Reject buttons for TASK_ASSIGNED */}
+                                                {n.type === 'TASK_ASSIGNED' && !n.read && n.taskId && (
+                                                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                                                        <button onClick={() => handleAcceptReject(n.taskId, true, n.id)} style={{
+                                                            padding: '5px 14px', borderRadius: 8, border: 'none',
+                                                            background: '#10b981', color: '#fff', fontSize: 12, fontWeight: 700,
+                                                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4
+                                                        }}>
+                                                            <ion-icon name="checkmark" style={{ fontSize: '14px' }}></ion-icon> Nhận việc
+                                                        </button>
+                                                        <button onClick={() => handleAcceptReject(n.taskId, false, n.id)} style={{
+                                                            padding: '5px 14px', borderRadius: 8, border: '1px solid rgba(248,81,73,0.3)',
+                                                            background: 'rgba(248,81,73,0.1)', color: '#f87171', fontSize: 12, fontWeight: 700,
+                                                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4
+                                                        }}>
+                                                            <ion-icon name="close" style={{ fontSize: '14px' }}></ion-icon> Từ chối
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
                 {/* Background Image (Coffee Beans/Roastery) */}
                 <div style={{
                     position: 'absolute', inset: 0,
@@ -248,6 +399,120 @@ export default function DashboardPage() {
                             )}
                         </div>
                     </div>
+                </div>
+
+                {/* ===== CÔNG VIỆC CỦA TÔI — Full Task Summary ===== */}
+                <div className="glass-panel" style={{ padding: 28, marginTop: 28 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                        <h2 className="text-glow-active" style={{ fontSize: 20, margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span className="icon-container glow" style={{ width: 36, height: 36, fontSize: 20 }}><ion-icon name="briefcase-outline"></ion-icon></span>
+                            Công việc của tôi
+                        </h2>
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Tổng hợp tất cả nhiệm vụ được giao</span>
+                    </div>
+
+                    {/* Stats Summary - 3 counters */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+                        <div style={{
+                            textAlign: 'center', padding: '16px 12px', borderRadius: 14,
+                            background: 'rgba(248,160,50,0.1)', border: '1px solid rgba(248,160,50,0.2)'
+                        }}>
+                            <div style={{ fontSize: 32, fontWeight: 800, color: '#f8a032' }}>{inProgressTasks.length}</div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#f8a032', textTransform: 'uppercase', letterSpacing: 1 }}>Đang làm</div>
+                        </div>
+                        <div style={{
+                            textAlign: 'center', padding: '16px 12px', borderRadius: 14,
+                            background: 'rgba(63,185,80,0.1)', border: '1px solid rgba(63,185,80,0.2)'
+                        }}>
+                            <div style={{ fontSize: 32, fontWeight: 800, color: '#3fb950' }}>{completedTasks.length}</div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#3fb950', textTransform: 'uppercase', letterSpacing: 1 }}>Hoàn thành</div>
+                        </div>
+                        <div style={{
+                            textAlign: 'center', padding: '16px 12px', borderRadius: 14,
+                            background: 'rgba(130,80,223,0.1)', border: '1px solid rgba(130,80,223,0.2)'
+                        }}>
+                            <div style={{ fontSize: 32, fontWeight: 800, color: '#8250df' }}>{myTasks.length}</div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#8250df', textTransform: 'uppercase', letterSpacing: 1 }}>Tổng</div>
+                        </div>
+                    </div>
+
+                    {/* Task Table */}
+                    {myTasks.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+                            <div style={{ fontSize: 40, marginBottom: 8, opacity: 0.4 }}><ion-icon name="clipboard-outline"></ion-icon></div>
+                            Bạn chưa được giao nhiệm vụ nào
+                        </div>
+                    ) : (
+                        <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                                        {['Tên công việc', 'Trạng thái', 'Ưu tiên', 'Hạn chót', 'Tiến độ'].map((h, i) => (
+                                            <th key={i} style={{
+                                                padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700,
+                                                color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em',
+                                                borderBottom: '1px solid rgba(255,255,255,0.06)'
+                                            }}>{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {myTasks.map(t => {
+                                        const st = t.status === 'COMPLETED'
+                                            ? { bg: 'rgba(63,185,80,0.15)', color: '#3fb950', label: 'Hoàn thành' }
+                                            : t.status === 'IN_PROGRESS'
+                                                ? { bg: 'rgba(248,160,50,0.15)', color: '#f8a032', label: 'Đang làm' }
+                                                : { bg: 'rgba(130,80,223,0.15)', color: '#8250df', label: 'Chờ xử lý' };
+                                        const pr = (t.priority || 1) >= 3
+                                            ? { bg: 'rgba(248,81,73,0.15)', color: '#f85149', label: 'Cao' }
+                                            : (t.priority || 1) >= 2
+                                                ? { bg: 'rgba(210,153,34,0.15)', color: '#d29922', label: 'Trung bình' }
+                                                : { bg: 'rgba(63,185,80,0.15)', color: '#3fb950', label: 'Thấp' };
+                                        const pct = t.completionPercentage || 0;
+                                        return (
+                                            <tr key={t.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.2s' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                <td style={{ padding: '14px 16px' }}>
+                                                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', marginBottom: 2 }}>{t.title}</div>
+                                                    {t.description && <div style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.description}</div>}
+                                                </td>
+                                                <td style={{ padding: '14px 16px' }}>
+                                                    <span style={{ background: st.bg, color: st.color, padding: '4px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700 }}>{st.label}</span>
+                                                </td>
+                                                <td style={{ padding: '14px 16px' }}>
+                                                    <span style={{ background: pr.bg, color: pr.color, padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>{pr.label}</span>
+                                                </td>
+                                                <td style={{ padding: '14px 16px', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                                                    {t.deadline ? (
+                                                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                            <ion-icon name="time-outline" style={{ fontSize: '13px' }}></ion-icon>
+                                                            {new Date(t.deadline).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                                        </span>
+                                                    ) : '—'}
+                                                </td>
+                                                <td style={{ padding: '14px 16px', minWidth: 140 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                        <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 999, overflow: 'hidden' }}>
+                                                            <div style={{
+                                                                height: '100%', borderRadius: 999,
+                                                                background: pct >= 100 ? '#3fb950' : pct >= 50 ? '#f8a032' : '#8250df',
+                                                                width: `${pct}%`, transition: 'width 0.6s ease',
+                                                                boxShadow: `0 0 8px ${pct >= 100 ? '#3fb95066' : pct >= 50 ? '#f8a03266' : '#8250df66'}`
+                                                            }} />
+                                                        </div>
+                                                        <span style={{ fontSize: 13, fontWeight: 700, color: pct >= 100 ? '#3fb950' : 'var(--text-secondary)', minWidth: 40, textAlign: 'right' }}>
+                                                            {pct >= 100 ? <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}><ion-icon name="checkmark-circle" style={{ fontSize: '14px', color: '#3fb950' }}></ion-icon> 100%</span> : `${pct}%`}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

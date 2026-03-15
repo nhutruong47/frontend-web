@@ -88,6 +88,7 @@ export interface Goal {
     totalTasks: number;
     completedTasks: number;
     createdAt: string;
+    chatLog?: string;
 }
 
 export interface Task {
@@ -100,10 +101,24 @@ export interface Task {
     description: string;
     priority: number;
     status: string; // PENDING / IN_PROGRESS / COMPLETED
+    acceptanceStatus: string; // WAITING / ACCEPTED / REJECTED
+    hourlyRate: number;
     workload: number;
     actualWorkload: number;
     completionPercentage: number;
     deadline: string;
+    createdAt: string;
+}
+
+// === Chat ===
+export interface ChatMsg {
+    id: string;
+    teamId: string;
+    senderId: string;
+    senderName: string;
+    recipientId?: string;
+    recipientName?: string;
+    content: string;
     createdAt: string;
 }
 
@@ -123,4 +138,27 @@ export interface InterGroupOrder {
     createdAt: string;
     buyerTrustScore?: number;
     cancelledBy?: string;
+}
+
+// === Notifications ===
+export interface AppNotification {
+    id: string;
+    title: string;
+    message: string;
+    type: string; // TASK_ASSIGNED / TASK_ACCEPTED / TASK_REJECTED
+    taskId: string;
+    read: boolean;
+    createdAt: string;
+}
+
+// === Salary Report ===
+export interface SalaryReport {
+    memberId: string;
+    memberName: string;
+    totalTasks: number;
+    completedTasks: number;
+    totalWorkload: number;
+    totalActualWorkload: number;
+    hourlyRate: number;
+    estimatedSalary: number;
 }

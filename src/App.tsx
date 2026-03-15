@@ -10,6 +10,7 @@ import ProfilePage from './pages/ProfilePage';
 import OAuth2Callback from './pages/OAuth2Callback';
 import GroupsPage from './pages/GroupsPage';
 import GroupDetailPage from './pages/GroupDetailPage';
+import CreateTaskPage from './pages/CreateTaskPage';
 import InviteAcceptPage from './pages/InviteAcceptPage';
 import MarketplacePage from './pages/MarketplacePage';
 import OrderManagementPage from './pages/OrderManagementPage';
@@ -26,12 +27,14 @@ function App() {
                         <Route path="/register" element={<RegisterPage />} />
                         <Route path="/oauth2/callback" element={<OAuth2Callback />} />
                         <Route path="/invite" element={<InviteAcceptPage />} />
+                        <Route path="/invite/:code" element={<InviteAcceptPage />} />
 
                         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                             <Route path="/dashboard" element={<DashboardPage />} />
                             <Route path="/profile" element={<ProfilePage />} />
                             <Route path="/groups" element={<GroupsPage />} />
                             <Route path="/groups/:id" element={<GroupDetailPage />} />
+                            <Route path="/groups/:id/create-task" element={<CreateTaskPage />} />
                             <Route path="/orders" element={<OrderManagementPage />} />
                             <Route path="/settings" element={<SettingsPage />} />
                         </Route>

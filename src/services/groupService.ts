@@ -1,5 +1,6 @@
 import api from './api';
 import type { Team, Goal, Task } from '../types/types';
+import type { AppNotification, SalaryReport } from '../types/types';
 
 // === Team/Group API ===
 export const teamService = {
@@ -55,6 +56,10 @@ export const taskService = {
         api.patch(`/api/tasks/checklist/${checklistId}/toggle`).then(r => r.data),
     getKpi: (memberId: string) =>
         api.get(`/api/tasks/member/${memberId}/kpi`).then(r => r.data),
+    respondToTask: (taskId: string, accepted: boolean) =>
+        api.patch<Task>(`/api/tasks/${taskId}/respond`, { accepted }).then(r => r.data),
+    getSalaryReport: (teamId: string) =>
+        api.get<SalaryReport[]>(`/api/tasks/salary/${teamId}`).then(r => r.data),
 };
 
 // === Trial Status ===
@@ -72,9 +77,38 @@ export interface AiParseResult {
     priority: string;
     needsClarification: boolean;
     source: string;
+    tasks?: { title: string, description: string, priority: number, workload: number, suggestedAssignee?: string }[];
 }
 
 export const aiService = {
-    parseText: (text: string) =>
-        api.post<AiParseResult>('/api/ai/parse', { text }).then(r => r.data),
+    parseText: (text: string, teamId: string) =>
+        api.post<AiParseResult>('/api/ai/parse', { text, teamId }).then(r => r.data),
+};
+
+// === Chat Service ===
+import type { ChatMsg } from '../types/types';
+
+export const chatService = {
+    getGroupMessages: (teamId: string) =>
+        api.get<ChatMsg[]>(`/api/teams/${teamId}/chat`).then(r => r.data),
+    getDirectMessages: (teamId: string, userId: string) =>
+        api.get<ChatMsg[]>(`/api/teams/${teamId}/chat/dm/${userId}`).then(r => r.data),
+    getDmPreviews: (teamId: string) =>
+        api.get<ChatMsg[]>(`/api/teams/${teamId}/chat/dm-previews`).then(r => r.data),
+    sendMessage: (teamId: string, content: string, recipientId?: string) =>
+        api.post<ChatMsg>(`/api/teams/${teamId}/chat`, { content, recipientId }).then(r => r.data),
+    getOnlineUsers: () =>
+        api.get<string[]>('/api/presence/online').then(r => r.data),
+};
+
+// === Notification Service ===
+export const notificationService = {
+    getAll: () =>
+        api.get<AppNotification[]>('/api/notifications').then(r => r.data),
+    getUnreadCount: () =>
+        api.get<{ count: number }>('/api/notifications/unread-count').then(r => r.data),
+    markAsRead: (id: string) =>
+        api.patch(`/api/notifications/${id}/read`).then(r => r.data),
+    markAllRead: () =>
+        api.patch('/api/notifications/read-all').then(r => r.data),
 };
