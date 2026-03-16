@@ -72,6 +72,24 @@ export interface Team {
 }
 
 // === Goals & Tasks ===
+export interface AiTaskSuggestion {
+    title: string;
+    description: string;
+    workload: number;
+    priority: number;
+    assigneeRole: 'Senior' | 'Junior' | 'Intern';
+}
+
+export interface AiParsedResult {
+    phase: string;
+    mainGoal: string;
+    contingency: string;
+    needsClarification: boolean;
+    description: string;
+    source: string;
+    tasks: AiTaskSuggestion[];
+}
+
 export interface Goal {
     id: string;
     teamId: string;
@@ -81,7 +99,7 @@ export interface Goal {
     title: string;
     outputTarget: string;
     rawInstruction: string;
-    aiParsedData: string;
+    aiParsedData: string; // JSON string of AiParsedResult
     priority: number;
     status: string;
     deadline: string;
@@ -120,6 +138,12 @@ export interface ChatMsg {
     recipientName?: string;
     content: string;
     createdAt: string;
+}
+
+export interface AiChatLogMsg {
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp: string;
 }
 
 // === Inter-Group Orders ===

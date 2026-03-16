@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { teamService, goalService, taskService, getTrialStatus, chatService } from '../services/groupService';
-import type { Team, Goal, Task, ChatMsg, SalaryReport } from '../types/types';
+import type { Team, Goal, Task, ChatMsg, SalaryReport, AiParsedResult, AiChatLogMsg } from '../types/types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
@@ -56,7 +56,7 @@ export default function GroupDetailPage() {
 
     // Chat History
     const [showChatHistory, setShowChatHistory] = useState(false);
-    const [activeChatLog] = useState<any[]>([]);
+    const [activeChatLog] = useState<AiChatLogMsg[]>([]);
     const [activeGoalTitle] = useState('');
 
     // Chat
@@ -295,9 +295,10 @@ export default function GroupDetailPage() {
     });
 
     // Mock line chart data (weekly performance)
-    const weekDays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-    const lineData = weekDays.map((day, i) => {
-        const point: any = { day };
+    const lineData = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(); d.setDate(d.getDate() - (6 - i));
+        const day = d.toLocaleDateString('vi', { weekday: 'short' });
+        const point: Record<string, string | number> = { day };
         memberStats.forEach(m => {
             point[m.fullName || m.username] = Math.round(Math.min(100, Math.max(0, m.pct + (Math.sin(i * 1.5 + m.userId.charCodeAt(0)) * 20))));
         });
@@ -444,6 +445,51 @@ export default function GroupDetailPage() {
                                 <div style={{ height: '100%', background: m.pct === 100 ? '#16a34a' : m.pct > 0 ? '#f59e0b' : '#e2e8f0', borderRadius: 3, width: `${m.pct}%`, transition: 'width 0.4s' }} />
                             </div>
                             <div style={{ fontSize: 11, color: '#94a3b8' }}>{m.completed}/{m.total} công việc</div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* ===== GOAL STRATEGIC OVERVIEW (NEW) ===== */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16, marginBottom: 24 }}>
+                {goals.map(g => {
+                    let aiData: AiParsedResult | null = null;
+                    if (g.aiParsedData) {
+                        try {
+                            // Backend saves as stringified JSON or might look like "{...}"
+                            aiData = JSON.parse(g.aiParsedData);
+                        } catch (e) {
+                            console.error("Failed to parse AI data", e);
+                        }
+                    }
+
+                    if (!aiData) return null;
+
+                    return (
+                        <div key={g.id} style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                            <div style={{ background: '#6366f1', padding: '12px 16px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <ion-icon name="rocket-outline" style={{ fontSize: 18 }}></ion-icon>
+                                    <span style={{ fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kế hoạch AI: {g.title}</span>
+                                </div>
+                                <span style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700 }}>{aiData.phase || 'N/A'}</span>
+                            </div>
+                            <div style={{ padding: 16 }}>
+                                <div style={{ marginBottom: 12 }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>Mục tiêu chính</div>
+                                    <div style={{ fontSize: 14, color: '#1e293b', fontWeight: 600, lineHeight: 1.4 }}>{aiData.mainGoal || 'Chưa xác định'}</div>
+                                </div>
+                                <div style={{ marginBottom: 12 }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>Phương án dự phòng (Contingency)</div>
+                                    <div style={{ fontSize: 13, color: '#ef4444', background: '#fef2f2', padding: '8px 12px', borderRadius: 8, border: '1px solid #fee2e2' }}>
+                                        <ion-icon name="warning-outline" style={{ verticalAlign: 'middle', marginRight: 4 }}></ion-icon>
+                                        {aiData.contingency || 'Theo kế hoạch tiêu chuẩn'}
+                                    </div>
+                                </div>
+                                <div style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic', lineHeight: 1.4, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
+                                    "{aiData.description || 'Đã phân tích và chia nhỏ nhiệm vụ dựa trên nguồn lực hiện có.'}"
+                                </div>
+                            </div>
                         </div>
                     );
                 })}
