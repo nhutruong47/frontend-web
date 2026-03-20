@@ -1,5 +1,5 @@
 import api from './api';
-import type { Team, Goal, Task } from '../types/types';
+import type { Team, Goal, Task, InventoryItem } from '../types/types';
 import type { AppNotification, SalaryReport } from '../types/types';
 
 // === Team/Group API ===
@@ -13,6 +13,8 @@ export const teamService = {
         api.post<{ status: string; message: string; inviteLink?: string }>(`/api/teams/${teamId}/members`, { email }).then(r => r.data),
     removeMember: (teamId: string, userId: string) =>
         api.delete(`/api/teams/${teamId}/members/${userId}`),
+    updateMemberLabels: (teamId: string, userId: string, labels: string[]) =>
+        api.put<string[]>(`/api/teams/${teamId}/members/${userId}/labels`, { labels }).then(r => r.data),
     deleteTeam: (id: string) => api.delete(`/api/teams/${id}`),
     joinByCode: (inviteCode: string) =>
         api.post<Team>('/api/teams/join', { inviteCode }).then(r => r.data),
@@ -62,6 +64,17 @@ export const taskService = {
         api.get<SalaryReport[]>(`/api/tasks/salary/${teamId}`).then(r => r.data),
 };
 
+// === Inventory API ===
+export const inventoryService = {
+    getByTeam: (teamId: string) =>
+        api.get<InventoryItem[]>(`/api/inventory?teamId=${teamId}`).then(r => r.data),
+    create: (data: Partial<InventoryItem>) =>
+        api.post<InventoryItem>('/api/inventory', data).then(r => r.data),
+    updateQuantity: (id: string, quantity: number) =>
+        api.patch<InventoryItem>(`/api/inventory/${id}/quantity`, { quantity }).then(r => r.data),
+    delete: (id: string) => api.delete(`/api/inventory/${id}`),
+};
+
 // === Trial Status ===
 export const getTrialStatus = () =>
     api.get<{ aiTrialActive: boolean; daysRemaining: number }>('/api/auth/trial-status').then(r => r.data);
@@ -77,7 +90,7 @@ export interface AiParseResult {
     priority: string;
     needsClarification: boolean;
     source: string;
-    tasks?: { title: string, description: string, priority: number, workload: number, suggestedAssignee?: string }[];
+    tasks?: { title: string, description: string, priority: number, workload: number, suggestedAssignee?: string, assignee?: string, assigneeRole?: string }[];
 }
 
 export const aiService = {

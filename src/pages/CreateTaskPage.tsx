@@ -112,7 +112,8 @@ export default function CreateTaskPage() {
                 deadline: result.deadline || undefined,
                 priority: result.priority?.toLowerCase() === 'high' ? 3 : result.priority?.toLowerCase() === 'low' ? 1 : 2,
                 useAi: true,
-                chatLog: JSON.stringify(messages)
+                chatLog: JSON.stringify(messages),
+                tasks: result.tasks || []
             } as any);
             
             // Navigate back to group after creating
@@ -136,7 +137,7 @@ export default function CreateTaskPage() {
         const assigneeMap = new Map<string, { workload: number, tasks: any[] }>();
         if (previewResult.tasks) {
             previewResult.tasks.forEach(t => {
-                const assignee = t.suggestedAssignee || 'Chưa phân công';
+                const assignee = t.assignee || t.suggestedAssignee || 'Chưa phân công';
                 if (!assigneeMap.has(assignee)) {
                     assigneeMap.set(assignee, { workload: 0, tasks: [] });
                 }
@@ -149,32 +150,84 @@ export default function CreateTaskPage() {
         const totalWorkload = assigneesList.reduce((sum, a) => sum + a.workload, 0) || 1; // avoid div by 0
 
         const renderTaskList = () => {
-            if (!previewResult.tasks || previewResult.tasks.length === 0) return null;
+            if (!previewResult.tasks) return null;
             return (
                 <div style={{ marginBottom: 32, borderTop: '1px solid #f1f5f9', paddingTop: 24 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                        <ion-icon name="list-outline" style={{ color: '#6366f1', fontSize: 20 }}></ion-icon>
-                        <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1e293b' }}>Danh sách nhiệm vụ chi tiết ({previewResult.tasks.length})</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <ion-icon name="list-outline" style={{ color: '#6366f1', fontSize: 20 }}></ion-icon>
+                            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1e293b' }}>Danh sách nhiệm vụ chi tiết ({previewResult.tasks.length})</h3>
+                        </div>
+                        <button onClick={() => {
+                            const newTasks = [...(previewResult.tasks || [])];
+                            newTasks.push({ title: 'Nhiệm vụ mới', description: 'Mô tả nhiệm vụ', workload: 0, priority: 2 });
+                            setPreviewResult({...previewResult, tasks: newTasks});
+                        }} style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <ion-icon name="add-circle-outline"></ion-icon> Thêm nhiệm vụ
+                        </button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {previewResult.tasks.map((task, i) => (
-                            <div key={i} style={{ background: '#f8fafc', padding: '14px 18px', borderRadius: 10, border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.2s' }}>
-                                <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                                    <div style={{ minWidth: 28, height: 28, background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#64748b', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                            <div key={i} style={{ background: '#fff', padding: '14px 18px', borderRadius: 10, border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.2s', position: 'relative' }}>
+                                <div style={{ display: 'flex', gap: 14, alignItems: 'center', flex: 1 }}>
+                                    <div style={{ minWidth: 28, height: 28, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#64748b' }}>
                                         {i+1}
                                     </div>
-                                    <div>
-                                        <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', marginBottom: 2 }}>{task.title}</div>
-                                        <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.4 }}>{task.description}</div>
+                                    <div style={{ flex: 1 }}>
+                                        <input 
+                                            value={task.title} 
+                                            onChange={e => {
+                                                const newTasks = [...(previewResult.tasks || [])];
+                                                newTasks[i] = { ...newTasks[i], title: e.target.value };
+                                                setPreviewResult({...previewResult, tasks: newTasks});
+                                            }}
+                                            style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#1e293b', border: 'none', background: 'transparent', width: '100%', outline: 'none', padding: '1px 0' }}
+                                        />
+                                        <input 
+                                            value={task.description} 
+                                            onChange={e => {
+                                                const newTasks = [...(previewResult.tasks || [])];
+                                                newTasks[i] = { ...newTasks[i], description: e.target.value };
+                                                setPreviewResult({...previewResult, tasks: newTasks});
+                                            }}
+                                            style={{ margin: 0, fontSize: 12, color: '#64748b', border: 'none', background: 'transparent', width: '100%', outline: 'none', fontStyle: 'italic' }} 
+                                        />
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexShrink: 0 }}>
                                     <div style={{ textAlign: 'right' }}>
-                                        <div style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.02em', marginBottom: 2 }}>Phân công</div>
-                                        <div style={{ fontSize: 12, fontWeight: 700, color: '#6366f1' }}>{task.suggestedAssignee || '—'}</div>
+                                        <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 2 }}>Phân công</div>
+                                        <input 
+                                            value={task.assignee || task.suggestedAssignee || ''} 
+                                            onChange={e => {
+                                                const newTasks = [...(previewResult.tasks || [])];
+                                                newTasks[i] = { ...newTasks[i], assignee: e.target.value };
+                                                setPreviewResult({...previewResult, tasks: newTasks});
+                                            }}
+                                            placeholder="..."
+                                            style={{ fontSize: 11, fontWeight: 800, color: '#6366f1', border: 'none', background: 'transparent', textAlign: 'right', width: 80, outline: 'none' }}
+                                        />
                                     </div>
-                                    <div style={{ background: '#eef2ff', color: '#6366f1', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800 }}>
-                                        {task.workload}%
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <input 
+                                            type="number" 
+                                            value={task.workload || 0} 
+                                            onChange={e => {
+                                                const newTasks = [...(previewResult.tasks || [])];
+                                                newTasks[i] = { ...newTasks[i], workload: Number(e.target.value) };
+                                                setPreviewResult({...previewResult, tasks: newTasks});
+                                            }}
+                                            style={{ width: 40, border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 10, padding: '2px 4px', textAlign: 'center' }} 
+                                        />
+                                        <button 
+                                            onClick={() => {
+                                                const newTasks = (previewResult.tasks || []).filter((_, idx) => idx !== i);
+                                                setPreviewResult({...previewResult, tasks: newTasks});
+                                            }}
+                                            style={{ background: '#fef2f2', border: '1px solid #fee2e2', color: '#ef4444', borderRadius: 4, width: 24, height: 24, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                        >
+                                            <ion-icon name="close-outline"></ion-icon>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -187,7 +240,7 @@ export default function CreateTaskPage() {
         const renderAssignments = () => {
             if (assigneesList.length === 0) return null;
             return (
-                <div style={{ marginTop: 24, paddingBottom: 32 }}>
+                <div style={{ marginTop: 24, paddingBottom: 32, borderTop: '1px solid #f1f5f9', paddingTop: 24 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                         <ion-icon name="flash" style={{ color: '#d97706', fontSize: 20 }}></ion-icon>
                         <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1e293b' }}>Tổng hợp phân bổ nhân sự</h3>
@@ -196,47 +249,38 @@ export default function CreateTaskPage() {
                     <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 16 }}>
                         {assigneesList.map((assignee, idx) => {
                             const ratio = Math.min(100, Math.round((assignee.workload / totalWorkload) * 100));
-                            // Simple mock matching scores & roles based on index for demo purposes
-                            const matchingScore = [88, 75, 92, 64][idx % 4];
-                            const roles = ['Chuyên viên', 'Vận hành', 'Kiểm soát chất lượng', 'Bảo trì'];
+                            const matchingScore = 100;
                             const reason = assignee.tasks.map(t => t.title).join(', ');
                             
                             return (
-                                <div key={idx} style={{ minWidth: 260, flexShrink: 0, background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                                            <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#ede9fe', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16 }}>
+                                <div key={idx} style={{ minWidth: 260, flexShrink: 0, background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: 20 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                                        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                            <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#ede9fe', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>
                                                 {assignee.name.charAt(0).toUpperCase()}
                                             </div>
                                             <div>
-                                                <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b', marginBottom: 2 }}>{assignee.name}</div>
-                                                <div style={{ fontSize: 12, color: '#64748b' }}>{roles[idx % roles.length]}</div>
+                                                <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b' }}>{assignee.name}</div>
+                                                <div style={{ fontSize: 11, color: '#64748b' }}>Phân công AI</div>
                                             </div>
                                         </div>
-                                        <div style={{ fontSize: 13, fontWeight: 700, color: '#d97706' }}>{matchingScore}%</div>
+                                        <div style={{ fontSize: 12, fontWeight: 700, color: '#10b981' }}><ion-icon name="checkmark-circle"></ion-icon> Khớp</div>
                                     </div>
-                                    
-                                    <div style={{ marginBottom: 16 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 12, fontWeight: 600, color: '#8b5cf6', marginBottom: 6 }}>
-                                            Khối lượng {ratio}%
+                                    <div style={{ marginBottom: 12 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>
+                                            <span>Khối lượng:</span>
+                                            <span>{assignee.workload.toFixed(1)}</span>
                                         </div>
-                                        <div style={{ height: 6, background: '#f1f5f9', borderRadius: 3, overflow: 'hidden' }}>
-                                            <div style={{ height: '100%', width: `${ratio}%`, background: '#8b5cf6', borderRadius: 3 }}></div>
+                                        <div style={{ height: 4, background: '#f1f5f9', borderRadius: 2, overflow: 'hidden' }}>
+                                            <div style={{ height: '100%', width: `${ratio}%`, background: '#8b5cf6', borderRadius: 2 }}></div>
                                         </div>
                                     </div>
-                                    
-                                    <div style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic', lineHeight: 1.5 }}>
-                                        "Phù hợp nhất để phụ trách: {reason}"
+                                    <div style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {reason}
                                     </div>
                                 </div>
                             );
                         })}
-                        
-                        {/* Add Member Mock Card */}
-                        <div style={{ minWidth: 220, flexShrink: 0, borderRadius: 12, border: '2px dashed #cbd5e1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', cursor: 'pointer', background: '#f8fafc', transition: 'all 0.2s', minHeight: 180 }}>
-                            <ion-icon name="add" style={{ fontSize: 24, marginBottom: 8 }}></ion-icon>
-                            <span style={{ fontSize: 13, fontWeight: 600 }}>Thêm thành viên</span>
-                        </div>
                     </div>
                 </div>
             );
@@ -423,13 +467,13 @@ export default function CreateTaskPage() {
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 16, alignItems: 'center', marginBottom: 32 }}>
-                            <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Kỹ năng</div>
+                            <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Nhân sự</div>
                             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                {['VẬN HÀNH MÁY SẤY', 'KIỂM SOÁT CHẤT LƯỢNG', 'AN TOÀN LAO ĐỘNG'].map(skill => (
-                                    <span key={skill} style={{ background: '#ede9fe', color: '#7c3aed', padding: '4px 12px', borderRadius: 16, fontSize: 11, fontWeight: 700 }}>
-                                        {skill}
+                                {team?.members?.map((m: any) => (
+                                    <span key={m.userId} style={{ background: '#ede9fe', color: '#7c3aed', padding: '4px 12px', borderRadius: 16, fontSize: 11, fontWeight: 700 }}>
+                                        {m.fullName || m.username}{m.jobLabels?.length ? ` (${m.jobLabels.join(', ')})` : ''}
                                     </span>
-                                ))}
+                                )) || <span style={{ color: '#94a3b8' }}>—</span>}
                             </div>
                         </div>
 
@@ -564,6 +608,52 @@ export default function CreateTaskPage() {
                             ))}
                         </div>
                     </div>
+
+                    {/* Team Members with Job Labels */}
+                    {team.members && team.members.length > 0 && (
+                        <div style={{ marginTop: 24, borderTop: '1px solid var(--border)', paddingTop: 20 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                                <ion-icon name="people-outline" style={{ color: '#6366f1', fontSize: 18 }}></ion-icon>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Thành viên nhóm ({team.members.length})</span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                {team.members.map((m: any) => {
+                                    const initials = (m.fullName || m.username || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+                                    const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6'];
+                                    let hash = 0;
+                                    for (const c of (m.username || '')) hash = (hash * 31 + c.charCodeAt(0)) % colors.length;
+                                    const bgColor = colors[hash];
+                                    return (
+                                        <div key={m.userId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--bg-primary)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: bgColor, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                                                {initials}
+                                            </div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {m.fullName || m.username}
+                                                </div>
+                                                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                                                    {m.jobLabels && m.jobLabels.length > 0 ? (
+                                                        m.jobLabels.map((label: string, idx: number) => (
+                                                            <span key={idx} style={{ background: '#ede9fe', color: '#7c3aed', padding: '2px 8px', borderRadius: 12, fontSize: 10, fontWeight: 700 }}>
+                                                                {label}
+                                                            </span>
+                                                        ))
+                                                    ) : (
+                                                        <span style={{ fontSize: 10, color: '#94a3b8', fontStyle: 'italic' }}>Chưa gán nhãn</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 10, lineHeight: 1.5 }}>
+                                <ion-icon name="information-circle-outline" style={{ fontSize: 12, verticalAlign: 'middle' }}></ion-icon>{' '}
+                                AI sẽ tự động phân công dựa trên nhãn dán công việc.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Right Panel: AI Chat interface OR Preview */}
@@ -615,67 +705,163 @@ export default function CreateTaskPage() {
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                                    width: '100%'
                                 }}>
-                                    <div style={{
-                                        maxWidth: '75%',
-                                        padding: '14px 18px',
-                                        borderRadius: '20px',
-                                        borderBottomRightRadius: msg.role === 'user' ? '4px' : '20px',
-                                        borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : '20px',
-                                        background: msg.role === 'user' ? '#8b5cf6' : '#f1f5f9',
-                                        color: msg.role === 'user' ? '#fff' : '#334155',
-                                        fontSize: '15px',
-                                        lineHeight: '1.6',
-                                    }}>
-                                        {msg.content}
-                                    </div>
-
-                                    {/* AI Parsed Result UI Container */}
-                                    {msg.result && (
+                                    {msg.role === 'user' ? (
                                         <div style={{
-                                            marginTop: '12px',
-                                            width: '100%',
                                             maxWidth: '75%',
-                                            background: '#ffffff',
-                                            border: '1px solid #e2e8f0',
-                                            borderRadius: '16px',
-                                            padding: '20px',
-                                            alignSelf: 'flex-start',
-                                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+                                            padding: '14px 18px',
+                                            borderRadius: '20px',
+                                            borderBottomRightRadius: '4px',
+                                            background: '#8b5cf6',
+                                            color: '#fff',
+                                            fontSize: '15px',
+                                            lineHeight: '1.6',
                                         }}>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: 14 }}>
-                                                <div>
-                                                    <span style={{ color: '#64748b', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tiêu đề</span>
-                                                    <div style={{ fontWeight: 600, color: '#1e293b', marginTop: 4 }}>{msg.result.title || '—'}</div>
+                                            {msg.content}
+                                        </div>
+                                    ) : msg.result ? (
+                                        /* Rich Layout for AI Result to match Mockup */
+                                        <div style={{
+                                            width: '100%',
+                                            background: '#f8fafc', // Light grey container back
+                                            borderRadius: '16px',
+                                            padding: '24px',
+                                            alignSelf: 'flex-start',
+                                            border: '1px solid #e2e8f0',
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                            marginBottom: 8
+                                        }}>
+                                            {/* 1. Summary Description */}
+                                            {msg.result.description && (
+                                                <div style={{ marginBottom: '24px', color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>
+                                                    {msg.result.description}
                                                 </div>
-                                                <div>
-                                                    <span style={{ color: '#64748b', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Khối lượng</span>
-                                                    <div style={{ fontWeight: 600, color: '#3b82f6', marginTop: 4 }}>{msg.result.quantity || '—'}</div>
-                                                </div>
-                                                <div>
-                                                    <span style={{ color: '#64748b', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Hạn chót</span>
-                                                    <div style={{ fontWeight: 600, color: '#ef4444', marginTop: 4 }}>{msg.result.deadline || '—'}</div>
-                                                </div>
-                                                <div>
-                                                    <span style={{ color: '#64748b', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Mức ưu tiên</span>
-                                                    <div style={{ fontWeight: 600, color: '#f59e0b', marginTop: 4 }}>{priority}</div>
-                                                </div>
-                                            </div>
-
-                                            {!msg.result.needsClarification && (
-                                                <button
-                                                    onClick={() => handleCreateGoal(msg.result!)}
-                                                    style={{
-                                                        marginTop: 20, width: '100%', padding: '12px',
-                                                        background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)',
-                                                        color: '#8b5cf6', fontWeight: 700, fontSize: 14, borderRadius: 10,
-                                                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                >
-                                                    <ion-icon name="checkmark-circle-outline" style={{ fontSize: '18px' }}></ion-icon> Xác nhận & Tạo Công Việc
-                                                </button>
                                             )}
+
+                                            {/* 2. Member Grid */}
+                                            {msg.result.tasks && msg.result.tasks.length > 0 && (
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                                                    {(() => {
+                                                        const assigneeMap = new Map<string, string[]>();
+                                                        msg.result!.tasks!.forEach(t => {
+                                                            const assignee = t.assignee || t.suggestedAssignee || 'Chưa phân công';
+                                                            if (!assigneeMap.has(assignee)) assigneeMap.set(assignee, []);
+                                                            assigneeMap.get(assignee)!.push(t.description || t.title);
+                                                        });
+                                                        
+                                                        return Array.from(assigneeMap.entries()).map(([assignee, tasks]) => {
+                                                            const member = team?.members?.find((m: any) => m.username === assignee || m.fullName === assignee);
+                                                            const jobLabels = member?.jobLabels || [];
+                                                            const initials = assignee.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+                                                            const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6'];
+                                                            let hash = 0;
+                                                            for (const c of assignee) hash = (hash * 31 + c.charCodeAt(0)) % colors.length;
+                                                            const bgColor = colors[hash];
+
+                                                            return (
+                                                                <div key={assignee} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                            <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#e0f2fe', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700 }}>
+                                                                                {initials}
+                                                                            </div>
+                                                                            <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '14px' }}>{assignee}</div>
+                                                                        </div>
+                                                                        {jobLabels.length > 0 && (
+                                                                            <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '12px', background: '#e0f2fe', color: '#0284c7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                                                                                {jobLabels[0]}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div style={{ fontSize: '12px', color: '#64748b', lineHeight: '1.5', marginTop: '4px' }}>
+                                                                        {tasks.map((task, idx) => (
+                                                                            <div key={idx} style={{ marginBottom: tasks.length > 1 ? '4px' : '0' }}>
+                                                                                • {task}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        });
+                                                    })()}
+                                                </div>
+                                            )}
+
+                                            {/* 3. Goal Details Summary Box */}
+                                            <div style={{
+                                                background: '#ffffff',
+                                                border: '1px solid #e2e8f0',
+                                                borderRadius: '16px',
+                                                padding: '20px',
+                                                boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                                            }}>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', fontSize: 13 }}>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tiêu đề</span>
+                                                        <div style={{ fontWeight: 600, color: '#1e293b', marginTop: 4 }}>{msg.result.title || '—'}</div>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Khối lượng</span>
+                                                        <div style={{ fontWeight: 600, color: '#3b82f6', marginTop: 4 }}>{msg.result.quantity || '—'}</div>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Hạn chót</span>
+                                                        <div style={{ fontWeight: 600, color: '#ef4444', marginTop: 4 }}>{msg.result.deadline || '—'}</div>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#94a3b8', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Mức ưu tiên</span>
+                                                        <div style={{ fontWeight: 600, color: '#f59e0b', marginTop: 4 }}>{priority}</div>
+                                                    </div>
+                                                </div>
+
+                                                {!msg.result.needsClarification && (
+                                                    <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
+                                                        <button
+                                                            onClick={() => {
+                                                                // To reject, we can just clear msg.result or do nothing.
+                                                                // For now, let's just clear previewResult to exit any overlay if it is somehow stuck, or show a cancel note.
+                                                                alert('Đã từ chối kế hoạch này. Bạn có thể mô tả lại yêu cầu khác.');
+                                                            }}
+                                                            style={{
+                                                                flex: 1, padding: '12px',
+                                                                background: '#ffffff', border: '1px solid #cbd5e1',
+                                                                color: '#64748b', fontWeight: 600, fontSize: 14, borderRadius: 10,
+                                                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                                                transition: 'all 0.2s'
+                                                            }}
+                                                        >
+                                                            <ion-icon name="close-circle-outline" style={{ fontSize: '18px' }}></ion-icon> Từ chối
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleCreateGoal(msg.result!)}
+                                                            style={{
+                                                                flex: 2, padding: '12px',
+                                                                background: '#8b5cf6', border: 'none',
+                                                                color: '#ffffff', fontWeight: 700, fontSize: 14, borderRadius: 10,
+                                                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                                                transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(139,92,246,0.1)'
+                                                            }}
+                                                        >
+                                                            <ion-icon name="checkmark-circle-outline" style={{ fontSize: '18px' }}></ion-icon> Xác nhận & Tạo Công Việc
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        /* Assistant Message standard fallback */
+                                        <div style={{
+                                            maxWidth: '75%',
+                                            padding: '14px 18px',
+                                            borderRadius: '20px',
+                                            borderBottomLeftRadius: '4px',
+                                            background: '#f1f5f9',
+                                            color: '#334155',
+                                            fontSize: '15px',
+                                            lineHeight: '1.6',
+                                        }}>
+                                            {msg.content}
                                         </div>
                                     )}
                                 </div>

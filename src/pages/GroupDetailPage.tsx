@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { teamService, goalService, taskService, getTrialStatus, chatService } from '../services/groupService';
-import type { Team, Goal, Task, ChatMsg, SalaryReport, AiParsedResult, AiChatLogMsg } from '../types/types';
+import { teamService, goalService, taskService, getTrialStatus, chatService, inventoryService } from '../services/groupService';
+import type { Team, Goal, Task, ChatMsg, SalaryReport, AiParsedResult, AiChatLogMsg, InventoryItem } from '../types/types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
@@ -59,6 +59,25 @@ export default function GroupDetailPage() {
     const [activeChatLog] = useState<AiChatLogMsg[]>([]);
     const [activeGoalTitle] = useState('');
 
+    // Job Labels
+    const [showLabelModal, setShowLabelModal] = useState(false);
+    const [selectedMemberForLabels, setSelectedMemberForLabels] = useState<any>(null);
+    const [editingLabels, setEditingLabels] = useState<string>('');
+
+    // Inventory
+    const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+    const [showAddInventory, setShowAddInventory] = useState(false);
+    const [invName, setInvName] = useState('');
+    const [invQty, setInvQty] = useState('');
+    const [invUnit, setInvUnit] = useState('');
+    const [invThreshold, setInvThreshold] = useState('');
+    // For updating quantity inline
+    const [updatingInvId, setUpdatingInvId] = useState<string | null>(null);
+    const [updateInvQty, setUpdateInvQty] = useState('');
+
+    // Task Filtering
+    const [taskFilter, setTaskFilter] = useState<'my' | 'all'>('my');
+
     // Chat
     const [chatTab, setChatTab] = useState<'group' | 'dm'>('group');
     const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
@@ -90,6 +109,7 @@ export default function GroupDetailPage() {
                 .then(taskArrays => setAllTasks(taskArrays.flat()))
                 .catch(() => { });
         }).catch(() => { });
+        inventoryService.getByTeam(id).then(setInventoryItems).catch(() => { });
         getTrialStatus().then(s => { setTrialActive(s.aiTrialActive); setTrialDays(s.daysRemaining); }).catch(() => { });
     }, [id]);
 
@@ -269,6 +289,66 @@ export default function GroupDetailPage() {
         try { await teamService.deleteTeam(team.id); navigate('/groups'); } catch (e: any) { alert(e?.response?.data?.error || 'Lỗi'); }
     };
 
+    const handleSaveLabels = async () => {
+        if (!team || !selectedMemberForLabels) return;
+        setLoading(true);
+        try {
+            const labelArray = editingLabels.split(',').map(l => l.trim()).filter(l => l.length > 0);
+            const updatedLabels = await teamService.updateMemberLabels(team.id, selectedMemberForLabels.userId, labelArray);
+            
+            // Cập nhật state ui cho team member
+            setTeam(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    members: prev.members?.map(m => m.userId === selectedMemberForLabels.userId ? { ...m, jobLabels: updatedLabels } : m)
+                };
+            });
+            setShowLabelModal(false);
+        } catch (e: any) {
+            alert(e?.response?.data?.error || 'Lỗi khi lưu nhãn dán');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAddInventory = async () => {
+        if (!id || !invName.trim() || !invQty) return;
+        setLoading(true);
+        try {
+            await inventoryService.create({
+                teamId: id,
+                name: invName,
+                quantity: Number(invQty),
+                unit: invUnit || 'Cái',
+                lowStockThreshold: Number(invThreshold) || 10
+            });
+            const items = await inventoryService.getByTeam(id);
+            setInventoryItems(items);
+            setInvName(''); setInvQty(''); setInvUnit(''); setInvThreshold(''); setShowAddInventory(false);
+        } catch (e: any) { alert(e?.response?.data?.error || 'Lỗi thêm hàng'); } finally { setLoading(false); }
+    };
+
+    const handleUpdateInvQty = async (invId: string) => {
+        if (!id || !updateInvQty) return;
+        setLoading(true);
+        try {
+            await inventoryService.updateQuantity(invId, Number(updateInvQty));
+            const items = await inventoryService.getByTeam(id);
+            setInventoryItems(items);
+            setUpdatingInvId(null); setUpdateInvQty('');
+        } catch (e: any) { alert(e?.response?.data?.error || 'Lỗi cập nhật số lượng'); } finally { setLoading(false); }
+    };
+
+    const handleDeleteInventory = async (invId: string) => {
+        if (!confirm('Xóa mặt hàng này khỏi kho?')) return;
+        try {
+            await inventoryService.delete(invId);
+            const items = await inventoryService.getByTeam(id!);
+            setInventoryItems(items);
+        } catch (e: any) { alert(e?.response?.data?.error || 'Lỗi xóa hàng'); }
+    };
+
     if (!team) return (
         <div className="page-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
             <div style={{ textAlign: 'center', opacity: 0.5 }}>
@@ -441,6 +521,25 @@ export default function GroupDetailPage() {
                                 </div>
                                 <div style={{ marginLeft: 'auto', fontSize: 18, fontWeight: 800, color: m.pct === 100 ? '#16a34a' : m.pct > 0 ? '#f59e0b' : '#94a3b8' }}>{m.pct}%</div>
                             </div>
+                            
+                            {/* Tags / Job Labels */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12, minHeight: 24 }}>
+                                {m.jobLabels && m.jobLabels.length > 0 ? (
+                                    m.jobLabels.map((lbl: string, i: number) => (
+                                        <span key={i} style={{ background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, border: '1px solid #c7d2fe' }}>
+                                            {lbl}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <span style={{ fontSize: 11, color: '#cbd5e1', fontStyle: 'italic' }}>Chưa có nhãn</span>
+                                )}
+                                {isAdmin && (
+                                    <button onClick={() => { setSelectedMemberForLabels(m); setEditingLabels(m.jobLabels?.join(', ') || ''); setShowLabelModal(true); }} style={{ background: 'none', border: '1px dashed #cbd5e1', color: '#94a3b8', borderRadius: 6, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 12 }}>
+                                        <ion-icon name="pencil"></ion-icon>
+                                    </button>
+                                )}
+                            </div>
+
                             <div style={{ height: 6, background: '#f1f5f9', borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
                                 <div style={{ height: '100%', background: m.pct === 100 ? '#16a34a' : m.pct > 0 ? '#f59e0b' : '#e2e8f0', borderRadius: 3, width: `${m.pct}%`, transition: 'width 0.4s' }} />
                             </div>
@@ -486,8 +585,8 @@ export default function GroupDetailPage() {
                                         {aiData.contingency || 'Theo kế hoạch tiêu chuẩn'}
                                     </div>
                                 </div>
-                                <div style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic', lineHeight: 1.4, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
-                                    "{aiData.description || 'Đã phân tích và chia nhỏ nhiệm vụ dựa trên nguồn lực hiện có.'}"
+                                <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, borderTop: '1px solid #f1f5f9', paddingTop: 10, whiteSpace: 'pre-wrap', fontFamily: 'monospace', overflowX: 'auto' }}>
+                                    {aiData.description || 'Đã phân tích và chia nhỏ nhiệm vụ dựa trên nguồn lực hiện có.'}
                                 </div>
                             </div>
                         </div>
@@ -497,13 +596,79 @@ export default function GroupDetailPage() {
 
             {/* ===== TASK TABLE ===== */}
             <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 24 }}>
-                <div style={{ padding: '16px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#1e293b' }}>CÔNG VIỆC ({totalTasks})</h3>
-                    {isAdmin && (
-                        <button onClick={() => { if (!selectedGoalId && goals.length > 0) setSelectedGoalId(goals[0].id); setShowAddTask(!showAddTask); }} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <ion-icon name="add"></ion-icon> Thêm mới
+                <div style={{ padding: '16px 24px', borderBottom: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1e293b' }}>
+                            <ion-icon name="list-outline" style={{ verticalAlign: 'middle', marginRight: 6, color: '#6366f1' }}></ion-icon>
+                            CÔNG VIỆC
+                        </h3>
+                        {isAdmin && (
+                            <button onClick={() => { if (!selectedGoalId && goals.length > 0) setSelectedGoalId(goals[0].id); setShowAddTask(!showAddTask); }} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <ion-icon name="add"></ion-icon> Thêm mới
+                            </button>
+                        )}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button 
+                            onClick={() => setTaskFilter('my')}
+                            style={{ 
+                                padding: '8px 16px', 
+                                borderRadius: 10, 
+                                fontSize: 13, 
+                                fontWeight: 700, 
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                border: 'none',
+                                background: taskFilter === 'my' ? '#6366f1' : '#f1f5f9',
+                                color: taskFilter === 'my' ? '#fff' : '#64748b',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6
+                            }}
+                        >
+                            <ion-icon name="person-outline"></ion-icon>
+                            Việc của tôi
+                            <span style={{ 
+                                background: taskFilter === 'my' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)', 
+                                padding: '1px 6px', 
+                                borderRadius: 6, 
+                                fontSize: 11,
+                                marginLeft: 6
+                            }}>
+                                {allTasks.filter(t => t.memberId === user?.id).length}
+                            </span>
                         </button>
-                    )}
+                        <button 
+                            onClick={() => setTaskFilter('all')}
+                            style={{ 
+                                padding: '8px 16px', 
+                                borderRadius: 10, 
+                                fontSize: 13, 
+                                fontWeight: 700, 
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                border: 'none',
+                                background: taskFilter === 'all' ? '#6366f1' : '#f1f5f9',
+                                color: taskFilter === 'all' ? '#fff' : '#64748b',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6
+                            }}
+                        >
+                            <ion-icon name="people-outline"></ion-icon>
+                            Tất cả công việc
+                            <span style={{ 
+                                background: taskFilter === 'all' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)', 
+                                padding: '1px 6px', 
+                                borderRadius: 6, 
+                                fontSize: 11,
+                                marginLeft: 6
+                            }}>
+                                {allTasks.length}
+                            </span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Add task inline form */}
@@ -519,7 +684,6 @@ export default function GroupDetailPage() {
                     </div>
                 )}
 
-                {/* Table */}
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ background: '#f8fafc' }}>
@@ -529,79 +693,83 @@ export default function GroupDetailPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {allTasks.length === 0 ? (
-                            <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 13 }}>Chưa có công việc nào</td></tr>
-                        ) : allTasks.map(t => {
-                            const st = STATUS_COLORS[t.status] || STATUS_COLORS.PENDING;
-                            return (
-                                <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                    <td style={{ padding: '12px 16px' }}>
-                                        <div style={{ fontWeight: 600, fontSize: 14, color: '#1e293b' }}>{t.title}</div>
-                                        {t.description && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{t.description}</div>}
-                                        {t.deadline && <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 4 }}><ion-icon name="time-outline" style={{ fontSize: 11 }}></ion-icon> Hạn: {new Date(t.deadline).toLocaleDateString('vi')}</div>}
-                                    </td>
-                                    <td style={{ padding: '12px 16px' }}>
-                                        {isAdmin ? (
-                                            <select value={t.status} onChange={e => handleTaskStatus(t.id, e.target.value)} style={{ background: st.bg, color: st.color, border: 'none', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                                                <option value="PENDING">Chờ xử lý</option>
-                                                <option value="IN_PROGRESS">Đang làm</option>
-                                                <option value="COMPLETED">Hoàn thành</option>
-                                            </select>
-                                        ) : (
-                                            <span style={{ background: st.bg, color: st.color, padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700 }}>{st.label}</span>
-                                        )}
-                                    </td>
-                                    <td style={{ padding: '12px 16px' }}>
-                                        {(() => {
-                                            const as = t.acceptanceStatus || 'WAITING';
-                                            const aStyle = as === 'ACCEPTED' ? { bg: '#dcfce7', color: '#16a34a', label: 'Đã nhận' }
-                                                : as === 'REJECTED' ? { bg: '#fee2e2', color: '#dc2626', label: 'Từ chối' }
-                                                : { bg: '#fef3c7', color: '#d97706', label: 'Chờ xác nhận' };
-                                            return (
-                                                <div>
-                                                    <span style={{ background: aStyle.bg, color: aStyle.color, padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>{aStyle.label}</span>
-                                                    {as === 'WAITING' && t.memberId === user?.id && (
-                                                        <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
-                                                            <button onClick={async () => { await taskService.respondToTask(t.id, true); const g = await goalService.getByTeam(id!); setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }} style={{ padding: '3px 8px', borderRadius: 6, border: 'none', background: '#10b981', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>Nhận</button>
-                                                            <button onClick={async () => { await taskService.respondToTask(t.id, false); const g = await goalService.getByTeam(id!); setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }} style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid #fca5a5', background: '#fff', color: '#dc2626', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>Từ chối</button>
-                                                        </div>
-                                                    )}
+                        {(() => {
+                            const filtered = taskFilter === 'my' ? allTasks.filter(t => t.memberId === user?.id) : allTasks;
+                            if (filtered.length === 0) {
+                                return <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 13 }}>Chưa có công việc nào trong danh sách này</td></tr>;
+                            }
+                            return filtered.map(t => {
+                                const st = STATUS_COLORS[t.status] || STATUS_COLORS.PENDING;
+                                return (
+                                    <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                        <td style={{ padding: '12px 16px' }}>
+                                            <div style={{ fontWeight: 600, fontSize: 14, color: '#1e293b' }}>{t.title}</div>
+                                            {t.description && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{t.description}</div>}
+                                            {t.deadline && <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 4 }}><ion-icon name="time-outline" style={{ fontSize: 11 }}></ion-icon> Hạn: {new Date(t.deadline).toLocaleDateString('vi')}</div>}
+                                        </td>
+                                        <td style={{ padding: '12px 16px' }}>
+                                            {isAdmin ? (
+                                                <select value={t.status} onChange={e => handleTaskStatus(t.id, e.target.value)} style={{ background: st.bg, color: st.color, border: 'none', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                                                    <option value="PENDING">Chờ xử lý</option>
+                                                    <option value="IN_PROGRESS">Đang làm</option>
+                                                    <option value="COMPLETED">Hoàn thành</option>
+                                                </select>
+                                            ) : (
+                                                <span style={{ background: st.bg, color: st.color, padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700 }}>{st.label}</span>
+                                            )}
+                                        </td>
+                                        <td style={{ padding: '12px 16px' }}>
+                                            {(() => {
+                                                const as = t.acceptanceStatus || 'WAITING';
+                                                const aStyle = as === 'ACCEPTED' ? { bg: '#dcfce7', color: '#16a34a', label: 'Đã nhận' }
+                                                    : as === 'REJECTED' ? { bg: '#fee2e2', color: '#dc2626', label: 'Từ chối' }
+                                                    : { bg: '#fef3c7', color: '#d97706', label: 'Chờ xác nhận' };
+                                                return (
+                                                    <div>
+                                                        <span style={{ background: aStyle.bg, color: aStyle.color, padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', display: 'inline-block' }}>{aStyle.label}</span>
+                                                        {as === 'WAITING' && t.memberId === user?.id && (
+                                                            <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                                                                <button onClick={async () => { await taskService.respondToTask(t.id, true); const g = await goalService.getByTeam(id!); setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }} style={{ padding: '3px 8px', borderRadius: 6, border: 'none', background: '#10b981', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>Nhận</button>
+                                                                <button onClick={async () => { await taskService.respondToTask(t.id, false); const g = await goalService.getByTeam(id!); setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }} style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid #fca5a5', background: '#fff', color: '#dc2626', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>Từ chối</button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </td>
+                                        <td style={{ padding: '12px 16px', minWidth: 120 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <div style={{ flex: 1, height: 6, background: '#f1f5f9', borderRadius: 3, overflow: 'hidden' }}>
+                                                    <div style={{ height: '100%', background: st.color, borderRadius: 3, width: `${t.completionPercentage || 0}%`, transition: 'width 0.4s' }} />
                                                 </div>
-                                            );
-                                        })()}
-                                    </td>
-                                    <td style={{ padding: '12px 16px', minWidth: 120 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <div style={{ flex: 1, height: 6, background: '#f1f5f9', borderRadius: 3, overflow: 'hidden' }}>
-                                                <div style={{ height: '100%', background: st.color, borderRadius: 3, width: `${t.completionPercentage || 0}%`, transition: 'width 0.4s' }} />
+                                                <span style={{ fontSize: 12, fontWeight: 700, color: st.color }}>{t.completionPercentage || 0}%</span>
                                             </div>
-                                            <span style={{ fontSize: 12, fontWeight: 700, color: st.color }}>{t.completionPercentage || 0}%</span>
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '12px 16px' }}>
-                                        <span style={{ background: t.priority >= 3 ? '#fee2e2' : t.priority >= 2 ? '#fef3c7' : '#f0fdf4', color: t.priority >= 3 ? '#dc2626' : t.priority >= 2 ? '#d97706' : '#16a34a', padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                                            {t.priority >= 3 ? 'Cao' : t.priority >= 2 ? 'TB' : 'Thấp'}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '12px 16px' }}>
-                                        {isAdmin ? (
-                                            <select value={t.memberId || ''} onChange={async e => { await taskService.assign(t.id, e.target.value); const g = await goalService.getByTeam(id!); setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', minWidth: 100 }}>
-                                                <option value="">— Giao —</option>
-                                                {team?.members?.map(m => <option key={m.userId} value={m.userId}>{m.fullName || m.username}</option>)}
-                                            </select>
-                                        ) : (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                {t.memberName && <div style={{ width: 24, height: 24, borderRadius: '50%', background: avatarColor(t.memberName), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff' }}>{getInitials(t.memberName)}</div>}
-                                                <span style={{ fontSize: 12, color: '#475569' }}>{t.memberName || 'Chưa giao'}</span>
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td style={{ padding: '12px 16px' }}>
-                                        {isAdmin && <button onClick={() => handleDeleteTask(t.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 16, opacity: 0.6 }}><ion-icon name="trash-outline"></ion-icon></button>}
-                                    </td>
-                                </tr>
-                            );
-                        })}
+                                        </td>
+                                        <td style={{ padding: '12px 16px' }}>
+                                            <span style={{ background: t.priority >= 3 ? '#fee2e2' : t.priority >= 2 ? '#fef3c7' : '#f0fdf4', color: t.priority >= 3 ? '#dc2626' : t.priority >= 2 ? '#d97706' : '#16a34a', padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
+                                                {t.priority >= 3 ? 'Cao' : t.priority >= 2 ? 'TB' : 'Thấp'}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '12px 16px' }}>
+                                            {isAdmin ? (
+                                                <select value={t.memberId || ''} onChange={async e => { await taskService.assign(t.id, e.target.value); const g = await goalService.getByTeam(id!); setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', minWidth: 100 }}>
+                                                    <option value="">— Giao —</option>
+                                                    {team?.members?.map(m => <option key={m.userId} value={m.userId}>{m.fullName || m.username}</option>)}
+                                                </select>
+                                            ) : (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    {t.memberName && <div style={{ width: 24, height: 24, borderRadius: '50%', background: avatarColor(t.memberName), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff' }}>{getInitials(t.memberName)}</div>}
+                                                    <span style={{ fontSize: 12, color: '#475569' }}>{t.memberName || 'Chưa giao'}</span>
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td style={{ padding: '12px 16px' }}>
+                                            {isAdmin && <button onClick={() => handleDeleteTask(t.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 16, opacity: 0.6 }}><ion-icon name="trash-outline"></ion-icon></button>}
+                                        </td>
+                                    </tr>
+                                );
+                            });
+                        })()}
                     </tbody>
                 </table>
             </div>
@@ -610,6 +778,82 @@ export default function GroupDetailPage() {
             {isAdmin && (
                 <SalaryPanel teamId={id!} />
             )}
+
+            {/* ===== BẢNG KHO HÀNG (INVENTORY) ===== */}
+            <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 24 }}>
+                <div style={{ padding: '16px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#1e293b' }}><ion-icon name="cube-outline" style={{ fontSize: 18, verticalAlign: 'middle', marginRight: 6, color: '#6366f1' }}></ion-icon> KHO HÀNG ({inventoryItems.length})</h3>
+                    {isAdmin && (
+                        <button onClick={() => setShowAddInventory(!showAddInventory)} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <ion-icon name="add"></ion-icon> Nhập kho
+                        </button>
+                    )}
+                </div>
+
+                {/* Add Inventory inline form */}
+                {showAddInventory && isAdmin && (
+                    <div style={{ padding: '16px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <input value={invName} onChange={e => setInvName(e.target.value)} placeholder="Tên hàng hóa *" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, flex: 1, minWidth: 200 }} />
+                        <input type="number" value={invQty} onChange={e => setInvQty(e.target.value)} placeholder="Số lượng *" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, width: 100 }} />
+                        <input value={invUnit} onChange={e => setInvUnit(e.target.value)} placeholder="Đơn vị (VD: Cái)" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, width: 130 }} />
+                        <input type="number" value={invThreshold} onChange={e => setInvThreshold(e.target.value)} placeholder="Báo sắp hết (< 10)" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, width: 140 }} />
+                        <button onClick={handleAddInventory} disabled={loading || !invName.trim() || !invQty} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Lưu</button>
+                        <button onClick={() => setShowAddInventory(false)} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: 12, cursor: 'pointer', color: '#64748b' }}>Hủy</button>
+                    </div>
+                )}
+
+                {/* Table */}
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                        <tr style={{ background: '#f8fafc' }}>
+                            {['Tên mặt hàng', 'Tình trạng', 'Số lượng', 'Cập nhật', ''].map((h, i) => (
+                                <th key={i} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>{h}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {inventoryItems.length === 0 ? (
+                            <tr><td colSpan={5} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 13 }}>Kho hàng trống</td></tr>
+                        ) : inventoryItems.map(item => {
+                            const isUpdating = updatingInvId === item.id;
+                            let statusColor = '#16a34a'; let statusBg = '#dcfce7'; let statusLabel = 'Còn hàng';
+                            if (item.status === 'OUT_OF_STOCK') { statusColor = '#dc2626'; statusBg = '#fee2e2'; statusLabel = 'Hết hàng'; }
+                            else if (item.status === 'LOW_STOCK') { statusColor = '#d97706'; statusBg = '#fef3c7'; statusLabel = 'Sắp hết'; }
+                            
+                            return (
+                                <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                    <td style={{ padding: '12px 16px' }}>
+                                        <div style={{ fontWeight: 600, fontSize: 14, color: '#1e293b' }}>{item.name}</div>
+                                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Mức báo hết: &lt;= {item.lowStockThreshold} {item.unit}</div>
+                                    </td>
+                                    <td style={{ padding: '12px 16px' }}>
+                                        <span style={{ background: statusBg, color: statusColor, padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor }}></div> {statusLabel}
+                                        </span>
+                                    </td>
+                                    <td style={{ padding: '12px 16px' }}>
+                                        <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{item.quantity} <span style={{ fontSize: 12, fontWeight: 500, color: '#64748b' }}>{item.unit}</span></div>
+                                    </td>
+                                    <td style={{ padding: '12px 16px' }}>
+                                        {isUpdating ? (
+                                            <div style={{ display: 'flex', gap: 6 }}>
+                                                <input type="number" value={updateInvQty} onChange={e => setUpdateInvQty(e.target.value)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #6366f1', width: 70, fontSize: 12 }} autoFocus />
+                                                <button onClick={() => handleUpdateInvQty(item.id)} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 6, padding: '0 8px', fontSize: 11, cursor: 'pointer' }}>OK</button>
+                                                <button onClick={() => setUpdatingInvId(null)} style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 6, padding: '0 8px', fontSize: 11, cursor: 'pointer' }}>Hủy</button>
+                                            </div>
+                                        ) : (
+                                            <button onClick={() => { setUpdatingInvId(item.id); setUpdateInvQty(item.quantity.toString()); }} style={{ background: '#f8fafc', color: '#6366f1', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Chỉnh sửa</button>
+                                        )}
+                                    </td>
+                                    <td style={{ padding: '12px 16px' }}>
+                                        {isAdmin && <button onClick={() => handleDeleteInventory(item.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 16, opacity: 0.6 }}><ion-icon name="trash-outline"></ion-icon></button>}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
 
             {/* ===== CHAT PANEL (SLIDE) ===== */}
             {showChat && (
@@ -850,6 +1094,32 @@ export default function GroupDetailPage() {
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
                             <button onClick={() => setShowAdSettings(false)} style={{ padding: '10px 20px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Thoát</button>
                             <button onClick={handleSaveAdSettings} disabled={loading} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: '#6366f1', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{loading ? 'Đang lưu...' : 'Lưu'}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Job Labels Modal */}
+            {showLabelModal && selectedMemberForLabels && (
+                <div className="modal-overlay" onClick={() => setShowLabelModal(false)} style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000 }}>
+                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, background: '#fff', color: '#1a1a1a', borderRadius: 16, padding: '24px' }}>
+                        <h2 style={{ margin: '0 0 8px', color: '#1e293b', fontSize: 18 }}>Nhãn dán công việc</h2>
+                        <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>
+                            Gán thẻ nhãn cho <b>{selectedMemberForLabels.fullName || selectedMemberForLabels.username}</b>. Các nhãn phân cách nhau bằng dấu phẩy (Ví dụ: Thợ rang, Đóng gói).
+                        </p>
+                        <input 
+                            value={editingLabels} 
+                            onChange={e => setEditingLabels(e.target.value)} 
+                            placeholder="Nhập thẻ nhãn..." 
+                            style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 14, outline: 'none', background: '#f8fafc' }} 
+                            autoFocus 
+                            onKeyDown={e => e.key === 'Enter' && handleSaveLabels()}
+                        />
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 24 }}>
+                            <button onClick={() => setShowLabelModal(false)} style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
+                            <button onClick={handleSaveLabels} disabled={loading} style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#6366f1', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                                {loading ? 'Đang lưu...' : 'Lưu nhãn'}
+                            </button>
                         </div>
                     </div>
                 </div>

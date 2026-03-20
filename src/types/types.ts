@@ -40,6 +40,7 @@ export interface TeamMemberInfo {
     fullName: string;
     groupRole: string; // OWNER / MEMBER
     joinedAt: string;
+    jobLabels?: string[];
     totalTasks?: number;
     completedTasks?: number;
     completionRate?: number;
@@ -185,4 +186,16 @@ export interface SalaryReport {
     totalActualWorkload: number;
     hourlyRate: number;
     estimatedSalary: number;
+}
+
+// === Inventory ===
+export interface InventoryItem {
+    id: string;
+    teamId: string;
+    name: string;
+    quantity: number;
+    unit: string;
+    lowStockThreshold: number;
+    status: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
+    lastUpdated: string;
 }

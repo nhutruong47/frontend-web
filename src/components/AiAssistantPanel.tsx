@@ -6,6 +6,7 @@ interface AiAssistantPanelProps {
     onCreateGoal?: (result: AiParseResult) => void;
     trialActive: boolean;
     trialDays: number;
+    teamId: string;
 }
 
 interface ChatMessage {
@@ -16,7 +17,7 @@ interface ChatMessage {
     timestamp: Date;
 }
 
-export default function AiAssistantPanel({ onCreateGoal, trialActive, trialDays }: AiAssistantPanelProps) {
+export default function AiAssistantPanel({ onCreateGoal, trialActive, trialDays, teamId }: AiAssistantPanelProps) {
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [loading, setLoading] = useState(false);
@@ -47,7 +48,7 @@ export default function AiAssistantPanel({ onCreateGoal, trialActive, trialDays 
         try {
             // For now, the backend only has parseText APIs we use text, 
             // but the UX will feel conversational.
-            const res = await aiService.parseText(userMsg.content);
+            const res = await aiService.parseText(userMsg.content, teamId);
 
             const aiMsg: ChatMessage = {
                 id: Date.now().toString() + '-ai',
