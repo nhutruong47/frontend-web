@@ -31,8 +31,13 @@ export default function DashboardPage() {
             setLoading(false);
         });
         // Load notifications
-        notificationService.getAll().then(setNotifications).catch(() => {});
-        notificationService.getUnreadCount().then(r => setUnreadCount(r.count)).catch(() => {});
+        notificationService.getAll().then(data => {
+            if (Array.isArray(data)) setNotifications(data);
+        }).catch(e => console.error("Load notifications failed", e));
+
+        notificationService.getUnreadCount().then(r => {
+            if (r && typeof r.count === 'number') setUnreadCount(r.count);
+        }).catch(e => console.error("Load unread count failed", e));
     }, [user?.id]);
 
     // WebSocket for realtime notifications
