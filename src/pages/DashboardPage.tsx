@@ -5,6 +5,7 @@ import { teamService, taskService, notificationService } from '../services/group
 import type { Team, Task, AppNotification } from '../types/types';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
+import { API_BASE_URL } from '../services/api';
 
 import { type ReactNode } from 'react';
 
@@ -38,7 +39,7 @@ export default function DashboardPage() {
     useEffect(() => {
         if (!user?.id) return;
         const token = localStorage.getItem('token');
-        const socket = new SockJS(`http://localhost:8080/ws?token=${token}`);
+        const socket = new SockJS(`${API_BASE_URL}/ws?token=${token}`);
         const client = new Client({
             webSocketFactory: () => socket as any,
             onConnect: () => {
@@ -82,10 +83,10 @@ export default function DashboardPage() {
         setUnreadCount(0);
     }, []);
 
-    const pendingTasks = myTasks.filter(t => t.status === 'PENDING');
-    const inProgressTasks = myTasks.filter(t => t.status === 'IN_PROGRESS');
-    const completedTasks = myTasks.filter(t => t.status === 'COMPLETED');
-    const completionPct = myTasks.length > 0 ? Math.round((completedTasks.length / myTasks.length) * 100) : 0;
+    const pendingTasks = (myTasks || []).filter(t => t?.status === 'PENDING');
+    const inProgressTasks = (myTasks || []).filter(t => t?.status === 'IN_PROGRESS');
+    const completedTasks = (myTasks || []).filter(t => t?.status === 'COMPLETED');
+    const completionPct = (myTasks || []).length > 0 ? Math.round((completedTasks.length / myTasks.length) * 100) : 0;
 
     if (loading) return (
         <div className="page-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80vh' }}>

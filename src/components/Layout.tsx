@@ -12,12 +12,12 @@ export default function Layout() {
                 <header className="topbar">
                     <div className="topbar-left">
                         <h2 className="topbar-greeting">
-                            Xin chào, <span className="topbar-username">{user?.username}</span>
+                            Xin chào, <span className="topbar-username">{user?.fullName || user?.username || 'Người dùng'}</span>
                         </h2>
                     </div>
                     <div className="topbar-right">
                         <div className="topbar-avatar" onClick={logout} title="Đăng xuất">
-                            {user?.username.charAt(0).toUpperCase()}
+                            {(user?.username || user?.fullName || 'U').charAt(0).toUpperCase()}
                         </div>
                         <button className="topbar-logout" onClick={logout}>
                             Đăng xuất

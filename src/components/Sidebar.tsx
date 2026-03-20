@@ -35,10 +35,10 @@ export default function Sidebar() {
             {user && (
                 <div className="sidebar-user">
                     <div className="sidebar-avatar">
-                        {user.username.charAt(0).toUpperCase()}
+                        {(user.username || user.fullName || 'U').charAt(0).toUpperCase()}
                     </div>
                     <div className="sidebar-user-info">
-                        <span className="sidebar-username">{user.username}</span>
+                        <span className="sidebar-username">{user.fullName || user.username || 'User'}</span>
                         <span className="role-badge member"><ion-icon name="person-outline" style={{ fontSize: '12px' }}></ion-icon> Member</span>
                     </div>
                 </div>
