@@ -38,21 +38,38 @@ export default function DashboardPage() {
     // WebSocket for realtime notifications
     useEffect(() => {
         if (!user?.id) return;
-        const token = localStorage.getItem('token');
-        const socket = new SockJS(`${API_BASE_URL}/ws?token=${token}`);
-        const client = new Client({
-            webSocketFactory: () => socket as any,
-            onConnect: () => {
-                client.subscribe(`/topic/user/${user.id}/notifications`, (msg) => {
-                    const notif: AppNotification = JSON.parse(msg.body);
-                    setNotifications(prev => [notif, ...prev]);
-                    setUnreadCount(prev => prev + 1);
-                });
-            },
-        });
-        client.activate();
-        stompRef.current = client;
-        return () => { client.deactivate(); };
+        let client: Client | null = null;
+        try {
+            const token = localStorage.getItem('token');
+            // Ensure socket URL matches page protocol (force https on vercel)
+            let socketUrl = `${API_BASE_URL}/ws?token=${token}`;
+            if (window.location.protocol === 'https:' && socketUrl.startsWith('http:')) {
+                socketUrl = socketUrl.replace('http:', 'https:');
+            }
+            
+            const socket = new SockJS(socketUrl);
+            client = new Client({
+                webSocketFactory: () => socket as any,
+                onConnect: () => {
+                    client?.subscribe(`/topic/user/${user.id}/notifications`, (msg) => {
+                        try {
+                            const notif: AppNotification = JSON.parse(msg.body);
+                            setNotifications(prev => [notif, ...prev]);
+                            setUnreadCount(prev => prev + 1);
+                        } catch (e) { console.error("Error parsing notif", e); }
+                    });
+                },
+                onStompError: (frame) => {
+                    console.error('STOMP error', frame);
+                }
+            });
+            client.activate();
+            stompRef.current = client;
+        } catch (err) {
+            console.error("WebSocket connection failed:", err);
+        }
+        
+        return () => { client?.deactivate(); };
     }, [user?.id]);
 
     // Close dropdown on outside click
