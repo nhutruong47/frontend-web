@@ -122,7 +122,7 @@ export default function LoginPage() {
                     <div className="login-form-header">
                         <div className="login-logo-row">
                             <span className="login-logo-icon">O</span>
-                            <span className="login-logo-text">ORCA</span>
+                            <span className="login-logo-text">ORCA v2</span>
                         </div>
                         <h2 className="login-form-title">Chào mừng trở lại!</h2>
                         <p className="login-form-subtitle">Đăng nhập để quản lý xưởng cà phê của bạn</p>
