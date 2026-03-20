@@ -249,8 +249,7 @@ export default function CreateTaskPage() {
                     <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 16 }}>
                         {assigneesList.map((assignee, idx) => {
                             const ratio = Math.min(100, Math.round((assignee.workload / totalWorkload) * 100));
-                            const matchingScore = 100;
-                            const reason = assignee.tasks.map(t => t.title).join(', ');
+                            const reason = assignee.tasks.map((t: any) => t.title).join(', ');
                             
                             return (
                                 <div key={idx} style={{ minWidth: 260, flexShrink: 0, background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: 20 }}>
@@ -757,7 +756,7 @@ export default function CreateTaskPage() {
                                                             const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6'];
                                                             let hash = 0;
                                                             for (const c of assignee) hash = (hash * 31 + c.charCodeAt(0)) % colors.length;
-                                                            const bgColor = colors[hash];
+                                                            void colors[hash];
 
                                                             return (
                                                                 <div key={assignee} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
