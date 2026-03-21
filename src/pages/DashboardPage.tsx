@@ -26,8 +26,12 @@ export default function DashboardPage() {
             teamService.getMyTeams().catch(() => []),
             user?.id ? taskService.getMyTasks(user.id).catch(() => []) : Promise.resolve([])
         ]).then(([t, tasks]) => {
-            setTeams(t);
-            setMyTasks(tasks);
+            setTeams(Array.isArray(t) ? t : []);
+            setMyTasks(Array.isArray(tasks) ? tasks : []);
+            setLoading(false);
+        }).catch(() => {
+            setTeams([]);
+            setMyTasks([]);
             setLoading(false);
         });
         // Load notifications
