@@ -639,35 +639,37 @@ export default function GroupDetailPage() {
                                 {allTasks.filter(t => t.memberId === user?.id).length}
                             </span>
                         </button>
-                        <button 
-                            onClick={() => setTaskFilter('all')}
-                            style={{ 
-                                padding: '8px 16px', 
-                                borderRadius: 10, 
-                                fontSize: 13, 
-                                fontWeight: 700, 
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                border: 'none',
-                                background: taskFilter === 'all' ? '#6366f1' : '#f1f5f9',
-                                color: taskFilter === 'all' ? '#fff' : '#64748b',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6
-                            }}
-                        >
-                            <ion-icon name="people-outline"></ion-icon>
-                            Tất cả công việc
-                            <span style={{ 
-                                background: taskFilter === 'all' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)', 
-                                padding: '1px 6px', 
-                                borderRadius: 6, 
-                                fontSize: 11,
-                                marginLeft: 6
-                            }}>
-                                {allTasks.length}
-                            </span>
-                        </button>
+                        {isAdmin && (
+                            <button 
+                                onClick={() => setTaskFilter('all')}
+                                style={{ 
+                                    padding: '8px 16px', 
+                                    borderRadius: 10, 
+                                    fontSize: 13, 
+                                    fontWeight: 700, 
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    border: 'none',
+                                    background: taskFilter === 'all' ? '#6366f1' : '#f1f5f9',
+                                    color: taskFilter === 'all' ? '#fff' : '#64748b',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 6
+                                }}
+                            >
+                                <ion-icon name="people-outline"></ion-icon>
+                                Tất cả công việc
+                                <span style={{ 
+                                    background: taskFilter === 'all' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)', 
+                                    padding: '1px 6px', 
+                                    borderRadius: 6, 
+                                    fontSize: 11,
+                                    marginLeft: 6
+                                }}>
+                                    {allTasks.length}
+                                </span>
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -694,7 +696,7 @@ export default function GroupDetailPage() {
                     </thead>
                     <tbody>
                         {(() => {
-                            const filtered = taskFilter === 'my' ? allTasks.filter(t => t.memberId === user?.id) : allTasks;
+                            const filtered = (taskFilter === 'my' || !isAdmin) ? allTasks.filter(t => t.memberId === user?.id) : allTasks;
                             if (filtered.length === 0) {
                                 return <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 13 }}>Chưa có công việc nào trong danh sách này</td></tr>;
                             }
@@ -708,7 +710,7 @@ export default function GroupDetailPage() {
                                             {t.deadline && <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 4 }}><ion-icon name="time-outline" style={{ fontSize: 11 }}></ion-icon> Hạn: {new Date(t.deadline).toLocaleDateString('vi')}</div>}
                                         </td>
                                         <td style={{ padding: '12px 16px' }}>
-                                            {isAdmin ? (
+                                            {(isAdmin || t.memberId === user?.id) ? (
                                                 <select value={t.status} onChange={e => handleTaskStatus(t.id, e.target.value)} style={{ background: st.bg, color: st.color, border: 'none', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
                                                     <option value="PENDING">Chờ xử lý</option>
                                                     <option value="IN_PROGRESS">Đang làm</option>
