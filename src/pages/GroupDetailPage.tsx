@@ -515,8 +515,10 @@ export default function GroupDetailPage() {
 
             {/* ===== MEMBER CARDS ===== */}
             <div style={{ display: 'flex', gap: 16, marginBottom: 24, overflowX: 'auto', paddingBottom: 4 }}>
-                {memberStats.map(m => {
-                    const displayName = m.fullName || m.username;
+                {memberStats
+                    .filter(m => isAdmin || m.userId === user?.id)
+                    .map(m => {
+                        const displayName = m.fullName || m.username;
                     return (
                         <div key={m.userId} style={{ minWidth: 220, background: '#fff', borderRadius: 14, padding: '16px 20px', border: '1px solid #e2e8f0', flexShrink: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
