@@ -466,6 +466,34 @@ export default function CreateTaskPage() {
                                             <div className="markdown-content">
                                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                                             </div>
+
+                                            {/* Show Suggested Questions even in clarification mode */}
+                                            {msg.result?.suggestedQuestions && msg.result.suggestedQuestions.length > 0 && (
+                                                <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                                    {msg.result.suggestedQuestions.map((q, qIdx) => (
+                                                        <button
+                                                            key={qIdx}
+                                                            onClick={() => {
+                                                                setInput(q);
+                                                                chatInputRef.current?.focus();
+                                                            }}
+                                                            style={{
+                                                                background: '#ffffff',
+                                                                border: '1px solid #fde68a',
+                                                                color: '#d97706',
+                                                                padding: '6px 12px',
+                                                                borderRadius: '12px',
+                                                                fontSize: '12px',
+                                                                fontWeight: 600,
+                                                                cursor: 'pointer',
+                                                                boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                                            }}
+                                                        >
+                                                            {q}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
