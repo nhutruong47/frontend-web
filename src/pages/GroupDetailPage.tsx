@@ -577,6 +577,7 @@ export default function GroupDetailPage() {
             </div>
 
             {/* ===== GOAL STRATEGIC OVERVIEW (NEW) ===== */}
+            {isAdmin && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16, marginBottom: 24 }}>
                 {goals.map(g => {
                     let aiData: any = null;
@@ -622,6 +623,7 @@ export default function GroupDetailPage() {
                     );
                 })}
             </div>
+            )}
 
             {/* ===== TASK TABLE ===== */}
             <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 24 }}>
