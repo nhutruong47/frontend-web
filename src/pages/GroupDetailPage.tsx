@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { teamService, goalService, taskService, getTrialStatus, chatService, inventoryService } from '../services/groupService';
-import type { Team, Goal, Task, ChatMsg, SalaryReport, AiParsedResult, AiChatLogMsg, InventoryItem } from '../types/types';
+import type { Team, Goal, Task, ChatMsg, SalaryReport, AiChatLogMsg, InventoryItem } from '../types/types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
