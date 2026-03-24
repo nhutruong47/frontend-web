@@ -6,6 +6,8 @@ import type { Team, Goal, Task, ChatMsg, SalaryReport, AiParsedResult, AiChatLog
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 function getInitials(name: string) {
     return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -448,8 +450,9 @@ export default function GroupDetailPage() {
             </div>
 
             {/* ===== LINE CHART ===== */}
-            <div style={{ background: '#fff', borderRadius: 14, padding: '20px 24px', border: '1px solid #e2e8f0', marginBottom: 24 }}>
-                <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: '#1e293b' }}>Hiệu suất nhân viên trong tuần</h3>
+            {isAdmin && (
+                <div style={{ background: '#fff', borderRadius: 14, padding: '20px 24px', border: '1px solid #e2e8f0', marginBottom: 24 }}>
+                    <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: '#1e293b' }}>Hiệu suất nhân viên trong tuần</h3>
                 <ResponsiveContainer width="100%" height={260}>
                     <LineChart data={lineData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -463,9 +466,10 @@ export default function GroupDetailPage() {
                     </LineChart>
                 </ResponsiveContainer>
             </div>
+            )}
 
             {/* ===== TWO COL: DONUT + BAR ===== */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 24 }}>
                 {/* Donut */}
                 <div style={{ background: '#fff', borderRadius: 14, padding: '20px 24px', border: '1px solid #e2e8f0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -492,6 +496,7 @@ export default function GroupDetailPage() {
                 </div>
 
                 {/* Bar */}
+                {isAdmin && (
                 <div style={{ background: '#fff', borderRadius: 14, padding: '20px 24px', border: '1px solid #e2e8f0' }}>
                     <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: '#1e293b' }}>So sánh thành viên</h3>
                     <ResponsiveContainer width="100%" height={140}>
@@ -505,6 +510,7 @@ export default function GroupDetailPage() {
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
+                )}
             </div>
 
             {/* ===== MEMBER CARDS ===== */}
@@ -596,7 +602,9 @@ export default function GroupDetailPage() {
                             <div style={{ padding: 16 }}>
                                 <div style={{ marginBottom: 12 }}>
                                     <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>Chỉ tiêu hiện tại</div>
-                                    <div style={{ fontSize: 14, color: '#1e293b', fontWeight: 600, lineHeight: 1.4 }}>{displayDesc}</div>
+                                    <div style={{ fontSize: 14, color: '#1e293b', fontWeight: 600, lineHeight: 1.4 }} className="markdown-body">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayDesc}</ReactMarkdown>
+                                    </div>
                                 </div>
                                 {aiData?.contingency && (
                                     <div style={{ marginBottom: 12 }}>
