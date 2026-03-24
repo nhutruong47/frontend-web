@@ -543,7 +543,26 @@ export default function GroupDetailPage() {
                             <div style={{ height: 6, background: '#f1f5f9', borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
                                 <div style={{ height: '100%', background: m.pct === 100 ? '#16a34a' : m.pct > 0 ? '#f59e0b' : '#e2e8f0', borderRadius: 3, width: `${m.pct}%`, transition: 'width 0.4s' }} />
                             </div>
-                            <div style={{ fontSize: 11, color: '#94a3b8' }}>{m.completed}/{m.total} công việc</div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                                <div style={{ fontSize: 11, color: '#94a3b8' }}>{m.completed}/{m.total} công việc</div>
+                                {m.userId !== user?.id && (
+                                    <button 
+                                        onClick={() => {
+                                            setChatTab('dm');
+                                            setDmUserId(m.userId);
+                                            setShowChat(true);
+                                        }}
+                                        style={{ 
+                                            background: '#eef2ff', color: '#6366f1', border: 'none', 
+                                            borderRadius: 8, padding: '4px 10px', fontSize: 11, 
+                                            fontWeight: 700, cursor: 'pointer', display: 'flex', 
+                                            alignItems: 'center', gap: 4 
+                                        }}
+                                    >
+                                        <ion-icon name="chatbubble-ellipses-outline"></ion-icon> Nhắn tin
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     );
                 })}
@@ -762,6 +781,14 @@ export default function GroupDetailPage() {
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                                     {t.memberName && <div style={{ width: 24, height: 24, borderRadius: '50%', background: avatarColor(t.memberName), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff' }}>{getInitials(t.memberName)}</div>}
                                                     <span style={{ fontSize: 12, color: '#475569' }}>{t.memberName || 'Chưa giao'}</span>
+                                                    {t.memberId && t.memberId !== user?.id && (
+                                                        <ion-icon 
+                                                            name="chatbubble-ellipses" 
+                                                            onClick={() => { setChatTab('dm'); setDmUserId(t.memberId!); setShowChat(true); }} 
+                                                            style={{ cursor: 'pointer', color: '#6366f1', marginLeft: 4, fontSize: 16 }} 
+                                                            title={`Nhắn tin với ${t.memberName}`}
+                                                        ></ion-icon>
+                                                    )}
                                                 </div>
                                             )}
                                         </td>
