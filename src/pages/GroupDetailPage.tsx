@@ -571,42 +571,42 @@ export default function GroupDetailPage() {
             {/* ===== GOAL STRATEGIC OVERVIEW (NEW) ===== */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16, marginBottom: 24 }}>
                 {goals.map(g => {
-                    let aiData: AiParsedResult | null = null;
+                    let aiData: any = null;
                     if (g.aiParsedData) {
                         try {
-                            // Backend saves as stringified JSON or might look like "{...}"
                             aiData = JSON.parse(g.aiParsedData);
                         } catch (e) {
                             console.error("Failed to parse AI data", e);
                         }
                     }
 
-                    if (!aiData) return null;
+                    const displayTitle = g.title || aiData?.mainGoal || 'Kế hoạch công việc';
+                    const displayDesc = g.outputTarget || g.rawInstruction || aiData?.description || 'Nhiệm vụ đã được phân bổ cho các thành viên trong nhóm.';
+                    const displayPhase = aiData?.phase || 'CHÍNH THỨC';
 
                     return (
                         <div key={g.id} style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                             <div style={{ background: '#6366f1', padding: '12px 16px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <ion-icon name="rocket-outline" style={{ fontSize: 18 }}></ion-icon>
-                                    <span style={{ fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kế hoạch AI: {g.title}</span>
+                                    <span style={{ fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mục tiêu: {displayTitle}</span>
                                 </div>
-                                <span style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700 }}>{aiData.phase || 'N/A'}</span>
+                                <span style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700 }}>{displayPhase}</span>
                             </div>
                             <div style={{ padding: 16 }}>
                                 <div style={{ marginBottom: 12 }}>
-                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>Mục tiêu chính</div>
-                                    <div style={{ fontSize: 14, color: '#1e293b', fontWeight: 600, lineHeight: 1.4 }}>{aiData.mainGoal || 'Chưa xác định'}</div>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>Chỉ tiêu hiện tại</div>
+                                    <div style={{ fontSize: 14, color: '#1e293b', fontWeight: 600, lineHeight: 1.4 }}>{displayDesc}</div>
                                 </div>
-                                <div style={{ marginBottom: 12 }}>
-                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>Phương án dự phòng (Contingency)</div>
-                                    <div style={{ fontSize: 13, color: '#ef4444', background: '#fef2f2', padding: '8px 12px', borderRadius: 8, border: '1px solid #fee2e2' }}>
-                                        <ion-icon name="warning-outline" style={{ verticalAlign: 'middle', marginRight: 4 }}></ion-icon>
-                                        {aiData.contingency || 'Theo kế hoạch tiêu chuẩn'}
+                                {aiData?.contingency && (
+                                    <div style={{ marginBottom: 12 }}>
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>Phương án dự phòng (Contingency)</div>
+                                        <div style={{ fontSize: 13, color: '#ef4444', background: '#fef2f2', padding: '8px 12px', borderRadius: 8, border: '1px solid #fee2e2' }}>
+                                            <ion-icon name="warning-outline" style={{ verticalAlign: 'middle', marginRight: 4 }}></ion-icon>
+                                            {aiData.contingency}
+                                        </div>
                                     </div>
-                                </div>
-                                <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, borderTop: '1px solid #f1f5f9', paddingTop: 10, whiteSpace: 'pre-wrap', fontFamily: 'monospace', overflowX: 'auto' }}>
-                                    {aiData.description || 'Đã phân tích và chia nhỏ nhiệm vụ dựa trên nguồn lực hiện có.'}
-                                </div>
+                                )}
                             </div>
                         </div>
                     );

@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useParams, useNavigate } from 'react-router-dom';
 import { teamService, aiService, goalService, getTrialStatus } from '../services/groupService';
 import type { AiParseResult } from '../services/groupService';
@@ -15,23 +17,35 @@ interface ChatMessage {
 export default function CreateTaskPage() {
     const { id: teamId } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const chatInputRef = useRef<HTMLTextAreaElement>(null);
 
     const [team, setTeam] = useState<Team | null>(null);
     const [category, setCategory] = useState('Rang xay');
     const [priority, setPriority] = useState('Trung bình');
 
     const [input, setInput] = useState('');
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [messages, setMessages] = useState<ChatMessage[]>(() => {
+        try {
+            const pathSegments = window.location.pathname.split('/');
+            const idx = pathSegments.indexOf('groups');
+            const tid = idx >= 0 && idx + 1 < pathSegments.length ? pathSegments[idx + 1] : null;
+            if (tid) {
+                const saved = localStorage.getItem(`ai_task_chat_${tid}`);
+                if (saved) {
+                    return JSON.parse(saved).map((m: any) => ({
+                        ...m,
+                        timestamp: new Date(m.timestamp)
+                    }));
+                }
+            }
+        } catch (e) {
+            console.error("Failed to map saved chat history", e);
+        }
+        return [];
+    });
     const [loading, setLoading] = useState(false);
     const [trialActive, setTrialActive] = useState(true);
     const [trialDays, setTrialDays] = useState(30);
-
-    const [previewResult, setPreviewResult] = useState<AiParseResult | null>(null);
-    const [isEditingPreview, setIsEditingPreview] = useState(false);
-    const [editTitle, setEditTitle] = useState('');
-    const [editDescriptionList, setEditDescriptionList] = useState<string[]>([]);
-    const [editDeadline, setEditDeadline] = useState('');
-    const [editPriority, setEditPriority] = useState('');
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -41,6 +55,15 @@ export default function CreateTaskPage() {
         getTrialStatus().then(s => { setTrialActive(s.aiTrialActive); setTrialDays(s.daysRemaining); }).catch(() => { });
     }, [teamId]);
 
+    useEffect(() => {
+        if (!teamId) return;
+        if (messages.length > 0) {
+            localStorage.setItem(`ai_task_chat_${teamId}`, JSON.stringify(messages));
+        } else {
+            localStorage.removeItem(`ai_task_chat_${teamId}`);
+        }
+    }, [messages, teamId]);
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -48,6 +71,15 @@ export default function CreateTaskPage() {
     useEffect(() => {
         scrollToBottom();
     }, [messages, loading]);
+
+    const clearHistory = () => {
+        if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện này?')) {
+            setMessages([]);
+            if (teamId) {
+                localStorage.removeItem(`ai_task_chat_${teamId}`);
+            }
+        }
+    };
 
     const handleSend = async () => {
         if (!input.trim() || !trialActive || loading) return;
@@ -64,28 +96,42 @@ export default function CreateTaskPage() {
         setLoading(true);
 
         try {
-            const res = await aiService.parseText(userMsg.content, teamId || '');
+            // Build simple string history
+            const historyStr = messages.map(m => {
+                if (m.role === 'user') return `User: ${m.content}`;
+                if (m.result && m.result.tasks) {
+                    return `AI đã chia việc: ${JSON.stringify(m.result.tasks.map(t => ({ task: t.title, assignTo: t.assignee || t.suggestedAssignee })))}`;
+                }
+                return `AI: ${m.content}`;
+            }).join('\n');
+
+            const res = await aiService.parseText(userMsg.content, teamId || '', historyStr);
+
+            // Frontend safety net: detect missing key fields and force clarification
+            const missingFields: string[] = [];
+            if (!res.deadline || res.deadline === '—' || res.deadline === 'YYYY-MM-DD') missingFields.push('Hạn chót (deadline)');
+            if (!res.quantity && !res.quantityNumber) missingFields.push('Khối lượng / Số lượng');
+            if (!res.unit || res.unit === 'đơn vị') missingFields.push('Đơn vị');
+
+            if (missingFields.length >= 2 && !res.needsClarification) {
+                res.needsClarification = true;
+                res.description = (res.description ? res.description + '\n\n' : '')
+                    + '⚠️ Tôi cần bạn bổ sung thêm thông tin:\n'
+                    + missingFields.map((f, i) => `${i + 1}. ${f}`).join('\n')
+                    + '\n\nVui lòng trả lời để tôi hoàn thiện kế hoạch nhé!';
+            }
 
             const aiMsg: ChatMessage = {
                 id: Date.now().toString() + '-ai',
                 role: 'assistant',
-                content: res.description || 'Tôi đã phân tích yêu cầu của bạn. Vui lòng xác nhận tạo mục tiêu bên dưới.',
+                content: res.description || 'Tôi đã điều chỉnh phân công theo yêu cầu của bạn. Vui lòng xác nhận bên dưới.',
                 result: res,
                 timestamp: new Date()
             };
             setMessages(prev => [...prev, aiMsg]);
 
             if (!res.needsClarification && res.title) {
-                // Show preview panel automatically
-                setPreviewResult(res);
-                setIsEditingPreview(false);
-                setEditTitle(res.title || '');
-                // Try splitting by common punctuation for bullets
-                let bulletItems = res.description ? res.description.split(/(?=\s*- |\s*• )|\.\s+|;\s+/).map(s => s.replace(/^[-•]\s*/, '').trim()).filter(Boolean) : [userMsg.content];
-                if (bulletItems.length === 0) bulletItems = [userMsg.content];
-                setEditDescriptionList(bulletItems);
-                setEditDeadline(res.deadline || '');
-                setEditPriority(res.priority || 'Medium');
+                // Keep it in chat interface
             }
         } catch (e: any) {
             const errorMsg: ChatMessage = {
@@ -116,381 +162,28 @@ export default function CreateTaskPage() {
                 tasks: result.tasks || []
             } as any);
             
-            // Navigate back to group after creating
-            navigate(`/groups/${teamId}`);
+            // Stay on the page and show success message
+            const successMsg: ChatMessage = {
+                id: Date.now().toString() + '-success',
+                role: 'assistant',
+                content: '🎉 **Tuyệt vời!** Công việc đã được phân bổ thành công vào nhóm. Vui lòng bấm vào "Quay lại Dashboard" để xem chi tiết, hoặc bạn có thể tiếp tục tạo mục tiêu mới ở đây.',
+                timestamp: new Date()
+            };
+            setMessages(prev => [...prev, successMsg]);
+
         } catch (e: any) {
             const errorMsg: ChatMessage = {
                 id: Date.now().toString() + '-err',
                 role: 'assistant',
-                content: e?.response?.data?.error || 'Không thể tạo mục tiêu',
+                content: e?.response?.data?.error || 'Không thể tạo công việc, vui lòng thử lại',
                 timestamp: new Date()
             };
             setMessages(prev => [...prev, errorMsg]);
+        } finally {
             setLoading(false);
         }
     };
 
-    const renderPreviewPanel = () => {
-        if (!previewResult) return null;
-
-        // Group tasks by assignee for the UI
-        const assigneeMap = new Map<string, { workload: number, tasks: any[] }>();
-        if (previewResult.tasks) {
-            previewResult.tasks.forEach(t => {
-                const assignee = t.assignee || t.suggestedAssignee || 'Chưa phân công';
-                if (!assigneeMap.has(assignee)) {
-                    assigneeMap.set(assignee, { workload: 0, tasks: [] });
-                }
-                const data = assigneeMap.get(assignee)!;
-                data.workload += t.workload || 0;
-                data.tasks.push(t);
-            });
-        }
-        const assigneesList = Array.from(assigneeMap.entries()).map(([name, data]) => ({ name, ...data }));
-        const totalWorkload = assigneesList.reduce((sum, a) => sum + a.workload, 0) || 1; // avoid div by 0
-
-        const renderTaskList = () => {
-            if (!previewResult.tasks) return null;
-            return (
-                <div style={{ marginBottom: 32, borderTop: '1px solid #f1f5f9', paddingTop: 24 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <ion-icon name="list-outline" style={{ color: '#6366f1', fontSize: 20 }}></ion-icon>
-                            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1e293b' }}>Danh sách nhiệm vụ chi tiết ({previewResult.tasks.length})</h3>
-                        </div>
-                        <button onClick={() => {
-                            const newTasks = [...(previewResult.tasks || [])];
-                            newTasks.push({ title: 'Nhiệm vụ mới', description: 'Mô tả nhiệm vụ', workload: 0, priority: 2 });
-                            setPreviewResult({...previewResult, tasks: newTasks});
-                        }} style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <ion-icon name="add-circle-outline"></ion-icon> Thêm nhiệm vụ
-                        </button>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {previewResult.tasks.map((task, i) => (
-                            <div key={i} style={{ background: '#fff', padding: '14px 18px', borderRadius: 10, border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.2s', position: 'relative' }}>
-                                <div style={{ display: 'flex', gap: 14, alignItems: 'center', flex: 1 }}>
-                                    <div style={{ minWidth: 28, height: 28, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#64748b' }}>
-                                        {i+1}
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <input 
-                                            value={task.title} 
-                                            onChange={e => {
-                                                const newTasks = [...(previewResult.tasks || [])];
-                                                newTasks[i] = { ...newTasks[i], title: e.target.value };
-                                                setPreviewResult({...previewResult, tasks: newTasks});
-                                            }}
-                                            style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#1e293b', border: 'none', background: 'transparent', width: '100%', outline: 'none', padding: '1px 0' }}
-                                        />
-                                        <input 
-                                            value={task.description} 
-                                            onChange={e => {
-                                                const newTasks = [...(previewResult.tasks || [])];
-                                                newTasks[i] = { ...newTasks[i], description: e.target.value };
-                                                setPreviewResult({...previewResult, tasks: newTasks});
-                                            }}
-                                            style={{ margin: 0, fontSize: 12, color: '#64748b', border: 'none', background: 'transparent', width: '100%', outline: 'none', fontStyle: 'italic' }} 
-                                        />
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexShrink: 0 }}>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 2 }}>Phân công</div>
-                                        <input 
-                                            value={task.assignee || task.suggestedAssignee || ''} 
-                                            onChange={e => {
-                                                const newTasks = [...(previewResult.tasks || [])];
-                                                newTasks[i] = { ...newTasks[i], assignee: e.target.value };
-                                                setPreviewResult({...previewResult, tasks: newTasks});
-                                            }}
-                                            placeholder="..."
-                                            style={{ fontSize: 11, fontWeight: 800, color: '#6366f1', border: 'none', background: 'transparent', textAlign: 'right', width: 80, outline: 'none' }}
-                                        />
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <input 
-                                            type="number" 
-                                            value={task.workload || 0} 
-                                            onChange={e => {
-                                                const newTasks = [...(previewResult.tasks || [])];
-                                                newTasks[i] = { ...newTasks[i], workload: Number(e.target.value) };
-                                                setPreviewResult({...previewResult, tasks: newTasks});
-                                            }}
-                                            style={{ width: 40, border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 10, padding: '2px 4px', textAlign: 'center' }} 
-                                        />
-                                        <button 
-                                            onClick={() => {
-                                                const newTasks = (previewResult.tasks || []).filter((_, idx) => idx !== i);
-                                                setPreviewResult({...previewResult, tasks: newTasks});
-                                            }}
-                                            style={{ background: '#fef2f2', border: '1px solid #fee2e2', color: '#ef4444', borderRadius: 4, width: 24, height: 24, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                        >
-                                            <ion-icon name="close-outline"></ion-icon>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
-
-        const renderAssignments = () => {
-            if (assigneesList.length === 0) return null;
-            return (
-                <div style={{ marginTop: 24, paddingBottom: 32, borderTop: '1px solid #f1f5f9', paddingTop: 24 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                        <ion-icon name="flash" style={{ color: '#d97706', fontSize: 20 }}></ion-icon>
-                        <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1e293b' }}>Tổng hợp phân bổ nhân sự</h3>
-                    </div>
-                    
-                    <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 16 }}>
-                        {assigneesList.map((assignee, idx) => {
-                            const ratio = Math.min(100, Math.round((assignee.workload / totalWorkload) * 100));
-                            const reason = assignee.tasks.map((t: any) => t.title).join(', ');
-                            
-                            return (
-                                <div key={idx} style={{ minWidth: 260, flexShrink: 0, background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: 20 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                                        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                                            <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#ede9fe', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>
-                                                {assignee.name.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b' }}>{assignee.name}</div>
-                                                <div style={{ fontSize: 11, color: '#64748b' }}>Phân công AI</div>
-                                            </div>
-                                        </div>
-                                        <div style={{ fontSize: 12, fontWeight: 700, color: '#10b981' }}><ion-icon name="checkmark-circle"></ion-icon> Khớp</div>
-                                    </div>
-                                    <div style={{ marginBottom: 12 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>
-                                            <span>Khối lượng:</span>
-                                            <span>{assignee.workload.toFixed(1)}</span>
-                                        </div>
-                                        <div style={{ height: 4, background: '#f1f5f9', borderRadius: 2, overflow: 'hidden' }}>
-                                            <div style={{ height: '100%', width: `${ratio}%`, background: '#8b5cf6', borderRadius: 2 }}></div>
-                                        </div>
-                                    </div>
-                                    <div style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                        {reason}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            );
-        };
-
-        if (isEditingPreview) {
-            return (
-                <div style={{ background: '#f8fafc', borderRadius: 16, border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 180px)', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
-                    {/* Header */}
-                    <div style={{ padding: '24px', borderBottom: '1px solid var(--border)', background: '#fff' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                                <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#1e293b' }}>Xem trước công việc</h2>
-                                <p style={{ margin: 0, fontSize: 13, color: '#64748b', marginTop: 4 }}>Xem lại chi tiết công việc và phân bổ nhân sự trước khi xác nhận.</p>
-                            </div>
-                            <div style={{ background: '#e0e7ff', color: '#6366f1', padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <ion-icon name="checkmark-outline"></ion-icon> AI ĐÃ XỬ LÝ
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Content */}
-                    <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-                        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, borderBottom: '1px solid #f1f5f9', paddingBottom: 16 }}>
-                                <span style={{ fontSize: 20, color: '#94a3b8' }}><ion-icon name="clipboard-outline"></ion-icon></span>
-                                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#1e293b' }}>Công việc đã chuẩn hóa</h3>
-                            </div>
-
-                            {/* Form Fields */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 20, alignItems: 'start', marginBottom: 20 }}>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', paddingTop: 10 }}>Tên công việc</div>
-                                <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, outline: 'none' }} />
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 20, alignItems: 'start', marginBottom: 20 }}>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', paddingTop: 10 }}>Chi tiết mô tả</div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                    {editDescriptionList.map((desc, idx) => (
-                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                            <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#94a3b8' }}></div>
-                                            <input type="text" value={desc} onChange={e => {
-                                                const newList = [...editDescriptionList];
-                                                newList[idx] = e.target.value;
-                                                setEditDescriptionList(newList);
-                                            }} style={{ flex: 1, padding: '10px 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, outline: 'none' }} />
-                                            <button onClick={() => setEditDescriptionList(editDescriptionList.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <ion-icon name="close-outline" style={{ fontSize: 20 }}></ion-icon>
-                                            </button>
-                                        </div>
-                                    ))}
-                                    <div>
-                                        <button onClick={() => setEditDescriptionList([...editDescriptionList, ''])} style={{ background: 'none', border: '1px solid #cbd5e1', color: '#8b5cf6', padding: '6px 12px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                            <ion-icon name="add-outline"></ion-icon> Thêm mục
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 20, alignItems: 'center', marginBottom: 20 }}>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>Hạn chót</div>
-                                <div style={{ position: 'relative', width: 'fit-content' }}>
-                                    <input type="text" value={editDeadline} onChange={e => setEditDeadline(e.target.value)} style={{ width: 250, padding: '10px 14px', paddingRight: 40, borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, outline: 'none' }} />
-                                    <ion-icon name="calendar-outline" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}></ion-icon>
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 20, alignItems: 'center', marginBottom: 32 }}>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>Ưu tiên</div>
-                                <div style={{ display: 'flex', width: 300, borderRadius: 8, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                                    {['Low', 'Medium', 'High'].map(level => {
-                                        const isSelected = editPriority.toLowerCase() === level.toLowerCase() || 
-                                                          (editPriority === 'Trung bình' && level === 'Medium') ||
-                                                          (editPriority === 'Thấp' && level === 'Low') ||
-                                                          (editPriority === 'Cao' && level === 'High');
-                                        return (
-                                            <button
-                                                key={level}
-                                                onClick={() => setEditPriority(level)}
-                                                style={{
-                                                    flex: 1, padding: '8px 0', fontSize: 13, fontWeight: 600,
-                                                    background: isSelected ? '#8b5cf6' : '#fff',
-                                                    color: isSelected ? '#fff' : '#64748b',
-                                                    border: 'none', borderRight: level !== 'High' ? '1px solid #e2e8f0' : 'none',
-                                                    cursor: 'pointer', transition: 'all 0.2s'
-                                                }}
-                                            >
-                                                {level}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                                <button onClick={() => { setIsEditingPreview(false); }} style={{ padding: '10px 24px', background: '#fff', border: '1px solid #cbd5e1', color: '#64748b', fontSize: 14, fontWeight: 600, borderRadius: 8, cursor: 'pointer' }}>
-                                    Hủy
-                                </button>
-                                <button onClick={() => { 
-                                    setIsEditingPreview(false); 
-                                    setPreviewResult({...previewResult, title: editTitle, description: editDescriptionList.filter(Boolean).join('; '), deadline: editDeadline, priority: editPriority}); 
-                                }} style={{ padding: '10px 24px', background: '#6366f1', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, borderRadius: 8, cursor: 'pointer' }}>
-                                    Lưu thay đổi
-                                </button>
-                            </div>
-                        </div>
-
-                        {renderTaskList()}
-                        {renderAssignments()}
-
-                    </div>
-                </div>
-            );
-        }
-
-        // READ ONLY MODE
-        return (
-            <div style={{ background: '#f8fafc', borderRadius: 16, border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 180px)', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
-                {/* Header */}
-                <div style={{ padding: '24px', borderBottom: '1px solid var(--border)', background: '#fff' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#1e293b' }}>Xem trước công việc</h2>
-                            <p style={{ margin: 0, fontSize: 13, color: '#64748b', marginTop: 4 }}>Xem lại chi tiết công việc và phân bổ nhân sự trước khi xác nhận.</p>
-                        </div>
-                        <div style={{ background: '#e0e7ff', color: '#6366f1', padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <ion-icon name="checkmark-outline"></ion-icon> AI ĐÃ XỬ LÝ
-                        </div>
-                    </div>
-                </div>
-
-                {/* Content */}
-                <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-                    <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, borderBottom: '1px solid #f1f5f9', paddingBottom: 16 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <span style={{ fontSize: 20, color: '#94a3b8' }}><ion-icon name="clipboard-outline"></ion-icon></span>
-                                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#1e293b' }}>Công việc đã chuẩn hóa</h3>
-                            </div>
-                            <button onClick={() => {
-                                setIsEditingPreview(true);
-                                setEditTitle(previewResult.title || '');
-                                setEditDescriptionList(previewResult.description ? previewResult.description.split('; ').filter(Boolean) : []);
-                                setEditDeadline(previewResult.deadline || '');
-                                setEditPriority(previewResult.priority || 'Medium');
-                            }} style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', padding: 4, display: 'flex' }}>
-                                <ion-icon name="pencil" style={{ fontSize: 18 }}></ion-icon>
-                            </button>
-                        </div>
-
-                        {/* Meta values */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 16, alignItems: 'start', marginBottom: 16 }}>
-                            <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Tên công việc</div>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>{previewResult.title || '—'}</div>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 16, alignItems: 'start', marginBottom: 16 }}>
-                            <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Mô tả</div>
-                            <div style={{ fontSize: 14, color: '#475569', display: 'flex', flexDirection: 'column', gap: 8, lineHeight: 1.5 }}>
-                                {previewResult.description ? previewResult.description.split('; ').map((item, i) => (
-                                    <div key={i} style={{ display: 'flex', gap: 8 }}>
-                                        <div style={{ color: '#94a3b8', marginTop: 2 }}>•</div>
-                                        <div>{item}</div>
-                                    </div>
-                                )) : '—'}
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 16, alignItems: 'center', marginBottom: 16 }}>
-                            <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Hạn chót</div>
-                            <div style={{ fontSize: 14, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <ion-icon name="calendar-outline" style={{ color: '#8b5cf6' }}></ion-icon> {previewResult.deadline || 'Chưa xác định'}
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 16, alignItems: 'center', marginBottom: 16 }}>
-                            <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Ưu tiên</div>
-                            <div>
-                                <span style={{ background: '#fef3c7', color: '#d97706', padding: '4px 10px', borderRadius: 12, fontSize: 11, fontWeight: 800, textTransform: 'uppercase' }}>
-                                    {previewResult.priority || 'MEDIUM'}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 16, alignItems: 'center', marginBottom: 32 }}>
-                            <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Nhân sự</div>
-                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                {team?.members?.map((m: any) => (
-                                    <span key={m.userId} style={{ background: '#ede9fe', color: '#7c3aed', padding: '4px 12px', borderRadius: 16, fontSize: 11, fontWeight: 700 }}>
-                                        {m.fullName || m.username}{m.jobLabels?.length ? ` (${m.jobLabels.join(', ')})` : ''}
-                                    </span>
-                                )) || <span style={{ color: '#94a3b8' }}>—</span>}
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                            <button onClick={() => setPreviewResult(null)} style={{ padding: '10px 24px', background: '#e11d48', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, borderRadius: 8, cursor: 'pointer' }}>
-                                Từ chối
-                            </button>
-                            <button onClick={() => handleCreateGoal(previewResult)} style={{ padding: '10px 24px', background: '#6366f1', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <ion-icon name="checkmark-outline"></ion-icon> Phê duyệt
-                            </button>
-                        </div>
-                    </div>
-                    {renderTaskList()}
-                    {renderAssignments()}
-                </div>
-            </div>
-        );
-    };
 
     if (!team) {
         return (
@@ -507,11 +200,25 @@ export default function CreateTaskPage() {
         <div style={{
             minHeight: '100vh',
             background: 'var(--bg-primary)',
-            padding: '32px 48px',
-            fontFamily: "'Inter', sans-serif"
+            padding: '32px 24px', // Reduced side padding
+            fontFamily: "'Inter', sans-serif",
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center' // Center the content
         }}>
+            <style>{`
+                .main-content-layout {
+                    width: 100%;
+                    max-width: 1440px;
+                    display: grid;
+                    grid-template-columns: 280px 1fr; // Reduced left sidebar
+                    gap: 32px;
+                    align-items: start;
+                }
+            `}</style>
+
             {/* Navigation Header */}
-            <div style={{ marginBottom: 32 }}>
+            <div style={{ width: '100%', maxWidth: 1440, marginBottom: 32 }}>
                 <button
                     onClick={() => navigate(`/groups/${teamId}`)}
                     style={{
@@ -531,7 +238,7 @@ export default function CreateTaskPage() {
             </div>
 
             {/* Split Layout */}
-            <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 32, alignItems: 'start' }}>
+            <div className="main-content-layout">
                 
                 {/* Left Panel: Group Info Form */}
                 <div style={{
@@ -655,19 +362,19 @@ export default function CreateTaskPage() {
                     )}
                 </div>
 
-                {/* Right Panel: AI Chat interface OR Preview */}
-                {previewResult ? renderPreviewPanel() : (
+                {/* Right Panel: AI Chat interface */}
                 <div style={{
                     background: 'var(--bg-card)',
                     borderRadius: 16,
                     border: '1px solid var(--border)',
                     boxShadow: '0 4px 24px rgba(0,0,0,0.04)',
                     display: 'flex', flexDirection: 'column',
-                    height: 'calc(100vh - 180px)', // Fill remaining viewport height
+                    height: 'calc(100vh - 120px)', // Increased height
+                    minHeight: '800px',
                     overflow: 'hidden'
                 }}>
                     {/* Header */}
-                    <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)' }}>
+                    <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20 }}>
                                 <ion-icon name="sparkles"></ion-icon>
@@ -677,9 +384,16 @@ export default function CreateTaskPage() {
                                 <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>Mô tả mục tiêu một cách tự nhiên</p>
                             </div>
                         </div>
-                        <button style={{ background: 'none', border: 'none', color: '#8b5cf6', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <ion-icon name="book-outline"></ion-icon> Xem ví dụ
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            {messages.length > 0 && (
+                                <button onClick={clearHistory} style={{ background: 'none', border: '1px solid var(--border)', color: '#ef4444', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 6 }}>
+                                    <ion-icon name="trash-outline"></ion-icon> Xóa lịch sử
+                                </button>
+                            )}
+                            <button style={{ background: 'none', border: 'none', color: '#8b5cf6', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <ion-icon name="book-outline"></ion-icon> Xem ví dụ
+                            </button>
+                        </div>
                     </div>
                     
                     {/* Trial Banner */}
@@ -719,148 +433,39 @@ export default function CreateTaskPage() {
                                         }}>
                                             {msg.content}
                                         </div>
-                                    ) : msg.result ? (
-                                        /* Rich Layout for AI Result to match Mockup */
-                                        <div style={{
-                                            width: '100%',
-                                            background: '#f8fafc', // Light grey container back
-                                            borderRadius: '16px',
-                                            padding: '24px',
-                                            alignSelf: 'flex-start',
-                                            border: '1px solid #e2e8f0',
-                                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                                            marginBottom: 8
-                                        }}>
-                                            {/* 1. Summary Description */}
-                                            {msg.result.description && (
-                                                <div style={{ marginBottom: '24px', color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>
-                                                    {msg.result.description}
-                                                </div>
-                                            )}
-
-                                            {/* 2. Member Grid */}
-                                            {msg.result.tasks && msg.result.tasks.length > 0 && (
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                                                    {(() => {
-                                                        const assigneeMap = new Map<string, string[]>();
-                                                        msg.result!.tasks!.forEach(t => {
-                                                            const assignee = t.assignee || t.suggestedAssignee || 'Chưa phân công';
-                                                            if (!assigneeMap.has(assignee)) assigneeMap.set(assignee, []);
-                                                            assigneeMap.get(assignee)!.push(t.description || t.title);
-                                                        });
-                                                        
-                                                        return Array.from(assigneeMap.entries()).map(([assignee, tasks]) => {
-                                                            const member = team?.members?.find((m: any) => m.username === assignee || m.fullName === assignee);
-                                                            const jobLabels = member?.jobLabels || [];
-                                                            const initials = assignee.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
-                                                            const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6'];
-                                                            let hash = 0;
-                                                            for (const c of assignee) hash = (hash * 31 + c.charCodeAt(0)) % colors.length;
-                                                            void colors[hash];
-
-                                                            return (
-                                                                <div key={assignee} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                                            <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#e0f2fe', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700 }}>
-                                                                                {initials}
-                                                                            </div>
-                                                                            <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '14px' }}>{assignee}</div>
-                                                                        </div>
-                                                                        {jobLabels.length > 0 && (
-                                                                            <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '12px', background: '#e0f2fe', color: '#0284c7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-                                                                                {jobLabels[0]}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    <div style={{ fontSize: '12px', color: '#64748b', lineHeight: '1.5', marginTop: '4px' }}>
-                                                                        {tasks.map((task, idx) => (
-                                                                            <div key={idx} style={{ marginBottom: tasks.length > 1 ? '4px' : '0' }}>
-                                                                                • {task}
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        });
-                                                    })()}
-                                                </div>
-                                            )}
-
-                                            {/* 3. Goal Details Summary Box */}
-                                            <div style={{
-                                                background: '#ffffff',
-                                                border: '1px solid #e2e8f0',
-                                                borderRadius: '16px',
-                                                padding: '20px',
-                                                boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-                                            }}>
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', fontSize: 13 }}>
-                                                    <div>
-                                                        <span style={{ color: '#94a3b8', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tiêu đề</span>
-                                                        <div style={{ fontWeight: 600, color: '#1e293b', marginTop: 4 }}>{msg.result.title || '—'}</div>
-                                                    </div>
-                                                    <div>
-                                                        <span style={{ color: '#94a3b8', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Khối lượng</span>
-                                                        <div style={{ fontWeight: 600, color: '#3b82f6', marginTop: 4 }}>{msg.result.quantity || '—'}</div>
-                                                    </div>
-                                                    <div>
-                                                        <span style={{ color: '#94a3b8', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Hạn chót</span>
-                                                        <div style={{ fontWeight: 600, color: '#ef4444', marginTop: 4 }}>{msg.result.deadline || '—'}</div>
-                                                    </div>
-                                                    <div>
-                                                        <span style={{ color: '#94a3b8', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Mức ưu tiên</span>
-                                                        <div style={{ fontWeight: 600, color: '#f59e0b', marginTop: 4 }}>{priority}</div>
-                                                    </div>
-                                                </div>
-
-                                                {!msg.result.needsClarification && (
-                                                    <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
-                                                        <button
-                                                            onClick={() => {
-                                                                // To reject, we can just clear msg.result or do nothing.
-                                                                // For now, let's just clear previewResult to exit any overlay if it is somehow stuck, or show a cancel note.
-                                                                alert('Đã từ chối kế hoạch này. Bạn có thể mô tả lại yêu cầu khác.');
-                                                            }}
-                                                            style={{
-                                                                flex: 1, padding: '12px',
-                                                                background: '#ffffff', border: '1px solid #cbd5e1',
-                                                                color: '#64748b', fontWeight: 600, fontSize: 14, borderRadius: 10,
-                                                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                                                                transition: 'all 0.2s'
-                                                            }}
-                                                        >
-                                                            <ion-icon name="close-circle-outline" style={{ fontSize: '18px' }}></ion-icon> Từ chối
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleCreateGoal(msg.result!)}
-                                                            style={{
-                                                                flex: 2, padding: '12px',
-                                                                background: '#8b5cf6', border: 'none',
-                                                                color: '#ffffff', fontWeight: 700, fontSize: 14, borderRadius: 10,
-                                                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                                                                transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(139,92,246,0.1)'
-                                                            }}
-                                                        >
-                                                            <ion-icon name="checkmark-circle-outline" style={{ fontSize: '18px' }}></ion-icon> Xác nhận & Tạo Công Việc
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
+                                    ) : (msg.result && !msg.result.needsClarification) ? (
+                                        /* Case 1: Interactive Refinement Form (Matches Screenshot) */
+                                        <AiResultRefinementForm 
+                                            result={msg.result} 
+                                            onConfirm={(finalData) => handleCreateGoal(finalData)} 
+                                            onAsk={(question) => {
+                                                setInput(question);
+                                                chatInputRef.current?.focus();
+                                            }}
+                                        />
                                     ) : (
-                                        /* Assistant Message standard fallback */
+                                        /* Case 2: Clarification Question OR standard assistant msg */
                                         <div style={{
-                                            maxWidth: '75%',
-                                            padding: '14px 18px',
+                                            maxWidth: '85%',
+                                            padding: '16px 20px',
                                             borderRadius: '20px',
                                             borderBottomLeftRadius: '4px',
-                                            background: '#f1f5f9',
+                                            background: msg.result?.needsClarification ? '#fff9db' : '#f1f5f9', // Yellowish for questions
+                                            border: msg.result?.needsClarification ? '1px solid #f9eb97' : 'none',
                                             color: '#334155',
                                             fontSize: '15px',
                                             lineHeight: '1.6',
+                                            alignSelf: 'flex-start',
+                                            boxShadow: msg.result?.needsClarification ? '0 2px 8px rgba(0,0,0,0.05)' : 'none'
                                         }}>
-                                            {msg.content}
+                                            {msg.result?.needsClarification && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontWeight: 700, fontSize: 13, color: '#d97706' }}>
+                                                    <ion-icon name="alert-circle"></ion-icon> AI CẦN XÁC NHẬN THÊM
+                                                </div>
+                                            )}
+                                            <div className="markdown-content">
+                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -884,6 +489,7 @@ export default function CreateTaskPage() {
                     <div style={{ padding: '24px', borderTop: '1px solid var(--border)', background: '#ffffff' }}>
                         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
                             <textarea
+                                ref={chatInputRef}
                                 value={input}
                                 onChange={e => setInput(e.target.value)}
                                 onKeyDown={e => {
@@ -924,7 +530,6 @@ export default function CreateTaskPage() {
                         </div>
                     </div>
                 </div>
-                )}
             </div>
             <style>{`
                 .dot-typing {
@@ -946,7 +551,214 @@ export default function CreateTaskPage() {
                     66.667% { box-shadow: 9984px 0 0 0 currentcolor, 9999px 0 0 0 currentcolor, 10014px 0 0 0 currentcolor; }
                     100% { box-shadow: 9984px 0 0 0 currentcolor, 9999px 0 0 0 currentcolor, 10014px 0 0 0 currentcolor; }
                 }
+                @keyframes slideUp {
+                    from { transform: translateY(20px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+                .markdown-content { white-space: pre-wrap; font-size: 14px; }
+                .markdown-content table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13px; background: #fff; }
+                .markdown-content th, .markdown-content td { border: 1px solid #fde68a; padding: 10px; text-align: left; }
+                .markdown-content th { background: #fef3c7; font-weight: 700; color: #92400e; }
+                .markdown-content p { margin: 8px 0; }
+                .markdown-content h3 { margin: 16px 0 8px; font-size: 16px; font-weight: 800; color: #92400e; }
             `}</style>
+        </div>
+    );
+}
+/**
+ * Component to refine and edit the AI parse result before creation.
+ * Matches the design in the user's screenshot.
+ */
+function AiResultRefinementForm({ result, onConfirm, onAsk }: { result: AiParseResult, onConfirm: (data: AiParseResult) => void, onAsk: (q: string) => void }) {
+    const [editedResult, setEditedResult] = useState<AiParseResult>({
+        ...result,
+        tasks: result.tasks ? [...result.tasks] : []
+    });
+
+    const updateField = (field: keyof AiParseResult, value: any) => {
+        setEditedResult(prev => ({ ...prev, [field]: value }));
+    };
+
+    const updateTask = (index: number, value: string) => {
+        const newTasks = [...(editedResult.tasks || [])];
+        newTasks[index] = { ...newTasks[index], description: value, title: value };
+        updateField('tasks', newTasks);
+    };
+
+    const removeTask = (index: number) => {
+        const newTasks = [...(editedResult.tasks || [])].filter((_, i) => i !== index);
+        updateField('tasks', newTasks);
+    };
+
+    const addTask = () => {
+        const newTasks = [...(editedResult.tasks || []), { title: '', description: '', assignee: '' }];
+        updateField('tasks', newTasks);
+    };
+
+    return (
+        <div style={{
+            width: '100%',
+            background: '#ffffff',
+            borderRadius: '24px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
+            overflow: 'hidden',
+            marginBottom: 16,
+            animation: 'slideUp 0.4s ease-out'
+        }}>
+            {/* Header Area */}
+            <div style={{ padding: '24px 32px', borderBottom: '1px solid #f1f5f9', position: 'relative' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                    <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#1e293b' }}>Xem trước công việc</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#ede9fe', color: '#7c3aed', padding: '4px 12px', borderRadius: '20px', fontSize: 11, fontWeight: 700 }}>
+                        <ion-icon name="checkmark-done-outline"></ion-icon> AI ĐÃ XỬ LÝ
+                    </div>
+                </div>
+                <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>Xem lại chi tiết công việc và phân bổ nhân sự trước khi xác nhận.</p>
+            </div>
+
+            <div style={{ padding: '32px' }}>
+                {/* Standardization Card */}
+                <div style={{ background: '#fafafa', borderRadius: '16px', border: '1px solid #f1f5f9', padding: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                        <span style={{ fontSize: 20, color: '#f59e0b' }}><ion-icon name="clipboard-outline"></ion-icon></span>
+                        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#334155' }}>Công việc đã chuẩn hóa</h3>
+                    </div>
+
+                    {/* Title Input */}
+                    <div style={{ marginBottom: 24 }}>
+                        <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8 }}>Tên công việc</label>
+                        <input
+                            type="text"
+                            value={editedResult.title || ''}
+                            onChange={e => updateField('title', e.target.value)}
+                            style={{
+                                width: '100%', padding: '14px 18px', borderRadius: '12px',
+                                border: '1px solid #e2e8f0', background: '#fff',
+                                color: '#1e293b', fontSize: 15, fontWeight: 500, outline: 'none',
+                                transition: 'border-color 0.2s'
+                            }}
+                        />
+                    </div>
+
+                    {/* Task List (Mô tả chi tiết) */}
+                    <div style={{ marginBottom: 24 }}>
+                        <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8 }}>Chi tiết mô tả</label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {editedResult.tasks?.map((task, idx) => (
+                                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <span style={{ color: '#cbd5e1', fontSize: 16 }}>•</span>
+                                    <input
+                                        type="text"
+                                        value={task.description || task.title || ''}
+                                        onChange={e => updateTask(idx, e.target.value)}
+                                        style={{
+                                            flex: 1, padding: '12px 16px', borderRadius: '12px',
+                                            border: '1px solid #e2e8f0', background: '#fff',
+                                            color: '#334155', fontSize: 14, outline: 'none'
+                                        }}
+                                    />
+                                    <button
+                                        onClick={() => removeTask(idx)}
+                                        style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: 20, display: 'flex' }}
+                                    >
+                                        <ion-icon name="close-circle-outline"></ion-icon>
+                                    </button>
+                                </div>
+                            ))}
+                            <button
+                                onClick={addTask}
+                                style={{
+                                    alignSelf: 'flex-start', background: '#f5f3ff', border: '1px solid #ddd6fe',
+                                    color: '#7c3aed', padding: '8px 16px', borderRadius: '10px',
+                                    fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6
+                                }}
+                            >
+                                <ion-icon name="add-outline"></ion-icon> Thêm mục
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Deadline & Priority Row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+                        <div>
+                            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8 }}>Hạn chót</label>
+                            <input
+                                type="text"
+                                value={editedResult.deadline || ''}
+                                onChange={e => updateField('deadline', e.target.value)}
+                                style={{
+                                    width: '100%', padding: '12px 16px', borderRadius: '12px',
+                                    border: '1px solid #e2e8f0', background: '#fff',
+                                    color: '#334155', fontSize: 14, outline: 'none'
+                                }}
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8 }}>Ưu tiên</label>
+                            <div style={{ display: 'flex', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', background: '#fff' }}>
+                                {['Low', 'Medium', 'High'].map((p) => (
+                                    <button
+                                        key={p}
+                                        onClick={() => updateField('priority', p)}
+                                        style={{
+                                            flex: 1, padding: '12px 0', fontSize: 13, fontWeight: 700,
+                                            border: 'none', borderRight: p !== 'High' ? '1px solid #f1f5f9' : 'none',
+                                            background: (editedResult.priority?.toLowerCase() || 'medium') === p.toLowerCase() ? '#6366f1' : 'transparent',
+                                            color: (editedResult.priority?.toLowerCase() || 'medium') === p.toLowerCase() ? '#fff' : '#64748b',
+                                            cursor: 'pointer', transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        {p}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Suggested Questions */}
+                {editedResult.suggestedQuestions && editedResult.suggestedQuestions.length > 0 && (
+                    <div style={{ marginTop: 24, borderTop: '1px solid #f1f5f9', paddingTop: 20 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, color: '#6366f1', fontSize: 13, fontWeight: 700 }}>
+                            <ion-icon name="bulb-outline"></ion-icon> Gợi ý từ AI để tối ưu kế hoạch:
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                            {editedResult.suggestedQuestions.map((q, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => onAsk(q)}
+                                    style={{
+                                        background: '#fff', border: '1px solid #e0e7ff',
+                                        color: '#4f46e5', padding: '8px 16px', borderRadius: '12px',
+                                        fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                                        transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                    }}
+                                    onMouseOver={e => { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.borderColor = '#c7d2fe'; }}
+                                    onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#e0e7ff'; }}
+                                >
+                                    {q}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Footer Buttons */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
+                    <button
+                        style={{ padding: '12px 32px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                        Hủy
+                    </button>
+                    <button
+                        onClick={() => onConfirm(editedResult)}
+                        style={{ padding: '12px 32px', borderRadius: '12px', border: 'none', background: '#6366f1', color: '#fff', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}
+                    >
+                        Lưu thay đổi
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

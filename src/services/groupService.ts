@@ -90,12 +90,13 @@ export interface AiParseResult {
     priority: string;
     needsClarification: boolean;
     source: string;
+    suggestedQuestions?: string[];
     tasks?: { title: string, description: string, priority: number, workload: number, suggestedAssignee?: string, assignee?: string, assigneeRole?: string }[];
 }
 
 export const aiService = {
-    parseText: (text: string, teamId: string) =>
-        api.post<AiParseResult>('/api/ai/parse', { text, teamId }).then(r => r.data),
+    parseText: (text: string, teamId: string, history?: string) =>
+        api.post<AiParseResult>('/api/ai/parse', { text, teamId, history }).then(r => r.data),
 };
 
 // === Chat Service ===
