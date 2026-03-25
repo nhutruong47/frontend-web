@@ -4,8 +4,9 @@
     background: var(--bg-primary);
     color: var(--text-primary);
     font-family: 'Inter', sans-serif;
-    min-height: 100vh;
-    width: 100vw;
+    height: 100vh;
+    width: 100%;
+    overflow-y: auto;
     overflow-x: hidden;
     transition: background 0.3s, color 0.3s;
 }
@@ -394,6 +395,7 @@
     flex: 1;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
