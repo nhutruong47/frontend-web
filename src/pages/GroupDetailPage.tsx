@@ -770,12 +770,40 @@ export default function GroupDetailPage() {
                                                 );
                                             })()}
                                         </td>
-                                        <td style={{ padding: '12px 16px', minWidth: 120 }}>
+                                        <td style={{ padding: '12px 16px', minWidth: 140 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <div style={{ flex: 1, height: 6, background: '#f1f5f9', borderRadius: 3, overflow: 'hidden' }}>
-                                                    <div style={{ height: '100%', background: st.color, borderRadius: 3, width: `${t.completionPercentage || 0}%`, transition: 'width 0.4s' }} />
-                                                </div>
-                                                <span style={{ fontSize: 12, fontWeight: 700, color: st.color }}>{t.completionPercentage || 0}%</span>
+                                                {(isAdmin || t.memberId === user?.id) ? (
+                                                    <input 
+                                                        title="Kéo thả để cập nhật tiến độ"
+                                                        type="range" 
+                                                        min={0} max={100} 
+                                                        value={t.completionPercentage || 0} 
+                                                        onChange={(e) => {
+                                                            const newTasks = allTasks.map(tk => tk.id === t.id ? { ...tk, completionPercentage: parseInt(e.target.value) } : tk);
+                                                            setAllTasks(newTasks);
+                                                        }}
+                                                        onMouseUp={async (e) => {
+                                                            const pct = parseInt((e.target as HTMLInputElement).value);
+                                                            await taskService.updateProgress(t.id, pct);
+                                                            const g = await goalService.getByTeam(id!);
+                                                            setGoals(g);
+                                                            Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat()));
+                                                        }}
+                                                        onTouchEnd={async (e) => {
+                                                            const pct = parseInt((e.target as HTMLInputElement).value);
+                                                            await taskService.updateProgress(t.id, pct);
+                                                            const g = await goalService.getByTeam(id!);
+                                                            setGoals(g);
+                                                            Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat()));
+                                                        }}
+                                                        style={{ flex: 1, accentColor: st.color, cursor: 'pointer', height: 4 }}
+                                                    />
+                                                ) : (
+                                                    <div style={{ flex: 1, height: 6, background: '#f1f5f9', borderRadius: 3, overflow: 'hidden' }}>
+                                                        <div style={{ height: '100%', background: st.color, borderRadius: 3, width: `${t.completionPercentage || 0}%`, transition: 'width 0.4s' }} />
+                                                    </div>
+                                                )}
+                                                <span style={{ fontSize: 12, fontWeight: 700, color: st.color, minWidth: 32 }}>{t.completionPercentage || 0}%</span>
                                             </div>
                                         </td>
                                         <td style={{ padding: '12px 16px' }}>
