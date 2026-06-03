@@ -1,0 +1,128 @@
+.payment-result-page {
+    min-height: 70vh;
+    display: grid;
+    place-items: center;
+    color: var(--shell-text);
+}
+
+.payment-result-card {
+    width: min(560px, 100%);
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+    padding: 34px;
+    border: 1px solid var(--shell-border);
+    border-radius: 8px;
+    background: var(--shell-surface);
+    box-shadow: var(--shell-shadow);
+    text-align: center;
+}
+
+.payment-result-icon {
+    width: 68px;
+    height: 68px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.12);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.24);
+}
+
+.payment-result-card.failed .payment-result-icon {
+    background: rgba(239, 68, 68, 0.12);
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.24);
+}
+
+.payment-result-kicker {
+    color: var(--shell-accent);
+    font-size: 12px;
+    font-weight: 850;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.payment-result-card h1 {
+    margin: 0;
+    color: var(--shell-title);
+    font-size: 30px;
+    line-height: 1.15;
+}
+
+.payment-result-card p {
+    max-width: 430px;
+    margin: 0;
+    color: var(--shell-text-soft);
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.payment-result-photo {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--shell-border);
+}
+
+.payment-result-details {
+    width: 100%;
+    display: grid;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.payment-result-details div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: var(--shell-surface-soft);
+    border: 1px solid var(--shell-border);
+}
+
+.payment-result-details span {
+    color: var(--shell-text-soft);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.payment-result-details strong {
+    color: var(--shell-title);
+    text-align: right;
+}
+
+.payment-result-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.payment-result-primary,
+.payment-result-secondary {
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 850;
+}
+
+.payment-result-primary {
+    background: var(--shell-accent);
+    color: var(--shell-button-text);
+}
+
+.payment-result-secondary {
+    color: var(--shell-text);
+    background: var(--shell-surface-soft);
+    border: 1px solid var(--shell-border);
+}
