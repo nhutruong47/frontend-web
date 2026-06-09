@@ -1,0 +1,56 @@
+import { Link, useSearchParams } from 'react-router-dom';
+import { CheckCircle2, CircleAlert, ReceiptText } from 'lucide-react';
+import './PaymentResultPage.css';
+
+export default function PaymentResultPage() {
+    const [searchParams] = useSearchParams();
+    const status = searchParams.get('status');
+    const txnRef = searchParams.get('txnRef');
+    const planId = searchParams.get('planId');
+    const message = searchParams.get('message');
+    const success = status === 'SUCCESS';
+
+    return (
+        <div className="payment-result-page">
+            <section className={`payment-result-card ${success ? 'success' : 'failed'}`}>
+                <div className="payment-result-icon">
+                    {success ? <CheckCircle2 size={34} /> : <CircleAlert size={34} />}
+                </div>
+                <span className="payment-result-kicker">VNPAY</span>
+                <h1>{success ? 'Thanh toán thành công' : 'Thanh toán chưa hoàn tất'}</h1>
+                <p>{message || (success ? 'Gói AI của bạn đã được kích hoạt.' : 'Giao dịch bị hủy hoặc không hợp lệ.')}</p>
+
+                <img
+                    className="payment-result-photo"
+                    src="https://images.pexels.com/photos/30427274/pexels-photo-30427274.jpeg?auto=compress&cs=tinysrgb&w=900"
+                    alt="Cà phê espresso mới pha"
+                />
+
+                <div className="payment-result-details">
+                    <div>
+                        <span>Mã giao dịch</span>
+                        <strong>{txnRef || '-'}</strong>
+                    </div>
+                    <div>
+                        <span>Gói AI</span>
+                        <strong>{planId || '-'}</strong>
+                    </div>
+                    <div>
+                        <span>Trạng thái</span>
+                        <strong>{status || '-'}</strong>
+                    </div>
+                </div>
+
+                <div className="payment-result-actions">
+                    <Link to="/upgrade" className="payment-result-primary">
+                        <ReceiptText size={16} />
+                        Quay lại gói AI
+                    </Link>
+                    <Link to="/dashboard" className="payment-result-secondary">
+                        Về dashboard
+                    </Link>
+                </div>
+            </section>
+        </div>
+    );
+}

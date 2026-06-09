@@ -1,0 +1,332 @@
+.vnpay-mock-page {
+    min-height: calc(100vh - var(--topbar-height));
+    color: #1f2937;
+    background: #f2f5f9;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.vnpay-mock-header {
+    height: 74px;
+    display: grid;
+    grid-template-columns: 160px 1fr 64px;
+    align-items: center;
+    padding: 0 24px;
+    background: #ffea00;
+    border-bottom: 1px solid #d8dce3;
+}
+
+.vnpay-back,
+.vnpay-close {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #1459c8;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.vnpay-close {
+    width: 42px;
+    height: 42px;
+    justify-content: center;
+    border-radius: 8px;
+    justify-self: end;
+}
+
+.vnpay-brand {
+    justify-self: center;
+    color: #0f66cc;
+    font-size: 38px;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: 0;
+}
+
+.vnpay-brand strong {
+    margin-left: 6px;
+    color: #ed1c24;
+}
+
+.vnpay-mock-shell {
+    width: min(980px, calc(100% - 32px));
+    margin: 28px auto;
+    padding: 26px;
+    background: #fff;
+    border: 1px solid #dfe4ea;
+    border-radius: 8px;
+    box-shadow: 0 16px 44px rgba(15, 23, 42, 0.08);
+}
+
+.vnpay-notice {
+    margin-bottom: 24px;
+    padding: 14px 18px;
+    border-radius: 4px;
+    background: #e6f6fb;
+    color: #64748b;
+    font-size: 13px;
+    text-align: center;
+}
+
+.vnpay-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 42px;
+}
+
+.vnpay-qr-panel,
+.vnpay-bank-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.vnpay-qr-panel {
+    align-items: center;
+    text-align: center;
+}
+
+.vnpay-qr-panel h2,
+.vnpay-bank-panel h2 {
+    margin: 0 0 18px;
+    color: #334155;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.vnpay-logo-line {
+    margin-bottom: 8px;
+    color: #1d64cc;
+    font-size: 30px;
+    font-weight: 900;
+}
+
+.vnpay-logo-line strong {
+    color: #ed1c24;
+}
+
+.mock-qr {
+    width: 214px;
+    height: 214px;
+    display: grid;
+    grid-template-columns: repeat(15, 1fr);
+    grid-template-rows: repeat(15, 1fr);
+    gap: 2px;
+    padding: 10px;
+    border: 4px solid #26364f;
+    background: #fff;
+}
+
+.mock-qr span {
+    background: #fff;
+}
+
+.mock-qr span.filled {
+    background: #111827;
+}
+
+.scan-label {
+    margin-top: 10px;
+    color: #1da9d6;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.vnpay-coffee-thumb {
+    width: 214px;
+    height: 72px;
+    margin-top: 12px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #dfe4ea;
+}
+
+.vnpay-qr-panel p {
+    margin: 16px 0 4px;
+    color: #64748b;
+}
+
+.vnpay-amount {
+    color: #111827;
+    font-size: 25px;
+}
+
+.vnpay-help {
+    margin-top: 10px;
+    border: 0;
+    background: transparent;
+    color: #0f8ec8;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.vnpay-field {
+    display: grid;
+    gap: 7px;
+    margin-bottom: 14px;
+}
+
+.vnpay-field span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.vnpay-field input,
+.vnpay-field select {
+    height: 46px;
+    border: 1px solid #d7dee8;
+    border-radius: 4px;
+    background: #fff;
+    color: #111827;
+    padding: 0 14px;
+    font: inherit;
+    font-size: 14px;
+    outline: none;
+}
+
+.vnpay-field input:focus,
+.vnpay-field select:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.vnpay-confirm,
+.vnpay-cancel {
+    height: 48px;
+    border: 0;
+    border-radius: 4px;
+    font: inherit;
+    font-weight: 850;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+.vnpay-confirm {
+    margin-top: 8px;
+    background: #05a9e8;
+    color: #fff;
+}
+
+.vnpay-confirm:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.vnpay-cancel {
+    margin-top: 12px;
+    background: #edf2f7;
+    color: #64748b;
+}
+
+.vnpay-error {
+    margin: 2px 0 10px;
+    padding: 10px 12px;
+    border-radius: 4px;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 13px;
+}
+
+.vnpay-bank-list {
+    margin-top: 30px;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 18px;
+}
+
+.vnpay-bank-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.vnpay-bank-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.vnpay-bank-grid button {
+    min-height: 58px;
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 2px 7px;
+    align-items: center;
+    border: 1px solid #dfe4ea;
+    border-radius: 6px;
+    background: #fff;
+    color: #334155;
+    padding: 8px 10px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.vnpay-bank-grid button.active {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.12);
+}
+
+.vnpay-bank-grid svg {
+    grid-row: span 2;
+    color: #0ea5e9;
+}
+
+.vnpay-bank-grid span {
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.vnpay-bank-grid small {
+    color: #94a3b8;
+    font-size: 10px;
+}
+
+@media (max-width: 860px) {
+    .vnpay-mock-header {
+        grid-template-columns: 120px 1fr 48px;
+        padding: 0 12px;
+    }
+
+    .vnpay-brand {
+        font-size: 28px;
+    }
+
+    .vnpay-mock-shell {
+        width: calc(100% - 20px);
+        padding: 18px;
+    }
+
+    .vnpay-columns {
+        grid-template-columns: 1fr;
+        gap: 28px;
+    }
+
+    .vnpay-bank-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .vnpay-mock-header {
+        grid-template-columns: 44px 1fr 44px;
+    }
+
+    .vnpay-back span,
+    .vnpay-back {
+        font-size: 0;
+    }
+
+    .vnpay-bank-grid {
+        grid-template-columns: 1fr;
+    }
+}
