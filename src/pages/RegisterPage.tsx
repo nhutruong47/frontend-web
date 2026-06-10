@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import orcaLogo from '../assets/orca-logo.svg';
+import orcaLogo from '../assets/orca-logo.png';
 
 export default function RegisterPage() {
     const [username, setUsername] = useState('');
@@ -70,8 +70,7 @@ export default function RegisterPage() {
 
             <div className="auth-card">
                 <div className="auth-logo">
-                    <img className="auth-logo-icon" src={orcaLogo} alt="" aria-hidden="true" />
-                    <h1 className="auth-logo-text">ORCA</h1>
+                    <img className="auth-brand-full-logo" src={orcaLogo} alt="ORCA" />
                     <p className="auth-subtitle">Tạo tài khoản mới</p>
                 </div>
 

@@ -7,6 +7,7 @@ import {
   BarChart3,
   Brain,
   Building2,
+  Check,
   CheckCircle,
   Clock,
   ClipboardCheck,
@@ -22,8 +23,9 @@ import {
   TrendingUp,
   Users
 } from 'lucide-react';
-import orcaLogo from '../assets/orca-logo.svg';
+import orcaLogo from '../assets/orca-logo.png';
 import './HomePage.css';
+import './UpgradePlanPage.css';
 
 const productionPoster =
   'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1600&q=85';
@@ -138,70 +140,101 @@ const roles = [
 
 const aiFeatures = [
   {
-    title: 'Dự báo công suất xưởng',
-    text: 'AI phân tích đơn hàng, lịch sản xuất và năng lực từng xưởng để gợi ý mức tải phù hợp.',
-    icon: TrendingUp
+    title: 'Lên kế hoạch sản xuất',
+    text: 'AI đề xuất kế hoạch làm việc dựa trên đơn hàng và khả năng sản xuất của xưởng.',
+    icon: ClipboardCheck
   },
   {
-    title: 'Gợi ý phân công nhân viên',
-    text: 'Hệ thống đề xuất nhân sự theo vai trò, ca làm việc và trạng thái batch cần xử lý.',
+    title: 'Giao việc cho nhân viên',
+    text: 'Tự động phân công công việc cho từng người và theo dõi trạng thái thực hiện.',
     icon: Users
   },
   {
-    title: 'Phân tích tiến độ đơn hàng',
-    text: 'AI tổng hợp dữ liệu từ workflow để chỉ ra đơn nào đang chạy chậm hoặc có nguy cơ nghẽn.',
+    title: 'Theo dõi tiến độ đơn hàng',
+    text: 'Biết đơn hàng nào đang sản xuất, đã hoàn thành đến đâu và công đoạn nào đang bị chậm.',
     icon: BarChart3
   },
   {
-    title: 'Cảnh báo chậm tiến độ',
-    text: 'Tự động cảnh báo khi batch vượt thời gian dự kiến, thiếu QC hoặc trễ lịch bàn giao.',
+    title: 'Cảnh báo sớm vấn đề',
+    text: 'Thông báo khi có nguy cơ trễ giao hàng, thiếu nguyên liệu hoặc công việc bị tồn đọng',
     icon: AlertTriangle
   }
 ];
 
 const workshops = [
   {
-    name: 'Ember Roastery Đà Lạt',
-    rating: '97%',
-    description: 'Xưởng rang specialty tập trung Arabica Cầu Đất, phù hợp các đơn cần profile ổn định.',
-    tags: ['Light Roast', 'Cupping Score: 85+'],
-    image: 'https://images.unsplash.com/photo-1511081692775-05d0f180a065?auto=format&fit=crop&w=1000&q=85'
+    name: 'Arabica Cầu Đất Washed',
+    rating: '98%',
+    description: 'Cà phê đặc sản với hương hoa nhài, vị chua thanh của cam chanh và hậu vị ngọt kéo dài.',
+    tags: ['Light Roast', 'Specialty', '100% Arabica'],
+    image: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=1000&q=85'
   },
   {
-    name: 'Origins Craft Lab',
-    rating: '94%',
-    description: 'Đơn vị sơ chế, phân loại và rang thử nghiệm cho các mẻ nhỏ cần kiểm soát chi tiết.',
-    tags: ['Lab Testing', 'Batch: 500g - 5kg'],
-    image: 'https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=1000&q=85'
-  },
-  {
-    name: 'Legacy Beans Factory',
+    name: 'Robusta Honey Fine',
     rating: '96%',
-    description: 'Xưởng quy mô lớn chuyên gia công cà phê thương mại với năng lực đóng gói nhanh.',
-    tags: ['Bulk Processing', 'Batch: 30kg+'],
-    image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1000&q=85'
+    description: 'Tuyển chọn từ những trái chín mọng, lên men mật ong mang lại thể chất đậm đà, hương chocolate.',
+    tags: ['Medium Roast', 'High Caffeine', 'Fine Robusta'],
+    image: 'https://images.unsplash.com/photo-1559525839-b184a4d698c7?auto=format&fit=crop&w=1000&q=85'
+  },
+  {
+    name: 'Signature Espresso Blend',
+    rating: '99%',
+    description: 'Tỷ lệ hoàn hảo 70% Robusta và 30% Arabica. Lớp crema dày mịn, hương vị cân bằng cho pha máy.',
+    tags: ['Dark Roast', 'Espresso', 'Blend'],
+    image: 'https://images.unsplash.com/photo-1587734195503-904fca47e0e9?auto=format&fit=crop&w=1000&q=85'
   }
 ];
 
 const pricingPlans = [
   {
-    name: 'Free Chat',
+    id: 'starter',
+    name: 'Starter',
     price: '0đ',
-    note: 'Gói hiện tại để dùng thử AI trong nhóm',
-    features: ['50K token/tháng', 'ORCA Lite', 'Chat AI cơ bản']
+    priceNote: '/tháng',
+    subTitle: 'AI quản lý công việc',
+    description: 'Dành cho xưởng nhỏ',
+    features: [
+      'AI tạo task từ đơn hàng',
+      'AI giao việc cho nhân viên',
+      'Theo dõi tiến độ sản xuất',
+      'Quản lý đơn hàng và batch',
+      'Báo cáo vận hành cơ bản',
+    ],
+    accent: 'starter',
   },
   {
-    name: 'AI Plus',
+    id: 'plus',
+    name: 'Professional',
     price: '129.000đ',
-    note: 'Phù hợp cá nhân cần chat dài hơn',
-    features: ['500K token/tháng', 'ORCA Smart', 'Ưu tiên tốc độ phản hồi']
+    priceNote: '/tháng',
+    subTitle: 'AI điều phối sản xuất',
+    description: 'Dành cho xưởng đang tăng trưởng',
+    features: [
+      'Cảnh báo công việc có nguy cơ trễ',
+      'Cảnh báo thiếu nguyên liệu',
+      'Phân tích hiệu suất sản xuất',
+      'Phát hiện điểm nghẽn trong quy trình',
+      'Đề xuất tối ưu tiến độ và nguồn lực',
+    ],
+    accent: 'professional',
+    featured: true,
   },
   {
-    name: 'AI Pro',
+    id: 'pro',
+    name: 'Enterprise',
     price: '249.000đ',
-    note: 'Dành cho người dùng cần xử lý nhiều nội dung',
-    features: ['1.5M token/tháng', 'ORCA Max', 'Phân tích yêu cầu dài']
-  }
+    priceNote: '/tháng',
+    subTitle: 'AI quản lý doanh nghiệp',
+    description: 'Dành cho doanh nghiệp nhiều xưởng',
+    features: [
+      'Lập kế hoạch sản xuất dài hạn',
+      'Dự báo nhu cầu và công suất',
+      'Mô phỏng trước các kịch bản sản xuất',
+      'Quản lý nhiều xưởng trên một nền tảng',
+      'Thương hiệu riêng cho doanh nghiệp',
+    ],
+    accent: 'enterprise',
+  },
 ];
 
 export default function HomePage() {
@@ -294,8 +327,7 @@ export default function HomePage() {
       <header className={`coffee-nav${navScrolled ? ' coffee-nav--scrolled' : ''}${navHidden ? ' coffee-nav--hidden' : ''}`} aria-label="Điều hướng chính">
         <div className="coffee-nav__inner">
           <button className="coffee-nav__brand" onClick={() => scrollTo('hero')} aria-label="Trang chủ ORCA">
-            <img src={orcaLogo} alt="" aria-hidden="true" />
-            <strong>ORCA</strong>
+            <img src={orcaLogo} alt="ORCA" className="coffee-nav__brand-img" />
           </button>
 
           <nav className="coffee-nav__links" aria-label="Các mục trên trang">
@@ -534,10 +566,9 @@ export default function HomePage() {
         <div className="coffee-ai-hero" data-reveal="up">
           <div>
             <span className="coffee-kicker">Công nghệ AI</span>
-            <h2>AI hỗ trợ vận hành sản xuất cà phê.</h2>
+            <h2>AI hỗ trợ quản lý sản xuất cà phê.</h2>
             <p>
-              ORCA không chỉ lưu dữ liệu vận hành. Hệ thống còn dùng AI để phân tích công suất,
-              tiến độ và phân công, giúp quản lý xưởng ra quyết định nhanh hơn.
+              ORCA giúp chủ xưởng biết hôm nay cần làm gì, ai đang làm việc gì và đơn hàng nào có nguy cơ bị chậm.
             </p>
           </div>
           <div className="coffee-ai-orb" aria-hidden="true">
@@ -563,12 +594,12 @@ export default function HomePage() {
       <section id="workshops" className="coffee-workshops">
         <div className="coffee-section-heading" data-reveal="up">
           <div>
-            <span className="coffee-kicker">Xưởng đối tác</span>
-            <h2>Mạng lưới gia công nổi bật.</h2>
-            <p>Những đơn vị rang uy tín hàng đầu trong mạng lưới ORCA.</p>
+            <span className="coffee-kicker">Sản phẩm nổi bật</span>
+            <h2>Các sản phẩm nổi tiếng trên thị trường.</h2>
+            <p>Những dòng sản phẩm cà phê chất lượng cao được đánh giá tốt nhất.</p>
           </div>
           <button className="coffee-text-link" onClick={() => navigate('/login?returnUrl=/dat-hang')}>
-            Xem tất cả các xưởng <ArrowRight size={18} />
+            Xem tất cả sản phẩm <ArrowRight size={18} />
           </button>
         </div>
 
@@ -577,7 +608,7 @@ export default function HomePage() {
             <article className="coffee-workshop-card" key={workshop.name} data-reveal="product" style={{ transitionDelay: `${index * 120}ms` }}>
               <div className="coffee-workshop-card__image">
                 <img src={workshop.image} alt={workshop.name} />
-                <span>Premium Partner</span>
+                <span>Best Seller</span>
               </div>
               <div className="coffee-workshop-card__body">
                 <div className="coffee-workshop-card__title">
@@ -601,18 +632,50 @@ export default function HomePage() {
           <span className="coffee-kicker">Pricing</span>
           <h2>Chọn gói phù hợp với quy mô vận hành.</h2>
         </div>
-        <div className="coffee-pricing-grid">
+        <div className="upgrade-grid" style={{ padding: '20px 0' }}>
           {pricingPlans.map((plan, index) => (
-            <article className="coffee-pricing-card" key={plan.name} data-reveal="product" style={{ transitionDelay: `${index * 100}ms` }}>
-              <h3>{plan.name}</h3>
-              <strong>{plan.price}</strong>
-              <p>{plan.note}</p>
-              {plan.features.map((feature) => (
-                <span key={feature}><CheckCircle size={16} /> {feature}</span>
-              ))}
-              <button className="coffee-button coffee-button--dark" onClick={() => navigate('/login?returnUrl=/upgrade')}>
-                Bắt đầu
+            <article
+              key={plan.id}
+              className={`plan-card accent-${plan.accent}${plan.featured ? ' featured' : ''}`}
+              data-reveal="product"
+              style={{ transitionDelay: `${index * 100}ms` }}
+            >
+              {plan.featured && (
+                <div className="plan-badge-wrapper">
+                  <span className="plan-badge">★ Phổ biến nhất</span>
+                </div>
+              )}
+
+              <div className="plan-name">{plan.name}</div>
+
+              <div className="plan-price">
+                <strong className="price-value">{plan.price}</strong>
+                <span className="price-note">{plan.priceNote}</span>
+              </div>
+
+              <div className="plan-sub-info">
+                <div className="plan-subtitle">{plan.subTitle}</div>
+                <p className="plan-description">{plan.description}</p>
+              </div>
+
+              <button
+                type="button"
+                className="plan-action"
+                onClick={() => navigate('/login?returnUrl=/upgrade')}
+              >
+                {plan.id === 'starter' ? 'Bắt đầu miễn phí' : 'Nâng cấp ngay'}
               </button>
+
+              <ul className="plan-features">
+                {plan.features.map((feature) => (
+                  <li key={feature}>
+                    <span className="feature-check-circle">
+                      <Check size={10} strokeWidth={4} />
+                    </span>
+                    <span className="feature-text">{feature}</span>
+                  </li>
+                ))}
+              </ul>
             </article>
           ))}
         </div>
@@ -632,81 +695,61 @@ export default function HomePage() {
 
       <footer id="contact" className="coffee-contact-footer">
         <div className="coffee-contact-footer__veil" aria-hidden="true" />
-        <div className="coffee-contact-footer__grid" data-reveal="up">
-          <section className="coffee-contact-column">
-            <h2>Office Information</h2>
-            <div className="coffee-contact-rule" />
-            <ul className="coffee-office-list">
-              <li>
-                <span><MapPin size={19} /></span>
-                <p>121 King Street, New York</p>
-              </li>
-              <li>
-                <span><Phone size={19} /></span>
-                <p>+1 (800) 333 44 55</p>
-              </li>
-              <li>
-                <span><Mail size={19} /></span>
-                <p>coffee@yoursite.com</p>
-              </li>
-              <li>
-                <span><Building2 size={19} /></span>
-                <p>+1 (800) 333 99 88</p>
-              </li>
-              <li>
-                <span><img className="coffee-office-logo" src={orcaLogo} alt="" aria-hidden="true" /></span>
-                <p>@orcatheme</p>
-              </li>
-            </ul>
-          </section>
-
-          <section className="coffee-contact-column">
-            <h2>News</h2>
-            <div className="coffee-contact-rule" />
-            <article className="coffee-footer-news">
-              <img src="https://images.unsplash.com/photo-1511081692775-05d0f180a065?auto=format&fit=crop&w=240&q=80" alt="Coffee shop team" />
-              <div>
-                <h3>A Place of Silence</h3>
-                <small><Clock size={13} /> 10 June 2024</small>
+        <div className="coffee-contact-footer__inner" data-reveal="up">
+          <div className="orca-footer-content">
+            <div className="orca-footer-info">
+              <div className="orca-footer-brand">
+                <img src={orcaLogo} alt="ORCA" className="orca-footer-logo" />
+                <span className="orca-footer-name">ORCA</span>
               </div>
-            </article>
-            <article className="coffee-footer-news">
-              <img src="https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=240&q=80" alt="Coffee cups" />
-              <div>
-                <h3>How to create a Logo like a Pro</h3>
-                <small><Clock size={13} /> 10 June 2024</small>
-              </div>
-            </article>
-          </section>
+              <p className="orca-footer-tagline">Điều phối sản xuất cà phê bằng AI.</p>
+              
+              <ul className="orca-footer-details">
+                <li>
+                  <MapPin size={20} className="footer-icon" />
+                  <div>
+                    <strong>KTX Khu B, ĐHQG-HCM</strong>
+                    <p>Đường Mạc Đĩnh Chi, Phường Đông Hòa, TP. Hồ Chí Minh</p>
+                  </div>
+                </li>
+                <li>
+                  <Phone size={20} className="footer-icon" />
+                  <span>0328 416 716</span>
+                </li>
+                <li>
+                  <Mail size={20} className="footer-icon" />
+                  <span>orca@gmail.com</span>
+                </li>
+              </ul>
+            </div>
 
-          <section className="coffee-contact-column">
-            <h2>Quick Shortcuts</h2>
-            <div className="coffee-contact-rule" />
-            <div className="coffee-shortcut-grid">
-              {['Home', 'City Store', 'Toolkits', 'Employees', 'Teams', 'Benefits', 'Support', 'Maps', 'Careers', 'News', 'Clients', 'Consultation', 'Publicity'].map((link) => (
-                <button key={link} onClick={() => scrollTo(link === 'Home' ? 'hero' : 'features')}>
-                  <ArrowRight size={16} />
-                  {link}
-                </button>
-              ))}
+            <div className="orca-footer-links">
+              <h3 className="footer-heading">Hỗ trợ</h3>
+              <ul>
+                <li><a href="#">Trung tâm trợ giúp</a></li>
+                <li><a href="#">Hướng dẫn sử dụng</a></li>
+                <li><a href="#">Cộng đồng ORCA</a></li>
+                <li><a href="#">Chính sách bảo mật</a></li>
+                <li><a href="#">Điều khoản dịch vụ</a></li>
+              </ul>
             </div>
-          </section>
 
-          <section className="coffee-contact-column">
-            <h2>Working Hours</h2>
-            <div className="coffee-contact-rule" />
-            <p className="coffee-hours-copy">
-              Our support available to help you 24 hours a day, seven days a week.
-            </p>
-            <div className="coffee-hours-row">
-              <span>Monday to Friday</span>
-              <strong>8:00 - 16:30</strong>
+            <div className="orca-footer-map">
+              <iframe
+                src="https://www.google.com/maps?q=KTX+Khu+B+ĐHQG-HCM,+Mạc+Đĩnh+Chi,+Đông+Hòa,+TP.HCM&output=embed"
+                width="100%"
+                height="100%"
+                style={{ border: 0, borderRadius: '16px', minHeight: '300px' }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="ORCA Location"
+              ></iframe>
             </div>
-            <div className="coffee-hours-row">
-              <span>Saturday</span>
-              <strong>8:00 - 13:00</strong>
-            </div>
-          </section>
+          </div>
+          
+          <div className="orca-footer-bottom">
+            <p>&copy; 2026 ORCA. All rights reserved.</p>
+          </div>
         </div>
       </footer>
     </main>

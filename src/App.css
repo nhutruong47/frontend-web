@@ -983,6 +983,46 @@
   filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.28));
 }
 
+/* Combined logo (whale + ORCA text in one image) */
+.sidebar-brand-logo {
+  height: 48px;
+  width: auto;
+  max-width: 160px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 8px rgba(180, 120, 40, 0.4));
+}
+
+.login-brand-full-logo {
+  height: 80px;
+  width: auto;
+  max-width: 220px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 4px 12px rgba(180, 120, 40, 0.45));
+  margin-bottom: 4px;
+}
+
+.auth-brand-full-logo {
+  height: 100px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 8px;
+  filter: drop-shadow(0 4px 14px rgba(180, 120, 40, 0.5));
+  animation: logoFloat 3s ease-in-out infinite;
+}
+
+.coffee-nav__brand-img {
+  height: 72px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 4px 12px rgba(180, 120, 40, 0.55)) drop-shadow(0 8px 20px rgba(0, 0, 0, 0.4));
+}
+
+
 .sidebar-nav {
   flex: 1;
   display: flex;

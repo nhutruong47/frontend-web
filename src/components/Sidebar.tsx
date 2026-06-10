@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import orcaLogo from '../assets/orca-logo.svg';
+import orcaLogo from '../assets/orca-logo.png';
 
 export default function Sidebar() {
     const { user } = useAuth();
@@ -52,8 +52,7 @@ export default function Sidebar() {
     return (
         <aside className="sidebar">
             <div className="sidebar-logo">
-                <img className="app-logo-mark" src={orcaLogo} alt="" aria-hidden="true" />
-                <span className="logo-text">ORCA</span>
+                <img className="app-logo-mark sidebar-brand-logo" src={orcaLogo} alt="ORCA" />
             </div>
 
             <nav className="sidebar-nav">

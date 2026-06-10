@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import orcaLogo from '../assets/orca-logo.svg';
+import orcaLogo from '../assets/orca-logo.png';
 
 const COFFEE_BRANDS = [
     { name: 'Trung Nguyên Legend', desc: 'Thương hiệu cà phê số 1 Việt Nam', emoji: 'TN' },
@@ -185,12 +185,7 @@ export default function LoginPage() {
                 <div className="login-form-container">
                     <div className="login-form-header">
                         <div className="login-logo-row">
-                            <span className="login-logo-icon" aria-hidden="true">
-                                <img src={orcaLogo} alt="" />
-                            </span>
-                            <span className="login-logo-text">
-                                <strong>ORCA</strong>
-                            </span>
+                            <img src={orcaLogo} alt="ORCA" className="login-brand-full-logo" />
                         </div>
                         <h2 className="login-form-title">Chào mừng trở lại!</h2>
                         <p className="login-form-subtitle">Đăng nhập để quản lý xưởng cà phê của bạn</p>

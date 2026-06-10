@@ -1,72 +1,70 @@
 import { useState } from 'react';
-import {
-    Check,
-    ChevronRight,
-    Gem,
-    MessagesSquare,
-    Sparkles,
-    Zap,
-    type LucideIcon,
-} from 'lucide-react';
+import { Check } from 'lucide-react';
 import './UpgradePlanPage.css';
 
 interface Plan {
     id: string;
     name: string;
-    eyebrow: string;
+    subTitle: string;
     price: string;
     priceNote: string;
-    tokenLimit: string;
-    model: string;
     featured?: boolean;
     current?: boolean;
     description: string;
     features: string[];
-    icon: LucideIcon;
-    accent: 'coffee' | 'violet' | 'green' | 'blue';
+    accent: 'starter' | 'professional' | 'enterprise';
 }
 
 const plans: Plan[] = [
     {
         id: 'starter',
-        name: 'Free Chat',
-        eyebrow: 'Gói hiện tại',
+        name: 'Starter',
         price: '0đ',
-        priceNote: 'tháng',
-        tokenLimit: '50K token',
-        model: 'ORCA Lite',
+        priceNote: '/tháng',
+        subTitle: 'AI quản lý công việc',
+        description: 'Dành cho xưởng nhỏ',
+        features: [
+            'AI tạo task từ đơn hàng',
+            'AI giao việc cho nhân viên',
+            'Theo dõi tiến độ sản xuất',
+            'Quản lý đơn hàng và batch',
+            'Báo cáo vận hành cơ bản'
+        ],
+        accent: 'starter',
         current: true,
-        description: 'Dùng thử AI để tạo mục tiêu, chia task và hỏi nhanh trong nhóm.',
-        features: ['Chat AI cơ bản', 'Lưu lịch sử hội thoại gần đây', 'Tạo task từ mô tả ngắn', 'Hỗ trợ nhóm nhỏ'],
-        icon: MessagesSquare,
-        accent: 'coffee',
     },
     {
-        id: 'plus',
-        name: 'AI Plus',
-        eyebrow: 'Phù hợp cá nhân',
+        id: 'plus', // internal ID maps to 'plus' on backend/vnpay
+        name: 'Professional',
         price: '129.000đ',
-        priceNote: 'tháng',
-        tokenLimit: '500K token',
-        model: 'ORCA Smart',
+        priceNote: '/tháng',
+        subTitle: 'AI điều phối sản xuất',
+        description: 'Dành cho xưởng đang tăng trưởng',
+        features: [
+            'Cảnh báo công việc có nguy cơ trễ',
+            'Cảnh báo thiếu nguyên liệu',
+            'Phân tích hiệu suất sản xuất',
+            'Phát hiện điểm nghẽn trong quy trình',
+            'Đề xuất tối ưu tiến độ và nguồn lực'
+        ],
+        accent: 'professional',
         featured: true,
-        description: 'Nhiều token hơn cho chat dài, phân tích task kỹ hơn và phản hồi nhanh.',
-        features: ['Ưu tiên tốc độ phản hồi', 'Chat dài nhiều ngữ cảnh', 'Tạo kế hoạch công việc chi tiết', 'Gợi ý deadline và ưu tiên'],
-        icon: Sparkles,
-        accent: 'violet',
     },
     {
-        id: 'pro',
-        name: 'AI Pro',
-        eyebrow: 'Token xịn hơn',
+        id: 'pro', // internal ID maps to 'pro' on backend/vnpay
+        name: 'Enterprise',
         price: '249.000đ',
-        priceNote: 'tháng',
-        tokenLimit: '1.5M token',
-        model: 'ORCA Max',
-        description: 'Dành cho người dùng chat AI thường xuyên và cần xử lý nhiều nội dung hơn.',
-        features: ['Mô hình suy luận tốt hơn', 'Phân tích file và yêu cầu dài', 'Tóm tắt lịch sử nhóm', 'Xuất prompt và biên bản công việc'],
-        icon: Zap,
-        accent: 'green',
+        priceNote: '/tháng',
+        subTitle: 'AI quản lý doanh nghiệp',
+        description: 'Dành cho doanh nghiệp nhiều xưởng',
+        features: [
+            'Lập kế hoạch sản xuất dài hạn',
+            'Dự báo nhu cầu và công suất',
+            'Mô phỏng trước các kịch bản sản xuất',
+            'Quản lý nhiều xưởng trên một nền tảng',
+            'Thương hiệu riêng cho doanh nghiệp'
+        ],
+        accent: 'enterprise',
     },
 ];
 
@@ -85,21 +83,12 @@ export default function UpgradePlanPage() {
     return (
         <div className="upgrade-page">
             <section className="upgrade-header">
-                <span className="upgrade-header-badge">
-                    <Gem size={15} />
-                    ORCA AI
-                </span>
-                <h1>Nâng cấp gói của bạn</h1>
-                <p>Chọn gói AI phù hợp để chat dài hơn, tạo task nhanh hơn và xử lý nhiều ngữ cảnh vận hành hơn.</p>
-                <div className="upgrade-billing-toggle" aria-label="Chu kỳ thanh toán">
-                    <button className="active" type="button">Hàng tháng</button>
-                    <button type="button">Hàng năm <span>Tiết kiệm</span></button>
-                </div>
+                <h1>Giải pháp AI cho sản xuất</h1>
+                <p>Chọn gói phù hợp để tối ưu quy trình và nâng cao năng suất nhà máy của bạn.</p>
             </section>
 
             <section className="upgrade-grid">
                 {plans.map((plan) => {
-                    const Icon = plan.icon;
                     const isSelected = selectedPlanId === plan.id;
 
                     return (
@@ -107,48 +96,40 @@ export default function UpgradePlanPage() {
                             key={plan.id}
                             className={`plan-card accent-${plan.accent} ${plan.current ? 'current' : ''} ${plan.featured ? 'featured' : ''} ${isSelected ? 'selected' : ''}`}
                         >
-                            {plan.featured && <span className="plan-ribbon">Phổ biến</span>}
-                            <div className="plan-topline">
-                                <div className="plan-icon">
-                                    <Icon size={20} />
+                            {plan.featured && (
+                                <div className="plan-badge-wrapper">
+                                    <span className="plan-badge">★ Phổ biến nhất</span>
                                 </div>
-                                <span>{plan.eyebrow}</span>
-                            </div>
-
-                            <h2>{plan.name}</h2>
-                            <p className="plan-description">{plan.description}</p>
-
+                            )}
+                            
+                            <div className="plan-name">{plan.name}</div>
+                            
                             <div className="plan-price">
-                                <strong>{plan.price}</strong>
-                                <span>{plan.priceNote}</span>
+                                <strong className="price-value">{plan.price}</strong>
+                                <span className="price-note">{plan.priceNote}</span>
                             </div>
 
-                            <div className="plan-quota">
-                                <div>
-                                    <span>Hạn mức</span>
-                                    <strong>{plan.tokenLimit}</strong>
-                                </div>
-                                <div>
-                                    <span>Model</span>
-                                    <strong>{plan.model}</strong>
-                                </div>
+                            <div className="plan-sub-info">
+                                <div className="plan-subtitle">{plan.subTitle}</div>
+                                <p className="plan-description">{plan.description}</p>
                             </div>
 
                             <button
                                 type="button"
                                 className="plan-action"
                                 onClick={() => handleSelectPlan(plan)}
-                                disabled={plan.current}
+                                disabled={plan.current && plan.id === 'starter'}
                             >
-                                {plan.current ? 'Gói hiện tại' : isSelected ? `Đã chọn ${plan.name}` : `Chọn ${plan.name}`}
-                                {!plan.current && <ChevronRight size={16} />}
+                                {plan.id === 'starter' ? 'Bắt đầu' : 'Nâng cấp ngay'}
                             </button>
 
                             <ul className="plan-features">
                                 {plan.features.map((feature) => (
                                     <li key={feature}>
-                                        <Check size={15} />
-                                        <span>{feature}</span>
+                                        <span className="feature-check-circle">
+                                            <Check size={10} strokeWidth={4} />
+                                        </span>
+                                        <span className="feature-text">{feature}</span>
                                     </li>
                                 ))}
                             </ul>
