@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import gsap from 'gsap';
 import {
   AlertTriangle,
   ArrowDown,
@@ -73,22 +74,22 @@ const featureSlides = [
   {
     title: 'Quản lý đơn gia công',
     text: 'Tạo đơn, chọn xưởng, đặt deadline và theo dõi trạng thái trong một luồng ngắn gọn.',
-    image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=1200&q=85'
+    image: 'https://images.pexels.com/photos/4226787/pexels-photo-4226787.jpeg?auto=compress&cs=tinysrgb&w=1200&fit=crop'
   },
   {
     title: 'Theo dõi batch sản xuất',
     text: 'Nắm profile rang, khối lượng, QC và người phụ trách của từng batch.',
-    image: 'https://images.unsplash.com/photo-1606791405792-1004f1718d0c?auto=format&fit=crop&w=1200&q=85'
+    image: 'https://images.pexels.com/photos/37540261/pexels-photo-37540261.jpeg?auto=compress&cs=tinysrgb&w=1200&fit=crop'
   },
   {
     title: 'Phân quyền nhân viên',
     text: 'Giao việc theo vai trò: quản lý xưởng, QC, đóng gói, giao hàng và admin.',
-    image: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=1200&q=85'
+    image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=85'
   },
   {
     title: 'Báo cáo vận hành',
     text: 'Xem công suất, tỷ lệ trễ hẹn, chất lượng batch và hiệu quả từng xưởng.',
-    image: 'https://images.unsplash.com/photo-1497636577773-f1231844b336?auto=format&fit=crop&w=1200&q=85'
+    image: 'https://images.pexels.com/photos/7693142/pexels-photo-7693142.jpeg?auto=compress&cs=tinysrgb&w=1200&fit=crop'
   }
 ];
 
@@ -100,26 +101,38 @@ const workflowSteps = [
   'Bàn giao và nghiệm thu'
 ];
 
-const dashboardShowcaseImages = [
+const curvedShowcaseImages = [
   {
-    title: 'Marketplace network',
-    label: 'Roastery marketplace',
-    image: '/luxury-coffee-hero.png'
+    title: 'Dashboard điều hành sản xuất',
+    image: 'https://images.pexels.com/photos/35968323/pexels-photo-35968323.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop'
   },
   {
-    title: 'Premium operations',
-    label: 'Batch command center',
-    image: 'https://images.unsplash.com/photo-1511081692775-05d0f180a065?auto=format&fit=crop&w=1600&q=85'
+    title: 'Quản lý đơn hàng',
+    image: 'https://images.pexels.com/photos/4226787/pexels-photo-4226787.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop'
   },
   {
-    title: 'Roast technology',
-    label: 'Precision roasting',
-    image: '/coffee-hero.png'
+    title: 'Giao việc cho nhân viên',
+    image: 'https://images.pexels.com/photos/4349948/pexels-photo-4349948.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop'
   },
   {
-    title: 'Warehouse tracking',
-    label: 'Inventory workflow',
-    image: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=1600&q=85'
+    title: 'Theo dõi tiến độ sản xuất',
+    image: 'https://images.pexels.com/photos/6007664/pexels-photo-6007664.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop'
+  },
+  {
+    title: 'Báo cáo hiệu suất',
+    image: 'https://images.pexels.com/photos/7693142/pexels-photo-7693142.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop'
+  },
+  {
+    title: 'Quản lý tồn kho',
+    image: 'https://images.pexels.com/photos/2868982/pexels-photo-2868982.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop'
+  },
+  {
+    title: 'Theo dõi chất lượng',
+    image: 'https://images.pexels.com/photos/34505585/pexels-photo-34505585.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop'
+  },
+  {
+    title: 'Công suất xưởng',
+    image: 'https://images.pexels.com/photos/37540261/pexels-photo-37540261.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop'
   }
 ];
 
@@ -242,6 +255,31 @@ export default function HomePage() {
   const [featureIndex, setFeatureIndex] = useState(0);
   const [navScrolled, setNavScrolled] = useState(false);
   const [navHidden, setNavHidden] = useState(false);
+  const wheelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!wheelRef.current) return;
+    
+    const anim = gsap.to(wheelRef.current, {
+      rotation: -360,
+      duration: 160,
+      ease: 'none',
+      repeat: -1,
+    });
+
+    const handleMouseEnter = () => anim.pause();
+    const handleMouseLeave = () => anim.play();
+
+    const wheelEl = wheelRef.current;
+    wheelEl.addEventListener('mouseenter', handleMouseEnter);
+    wheelEl.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      wheelEl.removeEventListener('mouseenter', handleMouseEnter);
+      wheelEl.removeEventListener('mouseleave', handleMouseLeave);
+      anim.kill();
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.add('luxury-home-page');
@@ -446,7 +484,7 @@ export default function HomePage() {
       <section id="features" className="coffee-features">
         <div className="coffee-section-heading coffee-section-heading--center" data-reveal="up">
           <span className="coffee-kicker">Các tính năng chính</span>
-          <h2>Quản lý vận hành bằng những màn hình dễ đọc.</h2>
+          <h2>Quản lý vận hành</h2>
         </div>
 
         <div className="coffee-feature-carousel" aria-label="Tính năng ORCA tự động chuyển động">
@@ -534,30 +572,31 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="dashboard" className="coffee-dashboard-section">
-        <div className="coffee-section-heading" data-reveal="up">
-          <div>
-            <span className="coffee-kicker">ORCA interface gallery</span>
-            <h2>Những không gian vận hành cà phê chuyển động liên tục.</h2>
-          </div>
+      <section id="dashboard" className="coffee-dashboard-curved">
+        <div className="coffee-curved-heading" data-reveal="up">
+          <span className="coffee-kicker">Mọi hoạt động sản xuất trong một hệ thống duy nhất</span>
+          <h2>Theo dõi đơn hàng, giao việc, tiến độ sản xuất và báo cáo vận hành từ một nơi duy nhất.</h2>
         </div>
-        <div className="coffee-interface-gallery" data-reveal="zoom" aria-label="ORCA interface image carousel">
-          <div className="coffee-interface-gallery__track">
-            {[...dashboardShowcaseImages, ...dashboardShowcaseImages].map((item, index) => (
-              <article className="coffee-interface-card" key={`${item.title}-${index}`}>
-                <img src={item.image} alt={item.title} />
-                <div className="coffee-interface-card__shade" />
-                <div className="coffee-interface-card__caption">
-                  <span>{item.label}</span>
-                  <strong>{item.title}</strong>
-                </div>
-              </article>
-            ))}
-          </div>
-          <div className="coffee-interface-gallery__rail" aria-hidden="true">
-            <span />
-            <span />
-            <span />
+        
+        <div className="coffee-curved-wheel-container">
+          <div className="coffee-curved-wheel" ref={wheelRef}>
+            {[...Array(6)].map((_, setIndex) => 
+              curvedShowcaseImages.map((item, i) => {
+                const globalIndex = setIndex * curvedShowcaseImages.length + i;
+                return (
+                  <article 
+                    className="coffee-curved-card" 
+                    key={`${setIndex}-${i}`}
+                    style={{ transform: `rotate(${globalIndex * 7.5}deg)` }}
+                  >
+                    <div className="card-inner">
+                      <img src={item.image} alt={item.title} />
+                      <div className="glass-label">{item.title}</div>
+                    </div>
+                  </article>
+                );
+              })
+            )}
           </div>
         </div>
       </section>
