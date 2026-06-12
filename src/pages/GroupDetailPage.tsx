@@ -106,6 +106,11 @@ export default function GroupDetailPage() {
     const [dmUserId, setDmUserId] = useState<string | null>(null);
     const [showChat, setShowChat] = useState(false);
     const [showChatTokens, setShowChatTokens] = useState(false);
+    const [chatExpanded, setChatExpanded] = useState(false);
+    const [showVideoCall, setShowVideoCall] = useState(false);
+    const [chatAttachment, setChatAttachment] = useState<File | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     const [unreadGroupCount, setUnreadGroupCount] = useState(0);
     const [unreadDmCounts, setUnreadDmCounts] = useState<Record<string, number>>({});
     const chatEndRef = useRef<HTMLDivElement>(null);
@@ -266,9 +271,16 @@ export default function GroupDetailPage() {
     }, [id, user, team]);
 
     const handleSendChat = async () => {
-        if (!id || !chatInput.trim()) return;
-        await chatService.sendMessage(id, chatInput.trim(), chatTab === 'dm' && dmUserId ? dmUserId : undefined);
+        if (!id || (!chatInput.trim() && !chatAttachment)) return;
+        
+        let messageContent = chatInput.trim();
+        if (chatAttachment) {
+            messageContent = messageContent ? `${messageContent} [Đính kèm: ${chatAttachment.name}]` : `[Đính kèm: ${chatAttachment.name}]`;
+        }
+
+        await chatService.sendMessage(id, messageContent, chatTab === 'dm' && dmUserId ? dmUserId : undefined);
         setChatInput('');
+        setChatAttachment(null);
         loadChatMessages();
     };
 
@@ -1291,11 +1303,15 @@ export default function GroupDetailPage() {
 
             {/* ===== CHAT PANEL (SLIDE) ===== */}
             {showChat && (
-                <div style={{ position: 'fixed', right: 0, top: 0, width: 380, height: '100vh', background: '#fff', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 100, display: 'flex', flexDirection: 'column', borderLeft: '1px solid #e2e8f0' }}>
+                <div style={{ position: 'fixed', right: 0, top: 0, width: chatExpanded ? 600 : 380, height: '100vh', background: '#fff', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 100, display: 'flex', flexDirection: 'column', borderLeft: '1px solid #e2e8f0', transition: 'width 0.3s ease' }}>
                     {/* Chat Header */}
                     <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1e293b' }}><ion-icon name="chatbubbles" style={{ fontSize: 18, verticalAlign: 'middle', marginRight: 6, color: '#d4a574' }}></ion-icon> Nhắn tin</h3>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <button onClick={() => setShowVideoCall(true)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#10b981', display: 'flex', alignItems: 'center' }} title="Gọi video"><ion-icon name="videocam-outline"></ion-icon></button>
+                            <button onClick={() => setChatExpanded(!chatExpanded)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center' }} title={chatExpanded ? "Thu nhỏ" : "Mở rộng"}>
+                                <ion-icon name={chatExpanded ? "contract-outline" : "expand-outline"}></ion-icon>
+                            </button>
                             <button onClick={() => setShowChatTokens(prev => !prev)} style={{ background: showChatTokens ? '#f9f1e3' : '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 999, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer', color: showChatTokens ? '#d4a574' : '#64748b' }}>
                                 {showChatTokens ? `${formatTokenCount(chatTokenTotal)} token` : 'Xem token'}
                             </button>
@@ -1457,7 +1473,20 @@ export default function GroupDetailPage() {
                             </div>
 
                             {/* Chat input */}
+                            {chatAttachment && (
+                                <div style={{ padding: '8px 16px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#333' }}>
+                                        <ion-icon name="document-text-outline" style={{ color: '#d4a574', fontSize: 18 }}></ion-icon>
+                                        <span style={{ maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{chatAttachment.name}</span>
+                                    </div>
+                                    <button onClick={() => setChatAttachment(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex' }}><ion-icon name="close-circle-outline" style={{ fontSize: 18 }}></ion-icon></button>
+                                </div>
+                            )}
                             <div style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0', background: '#fff', display: 'flex', gap: 8 }}>
+                                <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={e => { if(e.target.files && e.target.files[0]) setChatAttachment(e.target.files[0]) }} />
+                                <button onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 24, display: 'flex', alignItems: 'center' }} title="Đính kèm file/ảnh">
+                                    <ion-icon name="attach-outline"></ion-icon>
+                                </button>
                                 <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendChat()} placeholder={chatTab === 'dm' ? "Nhập tin nhắn riêng..." : "Nhập tin nhắn cho toàn nhóm..."} style={{ flex: 1, padding: '10px 14px', borderRadius: 20, border: '1px solid #cbd5e1', fontSize: 14, outline: 'none', background: '#f8fafc' }} />
                                 <button onClick={handleSendChat} style={{ background: '#d4a574', border: 'none', borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', transition: 'transform 0.1s' }} onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'} onMouseUp={e => e.currentTarget.style.transform = 'none'} onMouseLeave={e => e.currentTarget.style.transform = 'none'}><ion-icon name="send" style={{ fontSize: 18, marginLeft: 2 }}></ion-icon></button>
                             </div>
@@ -1467,6 +1496,32 @@ export default function GroupDetailPage() {
             )}
 
             {/* ===== MODALS (preserved) ===== */}
+            {/* Video Call Modal */}
+            {showVideoCall && (
+                <div style={{ position: 'fixed', inset: 0, background: '#111827', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
+                    {/* Header */}
+                    <div style={{ padding: '24px', display: 'flex', justifyContent: 'space-between', color: '#fff' }}>
+                        <h2 style={{ margin: 0, fontWeight: 500, fontSize: 18 }}>Cuộc gọi nhóm {team?.name}</h2>
+                        <button onClick={() => setShowVideoCall(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: 28, cursor: 'pointer', display: 'flex' }}><ion-icon name="expand"></ion-icon></button>
+                    </div>
+                    
+                    {/* Main Content */}
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                        <div style={{ width: 160, height: 160, borderRadius: '50%', background: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid #4b5563' }}>
+                            <ion-icon name="person" style={{ fontSize: 80, color: '#9ca3af' }}></ion-icon>
+                        </div>
+                        <div style={{ position: 'absolute', bottom: 40, color: '#fff', fontSize: 20, fontWeight: 500 }}>Đang gọi...</div>
+                    </div>
+
+                    {/* Controls */}
+                    <div style={{ padding: '32px', display: 'flex', justifyContent: 'center', gap: 24, background: 'linear-gradient(transparent, rgba(0,0,0,0.8))' }}>
+                        <button style={{ width: 64, height: 64, borderRadius: '50%', background: '#374151', border: 'none', color: '#fff', fontSize: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ion-icon name="mic-outline"></ion-icon></button>
+                        <button style={{ width: 64, height: 64, borderRadius: '50%', background: '#374151', border: 'none', color: '#fff', fontSize: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ion-icon name="videocam-outline"></ion-icon></button>
+                        <button onClick={() => setShowVideoCall(false)} style={{ width: 64, height: 64, borderRadius: '50%', background: '#ef4444', border: 'none', color: '#fff', fontSize: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ion-icon name="call-outline" style={{ transform: 'rotate(135deg)' }}></ion-icon></button>
+                    </div>
+                </div>
+            )}
+
             {/* Invite Modal */}
             {showAddMember && (
                 <div className="modal-overlay" onClick={closeModal} style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
