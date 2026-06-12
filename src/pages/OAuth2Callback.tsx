@@ -18,15 +18,15 @@ export default function OAuth2Callback() {
 
             if (token) {
                 // Lưu token
-                localStorage.setItem('token', token);
+                sessionStorage.setItem('token', token);
 
                 try {
                     // Fetch full user info
                     const userInfo = await authService.getMe();
-                    localStorage.setItem('user', JSON.stringify(userInfo));
+                    sessionStorage.setItem('user', JSON.stringify(userInfo));
                 } catch {
                     // Fallback: dùng info từ URL params
-                    localStorage.setItem('user', JSON.stringify({
+                    sessionStorage.setItem('user', JSON.stringify({
                         username: username || '',
                         role: role || 'MEMBER',
                     }));

@@ -54,7 +54,7 @@ export default function InviteAcceptPage() {
         }
         try {
             setLoading(true);
-            const jwt = localStorage.getItem('token');
+            const jwt = sessionStorage.getItem('token');
             const headers = { Authorization: `Bearer ${jwt}` };
 
             if (isCodeMode) {

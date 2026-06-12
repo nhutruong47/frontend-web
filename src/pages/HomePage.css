@@ -1613,6 +1613,204 @@ body.luxury-home-page {
   scroll-margin-top: 80px;
 }
 
+.coffee-pricing .upgrade-grid {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+
+.coffee-pricing .plan-card {
+  position: relative;
+  min-height: 585px;
+  padding: clamp(34px, 4vw, 48px) 32px 30px;
+  display: flex;
+  flex-direction: column;
+  color: #15100d;
+  background: rgba(255, 253, 249, 0.82);
+  border: 1px solid rgba(76, 57, 38, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 20px 54px rgba(75, 47, 32, 0.08);
+  transform: translateY(0);
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.coffee-pricing .plan-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 28px 68px rgba(75, 47, 32, 0.12);
+}
+
+.coffee-pricing .plan-card.featured {
+  border-color: #7b6042;
+  background: linear-gradient(180deg, #fffdf8 0%, #fbf4e8 100%);
+  box-shadow: 0 26px 72px rgba(104, 76, 45, 0.16);
+}
+
+.coffee-pricing .plan-card.accent-enterprise {
+  color: #ffffff;
+  background: #102033;
+  border-color: #102033;
+  box-shadow: 0 24px 68px rgba(10, 24, 42, 0.25);
+}
+
+.coffee-pricing .plan-badge-wrapper {
+  position: absolute;
+  inset: -14px 0 auto;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.coffee-pricing .plan-badge {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  color: #ffffff;
+  background: #5e4228;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 8px 20px rgba(73, 48, 28, 0.22);
+}
+
+.coffee-pricing .plan-name {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  color: inherit;
+  font-size: clamp(1.35rem, 2vw, 1.55rem);
+  font-weight: 850;
+}
+
+.coffee-pricing .plan-price {
+  min-height: 86px;
+  margin-top: 22px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.coffee-pricing .price-value {
+  color: inherit;
+  font-size: clamp(2.6rem, 4.6vw, 3.15rem);
+  line-height: 1;
+  font-weight: 900;
+}
+
+.coffee-pricing .price-note {
+  color: rgba(73, 48, 28, 0.6);
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.coffee-pricing .accent-enterprise .price-note {
+  color: #82a5ca;
+}
+
+.coffee-pricing .plan-sub-info {
+  min-height: 82px;
+  margin-top: 4px;
+}
+
+.coffee-pricing .plan-subtitle {
+  color: inherit;
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.coffee-pricing .plan-description {
+  margin: 12px 0 0;
+  color: rgba(73, 48, 28, 0.58);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.coffee-pricing .accent-enterprise .plan-description {
+  color: #7f9cbb;
+}
+
+.coffee-pricing .plan-action {
+  width: 100%;
+  min-height: 46px;
+  margin: 22px 0 34px;
+  padding: 0 20px;
+  color: #15100d;
+  background: rgba(255, 255, 255, 0.52);
+  border: 1px solid rgba(76, 57, 38, 0.12);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 850;
+  cursor: pointer;
+  transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.coffee-pricing .plan-action:hover {
+  transform: translateY(-1px);
+  background: #ffffff;
+  box-shadow: 0 12px 26px rgba(75, 47, 32, 0.12);
+}
+
+.coffee-pricing .featured .plan-action {
+  color: #ffffff;
+  background: linear-gradient(90deg, #806241 0%, #3e2817 100%);
+  border-color: transparent;
+}
+
+.coffee-pricing .accent-enterprise .plan-action {
+  color: #061427;
+  background: #ffffff;
+  border-color: #ffffff;
+}
+
+.coffee-pricing .plan-features {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  list-style: none;
+}
+
+.coffee-pricing .plan-features li {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 12px;
+  align-items: start;
+  color: rgba(73, 48, 28, 0.82);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.coffee-pricing .accent-enterprise .plan-features li {
+  color: #8fb5da;
+}
+
+.coffee-pricing .feature-check-circle {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #15a75a;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+  transform: translateY(1px);
+}
+
+.coffee-pricing .featured .feature-check-circle {
+  color: #3d2b1c;
+}
+
+.coffee-pricing .accent-enterprise .feature-check-circle {
+  color: #52dbd5;
+}
+
 .coffee-pricing-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1661,6 +1859,74 @@ body.luxury-home-page {
 .coffee-pricing-card .coffee-button {
   width: 100%;
   margin-top: auto;
+}
+
+.coffee-support {
+  position: relative;
+  padding: clamp(72px, 10vw, 128px) clamp(20px, 6vw, 86px);
+  background:
+    linear-gradient(180deg, #fbf6ed 0%, #f5eadb 100%);
+  scroll-margin-top: 80px;
+}
+
+.coffee-support-grid {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.coffee-support-card {
+  min-height: 260px;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  color: #201710;
+  background: rgba(255, 253, 249, 0.78);
+  border: 1px solid rgba(76, 57, 38, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 18px 44px rgba(75, 47, 32, 0.08);
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.coffee-support-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(128, 98, 65, 0.36);
+  box-shadow: 0 26px 58px rgba(75, 47, 32, 0.12);
+}
+
+.coffee-support-icon {
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: #5e4228;
+  border-radius: 8px;
+}
+
+.coffee-support-card h3 {
+  margin: 22px 0 0;
+  color: #201710;
+  font-size: 1.05rem;
+  font-weight: 850;
+}
+
+.coffee-support-card p {
+  margin: 12px 0 20px;
+  color: rgba(73, 48, 28, 0.66);
+  font-size: 0.92rem;
+  font-weight: 650;
+  line-height: 1.6;
+}
+
+.coffee-support-card strong {
+  margin-top: auto;
+  color: #0f766e;
+  font-size: 0.94rem;
+  font-weight: 850;
 }
 
 @keyframes featureDrift {
@@ -2220,8 +2486,18 @@ body.luxury-home-page {
   .coffee-stat-grid,
   .coffee-role-grid,
   .coffee-ai-grid,
-  .coffee-pricing-grid {
+  .coffee-pricing-grid,
+  .coffee-support-grid {
     grid-template-columns: 1fr;
+  }
+
+  .coffee-pricing .upgrade-grid {
+    grid-template-columns: 1fr;
+    max-width: 420px;
+  }
+
+  .coffee-pricing .plan-card {
+    min-height: auto;
   }
 
   .coffee-ai-hero {

@@ -10,16 +10,15 @@ export default function Sidebar() {
 
     const adminNavItems = [
         { path: '/admin?section=overview', label: 'Dashboard', icon: 'speedometer-outline' },
-        { path: '/admin?section=businesses', label: 'Doanh nghiệp / Xưởng', icon: 'business-outline' },
-        { path: '/admin?section=users', label: 'User toàn hệ thống', icon: 'people-outline' },
+        { path: '/admin?section=businesses', label: 'Doanh nghiệp', icon: 'business-outline' },
+        { path: '/admin?section=users', label: 'Người dùng', icon: 'people-outline' },
         { path: '/admin?section=subscriptions', label: 'Gói dịch vụ', icon: 'receipt-outline' },
-        { path: '/admin?section=billing', label: 'Thanh toán', icon: 'card-outline' },
-        { path: '/admin?section=ai', label: 'AI Management', icon: 'hardware-chip-outline' },
-        { path: '/admin?section=monitoring', label: 'System Monitoring', icon: 'pulse-outline' },
+        { path: '/admin?section=billing', label: 'Billing & Cost Control', icon: 'card-outline' },
+        { path: '/admin?section=ai', label: 'AI Usage', icon: 'hardware-chip-outline' },
+        { path: '/admin?section=monitoring', label: 'System Status', icon: 'pulse-outline' },
+        { path: '/admin?section=support', label: 'Support Center', icon: 'help-buoy-outline' },
+        { path: '/admin?section=notifications', label: 'Notification Center', icon: 'notifications-outline' },
         { path: '/admin?section=audit', label: 'Audit Log', icon: 'shield-checkmark-outline' },
-        { path: '/admin?section=workflow', label: 'Workflow', icon: 'git-network-outline' },
-        { path: '/admin?section=alerts', label: 'Alert Center', icon: 'notifications-outline' },
-        { path: '/admin?section=reports', label: 'Executive Report', icon: 'document-text-outline' },
     ];
 
     const navItems = user?.role === 'ADMIN' ? adminNavItems : [

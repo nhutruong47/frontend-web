@@ -1,248 +1,233 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
-
-.upgrade-page {
+.pricing-page {
     min-height: 100%;
-    color: #1e293b !important;
+    background: transparent;
+    font-family: var(--font, 'Inter', sans-serif);
+    padding: clamp(32px, 5vw, 64px) 24px;
     display: flex;
     flex-direction: column;
-    gap: 40px;
-    padding: clamp(24px, 4vw, 60px) 24px;
-    background: linear-gradient(180deg, #f5f7fb 0%, #edf2f9 100%) !important;
-    font-family: 'Outfit', 'Inter', system-ui, sans-serif !important;
-    overflow-y: auto;
+    align-items: center;
+    color: var(--text-primary);
 }
 
-/* Header styling */
-.upgrade-header {
-    max-width: 800px;
-    margin: 0 auto;
+.pricing-header {
     text-align: center;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    margin-bottom: 24px;
+    margin-top: 20px;
 }
 
-.upgrade-header h1 {
-    margin: 0;
-    color: #0f172a !important;
-    font-size: clamp(2rem, 3.5vw, 2.75rem);
+.pricing-header h1 {
+    font-size: 32px;
     font-weight: 800;
-    letter-spacing: -0.025em;
-    line-height: 1.2;
-}
-
-.upgrade-header p {
-    max-width: 600px;
-    margin: 0 auto;
-    color: #475569 !important;
-    font-size: clamp(14px, 1.5vw, 16px);
-    line-height: 1.6;
-    font-weight: 400;
-}
-
-/* Grid layout */
-.upgrade-grid {
-    max-width: 1140px;
-    width: 100%;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 28px;
-    align-items: center; /* Centers cards vertically so the taller card extends both top and bottom */
-    padding: 40px 0;
-}
-
-/* Card base styling */
-.plan-card {
-    position: relative;
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 20px;
-    padding: 40px 32px;
-    display: flex;
-    flex-direction: column;
-    min-height: 560px; /* Base height for Starter and Enterprise */
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02), 0 10px 15px -3px rgba(0, 0, 0, 0.03);
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.plan-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.08);
-}
-
-/* Name and price */
-.plan-name {
-    font-size: 24px;
-    font-weight: 700;
-    color: #0f172a !important;
-    margin-bottom: 20px;
-}
-
-.plan-price {
-    display: flex;
-    align-items: baseline;
-    gap: 4px;
+    color: var(--text-primary);
     margin-bottom: 12px;
 }
 
-.price-value {
-    font-size: 40px;
-    font-weight: 800;
-    color: #0f172a !important;
-    line-height: 1;
-}
-
-.price-note {
-    font-size: 14px;
-    font-weight: 500;
-    color: #64748b !important;
-}
-
-/* Subtitle and description */
-.plan-sub-info {
-    margin-bottom: 28px;
-}
-
-.plan-subtitle {
-    font-size: 16px;
-    font-weight: 700;
-    color: #0f172a !important;
-    margin-bottom: 4px;
-}
-
-.plan-description {
-    font-size: 13px;
-    color: #64748b !important;
-    margin: 0;
-    font-weight: 400;
-}
-
-/* Button */
-.plan-action {
-    width: 100%;
-    height: 48px;
-    border-radius: 999px;
+.pricing-header p {
     font-size: 15px;
-    font-weight: 700;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.pricing-payment-methods {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 48px;
+    justify-content: center;
+}
+
+.pricing-payment-methods button {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
-    margin-bottom: 32px;
-    border: none;
-    outline: none;
+    transition: all 0.2s;
+    color: var(--text-secondary);
 }
 
-/* Accent Starter */
-.plan-card.accent-starter {
-    background: #ffffff !important;
+.pricing-payment-methods button:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
 }
 
-.plan-card.accent-starter .plan-action {
-    border: 2px solid #0f766e !important;
-    background: #ffffff !important;
-    color: #0f766e !important;
+.pricing-payment-methods button.active.momo {
+    border-color: #d6008f;
+    color: #d6008f;
+    background: rgba(214, 0, 143, 0.1);
 }
 
-.plan-card.accent-starter .plan-action:hover:not(:disabled) {
-    background: #f0fdfa !important;
-    border-color: #0d9488 !important;
-    color: #0d9488 !important;
+.pricing-payment-methods button.active.vnpay {
+    border-color: #1459c8;
+    color: #1459c8;
+    background: rgba(20, 89, 200, 0.1);
 }
 
-.plan-card.accent-starter .plan-action:disabled {
-    border: 2px solid #0f766e !important;
-    background: #ffffff !important;
-    color: #0f766e !important;
-    opacity: 0.65;
-    cursor: not-allowed;
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    max-width: 1000px;
+    width: 100%;
+    align-items: stretch;
 }
 
-/* Accent Professional */
-.plan-card.accent-professional {
-    background: #faf6ec !important;
-    border: 1px solid #d4c2a8 !important;
-    box-shadow: 0 4px 6px -1px rgba(139, 115, 85, 0.05), 0 10px 15px -3px rgba(139, 115, 85, 0.08);
-    min-height: 610px !important; /* Make it taller than the others (560px) */
-    padding: 48px 32px !important; /* Slightly more vertical padding */
-    transform: scale(1.025); /* Scale it up slightly to make it wider/longer */
-    z-index: 2; /* Put it on top of overlapping elements */
+/* === BASE CARD (Starter) === */
+.pricing-card {
+    position: relative;
+    border-radius: 16px;
+    padding: 40px 32px;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: var(--shadow-md);
+    background: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border) !important;
 }
 
-.plan-card.accent-professional .plan-name {
-    color: #8c6e4a !important;
+.pricing-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
 }
 
-.plan-card.accent-professional .plan-action {
-    background: #8c6e4a !important;
-    color: #ffffff !important;
-}
-
-.plan-card.accent-professional .plan-action:hover {
-    background: #785c3c !important;
-}
-
-.plan-card.accent-professional:hover {
-    transform: scale(1.025) translateY(-4px);
-    box-shadow: 0 20px 32px -10px rgba(139, 115, 85, 0.2);
-}
-
-/* Accent Enterprise */
-.plan-card.accent-enterprise {
-    background: #0f223f !important;
-    border: 1px solid #1e293b !important;
-    color: #ffffff !important;
-}
-
-.plan-card.accent-enterprise .plan-name,
-.plan-card.accent-enterprise .price-value,
-.plan-card.accent-enterprise .plan-subtitle {
-    color: #ffffff !important;
-}
-
-.plan-card.accent-enterprise .price-note,
-.plan-card.accent-enterprise .plan-description {
-    color: #94a3b8 !important;
-}
-
-.plan-card.accent-enterprise .plan-action {
-    background: #ffffff !important;
-    color: #0f223f !important;
-}
-
-.plan-card.accent-enterprise .plan-action:hover {
-    background: #f1f5f9 !important;
-    color: #0b1a30 !important;
-}
-
-/* Popular Badge */
-.plan-badge-wrapper {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translate(-50%, -50%);
+/* === FEATURED CARD (Professional) === */
+.pricing-card.featured {
+    transform: scale(1.04);
     z-index: 10;
+    box-shadow: var(--shadow-lg), var(--shadow-glow);
+    border-color: var(--accent-secondary) !important;
+    background: linear-gradient(180deg, rgba(212, 165, 116, 0.05) 0%, var(--bg-card) 100%) !important;
 }
 
-.plan-badge {
-    background: #8c6e4a !important;
-    color: #ffffff !important;
+.pricing-card.featured:hover {
+    transform: scale(1.04) translateY(-4px);
+}
+
+.pricing-ribbon {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent-gradient);
+    color: #fff;
     padding: 6px 16px;
-    border-radius: 999px;
+    border-radius: 20px;
     font-size: 12px;
     font-weight: 700;
     white-space: nowrap;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: var(--shadow-sm);
 }
 
-/* Features List */
-.plan-features {
+.pricing-card h2 {
+    font-size: 22px;
+    font-weight: 800;
+    margin: 0 0 16px 0;
+    color: var(--text-primary) !important;
+}
+
+.pricing-card.featured h2 {
+    color: var(--accent-primary) !important;
+}
+
+.pricing-price {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 24px;
+}
+
+.pricing-price strong {
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--text-primary) !important;
+}
+
+.pricing-price span {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted) !important;
+}
+
+.pricing-subtitle {
+    margin-bottom: 32px;
+}
+
+.pricing-subtitle strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text-primary) !important;
+}
+
+.pricing-subtitle span {
+    display: block;
+    font-size: 13px;
+    opacity: 0.8;
+    color: var(--text-secondary) !important;
+}
+
+/* === BUTTON === */
+.pricing-action {
+    width: 100%;
+    padding: 14px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid var(--border) !important;
+    margin-bottom: 36px;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: var(--text-primary) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.pricing-card.featured .pricing-action {
+    background: var(--accent-gradient) !important;
+    color: #fff !important;
+    border: none !important;
+}
+
+.pricing-action:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
+}
+
+.pricing-card.featured .pricing-action:hover {
+    filter: brightness(1.15);
+    background: var(--accent-gradient) !important;
+    box-shadow: 0 0 15px rgba(212, 165, 116, 0.4);
+}
+
+/* Shine animation overlay (Sleen effect) */
+.pricing-action::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transform: skewX(-25deg);
+    transition: left 0s;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.pricing-action:hover::before {
+    left: 200%;
+    transition: left 0.6s ease-in-out;
+}
+
+.pricing-features {
     list-style: none;
     padding: 0;
     margin: 0;
@@ -251,172 +236,69 @@
     gap: 16px;
 }
 
-.plan-features li {
+.pricing-features li {
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 600;
     line-height: 1.5;
-    font-weight: 500;
-    color: #334155 !important;
+    color: var(--text-secondary) !important;
 }
 
-/* Text color for enterprise card list items */
-.plan-card.accent-enterprise .plan-features li {
-    color: #e2e8f0 !important;
-}
-
-/* Check Circle Icon Container */
-.feature-check-circle {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+.check-icon {
     flex-shrink: 0;
-    margin-top: 1px;
+    color: var(--success) !important;
 }
 
-/* Accent-specific Check Circles */
-.accent-starter .feature-check-circle {
-    border: 1.5px solid #0f766e !important;
-    color: #0f766e !important;
-    background: #f0fdfa !important;
+.pricing-card.featured .check-icon {
+    color: var(--accent-primary) !important;
 }
 
-.accent-professional .feature-check-circle {
-    border: 1.5px solid #8c6e4a !important;
-    color: #8c6e4a !important;
-    background: #fdfaf2 !important;
+/* Theme overrides for specific cards if needed (Enterprise Card) */
+.pricing-card.theme-dark {
+    background: #0f1c2e !important;
+    border-color: #1a2a40 !important;
+}
+.pricing-card.theme-dark h2,
+.pricing-card.theme-dark .pricing-price strong,
+.pricing-card.theme-dark .pricing-subtitle strong {
+    color: #ffffff !important;
+}
+.pricing-card.theme-dark .pricing-price span,
+.pricing-card.theme-dark .pricing-subtitle span,
+.pricing-card.theme-dark .pricing-features li {
+    color: #849bb3 !important;
+}
+.pricing-card.theme-dark .pricing-action {
+    background: #ffffff !important;
+    color: #0f1c2e !important;
+    border-color: #ffffff !important;
+}
+.pricing-card.theme-dark .pricing-action:hover {
+    background: #f0f4f8 !important;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+}
+.pricing-card.theme-dark .pricing-action::before {
+    background: linear-gradient(to right, transparent, rgba(15, 28, 46, 0.15), transparent);
+}
+.pricing-card.theme-dark .check-icon {
+    color: #62dbcb !important;
 }
 
-.accent-enterprise .feature-check-circle {
-    border: 1.5px solid #10b981 !important;
-    color: #10b981 !important;
-    background: #ecfdf5 !important;
-}
-
-/* Make Check SVG center exactly */
-.feature-check-circle svg {
-    color: inherit !important;
-    stroke-width: 4px;
-}
-
-/* Responsive queries */
-@media (max-width: 1024px) {
-    .upgrade-grid {
+@media (max-width: 960px) {
+    .pricing-grid {
         grid-template-columns: 1fr;
+        max-width: 400px;
         gap: 32px;
-        max-width: 450px;
-        align-items: stretch;
     }
     
-    .plan-badge-wrapper {
-        top: 0;
+    .pricing-card.featured {
+        transform: scale(1);
+        padding: 40px 32px;
     }
     
-    .plan-card.accent-professional {
-        transform: none !important;
-        min-height: 560px !important;
-        padding: 40px 32px !important;
-    }
-    
-    .plan-card.accent-professional:hover {
-        transform: translateY(-4px) !important;
+    .pricing-card.featured:hover {
+        transform: translateY(-4px);
     }
 }
-
-@media (max-width: 480px) {
-    .upgrade-page {
-        padding: 32px 16px;
-    }
-    
-    .plan-card {
-        padding: 32px 24px;
-    }
-}
-
-/* ===== Dark Theme Overrides for Upgrade page ===== */
-body.theme-dark .upgrade-page {
-    background: linear-gradient(180deg, #0a0e17 0%, #060910 100%) !important;
-    color: #cbd5e1 !important;
-}
-
-body.theme-dark .upgrade-header h1 {
-    color: #ffffff !important;
-}
-
-body.theme-dark .upgrade-header p {
-    color: #94a3b8 !important;
-}
-
-/* Dark Starter Card */
-body.theme-dark .plan-card.accent-starter {
-    background: #0f1524 !important;
-    border-color: rgba(255, 255, 255, 0.08) !important;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-}
-
-body.theme-dark .plan-card.accent-starter .plan-name,
-body.theme-dark .plan-card.accent-starter .price-value,
-body.theme-dark .plan-card.accent-starter .plan-subtitle {
-    color: #ffffff !important;
-}
-
-body.theme-dark .plan-card.accent-starter .price-note,
-body.theme-dark .plan-card.accent-starter .plan-description {
-    color: #94a3b8 !important;
-}
-
-body.theme-dark .plan-card.accent-starter .plan-features li {
-    color: #cbd5e1 !important;
-}
-
-/* Dark Professional Card */
-body.theme-dark .plan-card.accent-professional {
-    background: #1c1813 !important; /* dark warm gold tint */
-    border-color: #5c4a37 !important;
-    box-shadow: 0 10px 30px -5px rgba(139, 115, 85, 0.15);
-}
-
-body.theme-dark .plan-card.accent-professional .plan-name {
-    color: #d4a574 !important;
-}
-
-body.theme-dark .plan-card.accent-professional .price-value,
-body.theme-dark .plan-card.accent-professional .plan-subtitle {
-    color: #ffffff !important;
-}
-
-body.theme-dark .plan-card.accent-professional .price-note,
-body.theme-dark .plan-card.accent-professional .plan-description {
-    color: #a8a29e !important;
-}
-
-body.theme-dark .plan-card.accent-professional .plan-features li {
-    color: #cbd5e1 !important;
-}
-
-/* Dark Enterprise Card */
-body.theme-dark .plan-card.accent-enterprise {
-    background: #0b121f !important;
-    border-color: rgba(255, 255, 255, 0.08) !important;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
-}
-
-body.theme-dark .plan-card.accent-enterprise .plan-name,
-body.theme-dark .plan-card.accent-enterprise .price-value,
-body.theme-dark .plan-card.accent-enterprise .plan-subtitle {
-    color: #ffffff !important;
-}
-
-body.theme-dark .plan-card.accent-enterprise .price-note,
-body.theme-dark .plan-card.accent-enterprise .plan-description {
-    color: #94a3b8 !important;
-}
-
-body.theme-dark .plan-card.accent-enterprise .plan-features li {
-    color: #cbd5e1 !important;
-}
-

@@ -1,18 +1,23 @@
 import { useState } from 'react';
-import { Check } from 'lucide-react';
+import {
+    CheckCircle2,
+    Smartphone,
+    QrCode,
+} from 'lucide-react';
+import type { PaymentMethod } from '../services/paymentService';
 import './UpgradePlanPage.css';
 
 interface Plan {
     id: string;
     name: string;
-    subTitle: string;
     price: string;
     priceNote: string;
+    subtitle: string;
+    target: string;
     featured?: boolean;
-    current?: boolean;
-    description: string;
+    buttonText: string;
     features: string[];
-    accent: 'starter' | 'professional' | 'enterprise';
+    theme: 'light' | 'beige' | 'dark';
 }
 
 const plans: Plan[] = [
@@ -21,8 +26,9 @@ const plans: Plan[] = [
         name: 'Starter',
         price: '0đ',
         priceNote: '/tháng',
-        subTitle: 'AI quản lý công việc',
-        description: 'Dành cho xưởng nhỏ',
+        subtitle: 'AI quản lý công việc',
+        target: 'Dành cho xưởng nhỏ',
+        buttonText: 'Bắt đầu',
         features: [
             'AI tạo task từ đơn hàng',
             'AI giao việc cho nhân viên',
@@ -30,16 +36,17 @@ const plans: Plan[] = [
             'Quản lý đơn hàng và batch',
             'Báo cáo vận hành cơ bản'
         ],
-        accent: 'starter',
-        current: true,
+        theme: 'light',
     },
     {
-        id: 'plus', // internal ID maps to 'plus' on backend/vnpay
+        id: 'professional',
         name: 'Professional',
         price: '129.000đ',
         priceNote: '/tháng',
-        subTitle: 'AI điều phối sản xuất',
-        description: 'Dành cho xưởng đang tăng trưởng',
+        subtitle: 'AI điều phối sản xuất',
+        target: 'Dành cho xưởng đang tăng trưởng',
+        featured: true,
+        buttonText: 'Nâng cấp ngay',
         features: [
             'Cảnh báo công việc có nguy cơ trễ',
             'Cảnh báo thiếu nguyên liệu',
@@ -47,16 +54,16 @@ const plans: Plan[] = [
             'Phát hiện điểm nghẽn trong quy trình',
             'Đề xuất tối ưu tiến độ và nguồn lực'
         ],
-        accent: 'professional',
-        featured: true,
+        theme: 'beige',
     },
     {
-        id: 'pro', // internal ID maps to 'pro' on backend/vnpay
+        id: 'enterprise',
         name: 'Enterprise',
         price: '249.000đ',
         priceNote: '/tháng',
-        subTitle: 'AI quản lý doanh nghiệp',
-        description: 'Dành cho doanh nghiệp nhiều xưởng',
+        subtitle: 'AI quản lý doanh nghiệp',
+        target: 'Dành cho doanh nghiệp nhiều xưởng',
+        buttonText: 'Nâng cấp ngay',
         features: [
             'Lập kế hoạch sản xuất dài hạn',
             'Dự báo nhu cầu và công suất',
@@ -64,72 +71,85 @@ const plans: Plan[] = [
             'Quản lý nhiều xưởng trên một nền tảng',
             'Thương hiệu riêng cho doanh nghiệp'
         ],
-        accent: 'enterprise',
+        theme: 'dark',
     },
 ];
 
 export default function UpgradePlanPage() {
-    const [selectedPlanId, setSelectedPlanId] = useState(() => localStorage.getItem('orca-ai-plan') || 'plus');
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(() => {
+        const saved = localStorage.getItem('orca-payment-method');
+        return saved === 'MOMO' || saved === 'VNPAY' ? saved : 'MOMO';
+    });
 
     const handleSelectPlan = (plan: Plan) => {
-        if (plan.current) {
-            setSelectedPlanId(plan.id);
+        if (plan.id === 'starter') {
             return;
         }
         localStorage.setItem('orca-ai-plan-pending', plan.id);
-        window.location.href = `/vnpay-mock-checkout?planId=${plan.id}`;
+        localStorage.setItem('orca-payment-method', paymentMethod);
+        window.location.href = `/vnpay-mock-checkout?planId=${plan.id}&method=${paymentMethod}`;
     };
 
     return (
-        <div className="upgrade-page">
-            <section className="upgrade-header">
+        <div className="pricing-page">
+            <section className="pricing-header">
                 <h1>Giải pháp AI cho sản xuất</h1>
                 <p>Chọn gói phù hợp để tối ưu quy trình và nâng cao năng suất nhà máy của bạn.</p>
             </section>
 
-            <section className="upgrade-grid">
-                {plans.map((plan) => {
-                    const isSelected = selectedPlanId === plan.id;
+            <section className="pricing-payment-methods" aria-label="Phương thức thanh toán">
+                <button
+                    type="button"
+                    className={paymentMethod === 'MOMO' ? 'active momo' : 'momo'}
+                    onClick={() => setPaymentMethod('MOMO')}
+                >
+                    <Smartphone size={18} />
+                    <span>MoMo QR</span>
+                </button>
+                <button
+                    type="button"
+                    className={paymentMethod === 'VNPAY' ? 'active vnpay' : 'vnpay'}
+                    onClick={() => setPaymentMethod('VNPAY')}
+                >
+                    <QrCode size={18} />
+                    <span>VNPay QR</span>
+                </button>
+            </section>
 
+            <section className="pricing-grid">
+                {plans.map((plan) => {
                     return (
                         <article
                             key={plan.id}
-                            className={`plan-card accent-${plan.accent} ${plan.current ? 'current' : ''} ${plan.featured ? 'featured' : ''} ${isSelected ? 'selected' : ''}`}
+                            className={`pricing-card theme-${plan.theme} ${plan.featured ? 'featured' : ''}`}
                         >
-                            {plan.featured && (
-                                <div className="plan-badge-wrapper">
-                                    <span className="plan-badge">★ Phổ biến nhất</span>
-                                </div>
-                            )}
+                            {plan.featured && <span className="pricing-ribbon">★ Phổ biến nhất</span>}
                             
-                            <div className="plan-name">{plan.name}</div>
+                            <h2>{plan.name}</h2>
                             
-                            <div className="plan-price">
-                                <strong className="price-value">{plan.price}</strong>
-                                <span className="price-note">{plan.priceNote}</span>
+                            <div className="pricing-price">
+                                <strong>{plan.price}</strong>
+                                <span>{plan.priceNote}</span>
                             </div>
 
-                            <div className="plan-sub-info">
-                                <div className="plan-subtitle">{plan.subTitle}</div>
-                                <p className="plan-description">{plan.description}</p>
+                            <div className="pricing-subtitle">
+                                <strong>{plan.subtitle}</strong>
+                                <span>{plan.target}</span>
                             </div>
 
                             <button
                                 type="button"
-                                className="plan-action"
+                                className="pricing-action"
                                 onClick={() => handleSelectPlan(plan)}
-                                disabled={plan.current && plan.id === 'starter'}
                             >
-                                {plan.id === 'starter' ? 'Bắt đầu' : 'Nâng cấp ngay'}
+                                {plan.buttonText}
                             </button>
 
-                            <ul className="plan-features">
+                            <ul className="pricing-features">
                                 {plan.features.map((feature) => (
                                     <li key={feature}>
-                                        <span className="feature-check-circle">
-                                            <Check size={10} strokeWidth={4} />
-                                        </span>
-                                        <span className="feature-text">{feature}</span>
+                                        <CheckCircle2 className="check-icon" size={18} />
+                                        <span>{feature}</span>
                                     </li>
                                 ))}
                             </ul>

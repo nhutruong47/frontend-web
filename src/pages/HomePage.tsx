@@ -7,10 +7,8 @@ import {
   ArrowRight,
   BarChart3,
   Brain,
-  Building2,
   Check,
   CheckCircle,
-  Clock,
   ClipboardCheck,
   Factory,
   Mail,
@@ -21,7 +19,6 @@ import {
   Sparkles,
   Sprout,
   Star,
-  TrendingUp,
   Users
 } from 'lucide-react';
 import orcaLogo from '../assets/orca-logo.png';
@@ -47,7 +44,8 @@ const navItems = [
   { label: 'Trang chủ', target: 'hero' },
   { label: 'Giới thiệu', target: 'solution' },
   { label: 'Tính năng', target: 'features' },
-  { label: 'Hỏi đáp', target: 'ai' }
+  { label: 'Hỏi đáp', target: 'ai' },
+  { label: 'Hỗ trợ', target: 'support' }
 ];
 
 const stats = [
@@ -216,7 +214,7 @@ const pricingPlans = [
     accent: 'starter',
   },
   {
-    id: 'plus',
+    id: 'professional',
     name: 'Professional',
     price: '129.000đ',
     priceNote: '/tháng',
@@ -233,7 +231,7 @@ const pricingPlans = [
     featured: true,
   },
   {
-    id: 'pro',
+    id: 'enterprise',
     name: 'Enterprise',
     price: '249.000đ',
     priceNote: '/tháng',
@@ -247,6 +245,33 @@ const pricingPlans = [
       'Thương hiệu riêng cho doanh nghiệp',
     ],
     accent: 'enterprise',
+  },
+];
+
+const supportOptions = [
+  {
+    title: 'Hotline hỗ trợ',
+    detail: 'Trao đổi nhanh khi cần xử lý tài khoản, thanh toán hoặc lỗi vận hành.',
+    action: '0328 416 716',
+    icon: Phone,
+  },
+  {
+    title: 'Email hỗ trợ',
+    detail: 'Gửi mô tả vấn đề, ảnh màn hình hoặc yêu cầu tích hợp cho đội ORCA.',
+    action: 'orca@gmail.com',
+    icon: Mail,
+  },
+  {
+    title: 'Hướng dẫn sử dụng',
+    detail: 'Thiết lập xưởng, phân quyền nhân viên, tạo đơn và dùng AI lập kế hoạch.',
+    action: 'Xem tài liệu',
+    icon: ShieldCheck,
+  },
+  {
+    title: 'Triển khai cho xưởng',
+    detail: 'Đồng hành cấu hình quy trình, dữ liệu mẫu và luồng bàn giao cho đội sản xuất.',
+    action: 'Đặt lịch tư vấn',
+    icon: Users,
   },
 ];
 
@@ -702,7 +727,7 @@ export default function HomePage() {
                 className="plan-action"
                 onClick={() => navigate('/login?returnUrl=/upgrade')}
               >
-                {plan.id === 'starter' ? 'Bắt đầu miễn phí' : 'Nâng cấp ngay'}
+                {plan.id === 'starter' ? 'Bắt đầu' : 'Nâng cấp ngay'}
               </button>
 
               <ul className="plan-features">
@@ -717,6 +742,30 @@ export default function HomePage() {
               </ul>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section id="support" className="coffee-support">
+        <div className="coffee-section-heading coffee-section-heading--center" data-reveal="up">
+          <span className="coffee-kicker">Support</span>
+          <h2>Luôn có đội hỗ trợ khi xưởng cần xử lý nhanh.</h2>
+        </div>
+
+        <div className="coffee-support-grid">
+          {supportOptions.map((item, index) => {
+            const Icon = item.icon;
+
+            return (
+              <article className="coffee-support-card" key={item.title} data-reveal="product" style={{ transitionDelay: `${index * 80}ms` }}>
+                <span className="coffee-support-icon">
+                  <Icon size={22} />
+                </span>
+                <h3>{item.title}</h3>
+                <p>{item.detail}</p>
+                <strong>{item.action}</strong>
+              </article>
+            );
+          })}
         </div>
       </section>
 

@@ -336,6 +336,7 @@ export interface AdminPayment {
     amount: number;
     status: string;
     bankCode: string;
+    paymentMethod?: string;
     createdAt: string | null;
     paidAt: string | null;
 }

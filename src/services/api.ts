@@ -25,7 +25,7 @@ function sanitizeApiError(error: any) {
 // Interceptor: tự động gắn JWT token vào mọi request
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -40,8 +40,8 @@ api.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401) {
             // Token hết hạn hoặc không hợp lệ
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
             // Redirect về login nếu không ở trang auth
             if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
                 window.location.href = '/login';

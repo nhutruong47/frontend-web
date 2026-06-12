@@ -1,15 +1,34 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, CreditCard, Landmark, Smartphone, X } from 'lucide-react';
-import { paymentService } from '../services/paymentService';
+import { ArrowLeft, CheckCircle2, Clock3, Copy, ExternalLink, QrCode, Smartphone, X } from 'lucide-react';
+import QRCode from 'qrcode';
+import { paymentService, type PaymentMethod, type VirtualQrPaymentResponse } from '../services/paymentService';
 import './VnpayMockCheckoutPage.css';
 
 const planMap: Record<string, { name: string; amount: number }> = {
-    plus: { name: 'AI Plus', amount: 129000 },
-    pro: { name: 'AI Pro', amount: 249000 },
+    professional: { name: 'Professional', amount: 129000 },
+    enterprise: { name: 'Enterprise', amount: 249000 },
 };
 
-const banks = ['Vietcombank', 'VietinBank', 'BIDV', 'VPBank', 'MBBank', 'ACB', 'TPBank', 'VIB', 'Techcombank', 'OCB', 'MSB', 'HDBank'];
+const methodConfig: Record<PaymentMethod, {
+    label: string;
+    shortLabel: string;
+    className: string;
+    instruction: string;
+}> = {
+    MOMO: {
+        label: 'Cổng thanh toán MoMo',
+        shortLabel: 'MoMo',
+        className: 'momo',
+        instruction: 'Mở MoMo Test trong LDPlayer, chọn quét mã QR và xác nhận giao dịch sandbox.',
+    },
+    VNPAY: {
+        label: 'Cổng thanh toán VNPay QR',
+        shortLabel: 'VNPay',
+        className: 'vnpay',
+        instruction: 'Mở mobile banking hoặc ví hỗ trợ VNPay QR để quét mã thử nghiệm.',
+    },
+};
 
 function formatCurrency(value: number) {
     return new Intl.NumberFormat('vi-VN', {
@@ -19,65 +38,118 @@ function formatCurrency(value: number) {
     }).format(value);
 }
 
-function FakeQr({ seed }: { seed: string }) {
-    const cells = useMemo(() => Array.from({ length: 225 }, (_, index) => {
-        const code = seed.charCodeAt(index % seed.length) || 37;
-        return (index + code + (index * 7)) % 5 < 2;
-    }), [seed]);
+function RealQr({ payload, label }: { payload: string; label: string }) {
+    const [dataUrl, setDataUrl] = useState('');
 
-    return (
-        <div className="mock-qr" aria-label="QR thanh toán mô phỏng">
-            {cells.map((filled, index) => (
-                <span key={index} className={filled ? 'filled' : ''} />
-            ))}
-        </div>
-    );
+    useEffect(() => {
+        let mounted = true;
+        setDataUrl('');
+
+        QRCode.toDataURL(payload, {
+            errorCorrectionLevel: 'Q',
+            margin: 2,
+            width: 216,
+            color: {
+                dark: '#111827',
+                light: '#ffffff',
+            },
+        })
+            .then(url => {
+                if (mounted) setDataUrl(url);
+            })
+            .catch(() => {
+                if (mounted) setDataUrl('');
+            });
+
+        return () => {
+            mounted = false;
+        };
+    }, [payload]);
+
+    if (!dataUrl) {
+        return <div className="qr-render-error">Không thể render QR</div>;
+    }
+
+    return <img className="real-qr" src={dataUrl} alt={`QR thanh toán ${label}`} />;
 }
 
 export default function VnpayMockCheckoutPage() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const planId = searchParams.get('planId') || 'plus';
-    const plan = planMap[planId] ?? planMap.plus;
-    const [cardNumber, setCardNumber] = useState('');
-    const [cardDate, setCardDate] = useState('');
-    const [cardName, setCardName] = useState('');
-    const [bank, setBank] = useState('Vietcombank');
-    const [loading, setLoading] = useState(false);
+    const planId = searchParams.get('planId') || 'professional';
+    const plan = planMap[planId] ?? planMap.professional;
+    const methodParam = searchParams.get('method')?.toUpperCase();
+    const method: PaymentMethod = methodParam === 'MOMO' ? 'MOMO' : 'VNPAY';
+    const config = methodConfig[method];
+    const [qrPayment, setQrPayment] = useState<VirtualQrPaymentResponse | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [confirming, setConfirming] = useState(false);
+    const [copied, setCopied] = useState(false);
     const [error, setError] = useState('');
+    const openPaymentUrl = qrPayment?.deeplink || qrPayment?.payUrl || '';
 
-    const canSubmit = cardNumber.trim().length >= 6 && cardDate.trim().length >= 4 && cardName.trim().length >= 2;
-
-    const handleSubmit = async () => {
-        if (!canSubmit || loading) return;
+    useEffect(() => {
+        let mounted = true;
         setLoading(true);
         setError('');
+        setQrPayment(null);
+
+        paymentService.createVirtualQrPayment(planId, method)
+            .then(response => {
+                if (!mounted) return;
+                setQrPayment(response);
+            })
+            .catch(err => {
+                if (!mounted) return;
+                const maybeAxios = err as { response?: { data?: { message?: string; error?: string } }; message?: string };
+                setError(maybeAxios.response?.data?.message || maybeAxios.response?.data?.error || maybeAxios.message || 'Không thể tạo mã QR thanh toán.');
+            })
+            .finally(() => {
+                if (mounted) setLoading(false);
+            });
+
+        return () => {
+            mounted = false;
+        };
+    }, [method, planId]);
+
+    const handleCopy = async () => {
+        if (!qrPayment) return;
+        await navigator.clipboard.writeText(qrPayment.txnRef);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1600);
+    };
+
+    const handleConfirm = async () => {
+        if (!qrPayment || confirming) return;
+        setConfirming(true);
+        setError('');
         try {
-            const response = await paymentService.createMockTransfer(planId);
-            localStorage.setItem('orca-ai-plan', planId);
+            const response = await paymentService.confirmVirtualQrPayment(qrPayment.txnRef);
+            localStorage.setItem('orca-ai-plan', response.planId);
             const params = new URLSearchParams({
                 status: response.status,
                 txnRef: response.txnRef,
                 planId: response.planId,
-                message: `Thanh toán ảo qua ${bank} thành công`,
+                message: `Thanh toán qua ${config.shortLabel} thành công`,
             });
             navigate(`/payment-result?${params.toString()}`);
         } catch (err) {
             const maybeAxios = err as { response?: { data?: { message?: string; error?: string } }; message?: string };
-            setError(maybeAxios.response?.data?.message || maybeAxios.response?.data?.error || maybeAxios.message || 'Không thể xác thực giao dịch ảo.');
-            setLoading(false);
+            setError(maybeAxios.response?.data?.message || maybeAxios.response?.data?.error || maybeAxios.message || 'Không thể xác nhận giao dịch.');
+            setConfirming(false);
         }
     };
 
     return (
-        <div className="vnpay-mock-page">
+        <div className={`vnpay-mock-page ${config.className}`}>
             <header className="vnpay-mock-header">
                 <Link to="/upgrade" className="vnpay-back">
                     <ArrowLeft size={18} />
-                    Quay lại
+                    <span>Quay lại</span>
                 </Link>
                 <div className="vnpay-brand">
-                    <span>VNPAY</span>
+                    <span>{config.shortLabel}</span>
                     <strong>QR</strong>
                 </div>
                 <button type="button" className="vnpay-close" onClick={() => navigate('/upgrade')} title="Hủy thanh toán">
@@ -86,97 +158,82 @@ export default function VnpayMockCheckoutPage() {
             </header>
 
             <main className="vnpay-mock-shell">
-                <div className="vnpay-notice">
-                    Quý khách vui lòng không tắt trình duyệt cho đến khi nhận được kết quả giao dịch trên website.
-                </div>
-
-                <section className="vnpay-columns">
-                    <aside className="vnpay-qr-panel">
-                        <h2>Ứng dụng mobile quét mã QR</h2>
-                        <div className="vnpay-logo-line">
-                            <span>VNPAY</span>
-                            <strong>QR</strong>
-                        </div>
-                        <FakeQr seed={`${planId}-${plan.amount}-${bank}`} />
-                        <span className="scan-label">Scan to Pay</span>
-                        <img
-                            className="vnpay-coffee-thumb"
-                            src="https://images.pexels.com/photos/32732219/pexels-photo-32732219.jpeg?auto=compress&cs=tinysrgb&w=600"
-                            alt="Cà phê đá Việt Nam"
-                        />
-                        <p>Nạp tiền gói {plan.name}</p>
-                        <strong className="vnpay-amount">{formatCurrency(plan.amount)}</strong>
-                        <button type="button" className="vnpay-help">Hướng dẫn thanh toán?</button>
+                <section className="payment-order-card">
+                    <aside className="payment-order-info">
+                        <span className="payment-provider">{config.label}</span>
+                        <h1>Thông tin đơn hàng</h1>
+                        <dl>
+                            <div>
+                                <dt>Nhà cung cấp</dt>
+                                <dd>ORCA AI</dd>
+                            </div>
+                            <div>
+                                <dt>Gói nâng cấp</dt>
+                                <dd>{plan.name}</dd>
+                            </div>
+                            <div>
+                                <dt>Mã đơn hàng</dt>
+                                <dd>{qrPayment?.txnRef || 'Đang tạo...'}</dd>
+                            </div>
+                            <div>
+                                <dt>Số tiền</dt>
+                                <dd className="payment-amount">{formatCurrency(qrPayment?.amount ?? plan.amount)}</dd>
+                            </div>
+                        </dl>
+                        <button type="button" className="copy-txn" onClick={handleCopy} disabled={!qrPayment}>
+                            <Copy size={15} />
+                            {copied ? 'Đã sao chép' : 'Sao chép mã đơn'}
+                        </button>
                     </aside>
 
-                    <section className="vnpay-bank-panel">
-                        <h2>Thanh toán qua Ngân hàng {bank}</h2>
+                    <section className="payment-qr-panel">
+                        <div className="payment-qr-head">
+                            <QrCode size={22} />
+                            <h2>Quét mã QR để thanh toán</h2>
+                        </div>
 
-                        <label className="vnpay-field">
-                            <span><CreditCard size={15} /> Số thẻ</span>
-                            <input
-                                value={cardNumber}
-                                onChange={event => setCardNumber(event.target.value)}
-                                placeholder="9704 0000 0000 0018"
-                                inputMode="numeric"
-                            />
-                        </label>
-
-                        <label className="vnpay-field">
-                            <span>MM/YY</span>
-                            <input
-                                value={cardDate}
-                                onChange={event => setCardDate(event.target.value)}
-                                placeholder="07/30"
-                            />
-                        </label>
-
-                        <label className="vnpay-field">
-                            <span>Tên chủ thẻ không dấu</span>
-                            <input
-                                value={cardName}
-                                onChange={event => setCardName(event.target.value)}
-                                placeholder="NGUYEN VAN A"
-                            />
-                        </label>
-
-                        <label className="vnpay-field">
-                            <span><Landmark size={15} /> Ngân hàng</span>
-                            <select value={bank} onChange={event => setBank(event.target.value)}>
-                                {banks.map(item => <option key={item} value={item}>{item}</option>)}
-                            </select>
-                        </label>
+                        {loading && <div className="qr-placeholder">Đang tạo QR...</div>}
+                        {!loading && qrPayment && (
+                            <>
+                                <div className="payment-qr-frame">
+                                    <RealQr payload={qrPayment.qrPayload} label={config.shortLabel} />
+                                </div>
+                                <p className="scan-copy">
+                                    <Smartphone size={16} />
+                                    {config.instruction}
+                                </p>
+                                <div className="payment-expiry">
+                                    <Clock3 size={15} />
+                                    Hết hạn sau 15 phút
+                                </div>
+                                {openPaymentUrl && (
+                                    <a className="open-wallet-link" href={openPaymentUrl}>
+                                        <ExternalLink size={15} />
+                                        Mở {config.shortLabel}
+                                    </a>
+                                )}
+                            </>
+                        )}
 
                         {error && <div className="vnpay-error">{error}</div>}
 
-                        <button type="button" className="vnpay-confirm" onClick={handleSubmit} disabled={!canSubmit || loading}>
-                            {loading ? 'Đang xác thực...' : 'Xác thực'}
+                        <button type="button" className="vnpay-confirm" onClick={handleConfirm} disabled={!qrPayment || confirming}>
+                            {confirming ? 'Đang cập nhật database...' : `Tôi đã thanh toán qua ${config.shortLabel}`}
                         </button>
                         <button type="button" className="vnpay-cancel" onClick={() => navigate('/upgrade')}>
-                            Hủy
+                            Hủy thanh toán
                         </button>
                     </section>
                 </section>
 
-                <section className="vnpay-bank-list" aria-label="Ngân hàng hỗ trợ">
-                    <div className="vnpay-bank-title">
-                        <Smartphone size={16} />
-                        Sử dụng ứng dụng mở bởi VNPAY
-                    </div>
-                    <div className="vnpay-bank-grid">
-                        {banks.map((item, index) => (
-                            <button
-                                type="button"
-                                key={item}
-                                className={bank === item ? 'active' : ''}
-                                onClick={() => setBank(item)}
-                            >
-                                <CheckCircle2 size={14} />
-                                <span>{item}</span>
-                                <small>{index % 2 === 0 ? 'Mobile Banking' : 'Smart OTP'}</small>
-                            </button>
-                        ))}
-                    </div>
+                <section className="payment-mobile-steps" aria-label="Các bước thanh toán">
+                    {['Mở ứng dụng trên điện thoại', 'Quét QR trên màn hình', 'Xác nhận để ORCA cập nhật gói'].map((step, index) => (
+                        <div key={step}>
+                            <CheckCircle2 size={16} />
+                            <span>{index + 1}</span>
+                            <strong>{step}</strong>
+                        </div>
+                    ))}
                 </section>
             </main>
         </div>

@@ -106,15 +106,21 @@ export default function GroupDetailPage() {
     const [dmUserId, setDmUserId] = useState<string | null>(null);
     const [showChat, setShowChat] = useState(false);
     const [showChatTokens, setShowChatTokens] = useState(false);
+    const [unreadGroupCount, setUnreadGroupCount] = useState(0);
+    const [unreadDmCounts, setUnreadDmCounts] = useState<Record<string, number>>({});
     const chatEndRef = useRef<HTMLDivElement>(null);
     const stompClientRef = useRef<Client | null>(null);
 
     // Refs for WebSocket callbacks to always have the latest state without resubscribing
     const chatTabRef = useRef<'group' | 'dm'>(chatTab);
     const dmUserIdRef = useRef<string | null>(dmUserId);
+    const showChatRef = useRef(showChat);
     const chatTokenTotal = chatMessages.reduce((sum, message) => sum + estimateTokens(message.content), 0);
+    const unreadDmTotal = Object.values(unreadDmCounts).reduce((sum, count) => sum + count, 0);
+    const unreadTotal = unreadGroupCount + unreadDmTotal;
     useEffect(() => { chatTabRef.current = chatTab; }, [chatTab]);
     useEffect(() => { dmUserIdRef.current = dmUserId; }, [dmUserId]);
+    useEffect(() => { showChatRef.current = showChat; }, [showChat]);
 
     // Online presence + DM previews
     const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
@@ -122,7 +128,7 @@ export default function GroupDetailPage() {
 
     const currentMember = team?.members?.find(m => m.userId === user?.id);
     const isSystemAdmin = user?.role === 'ADMIN';
-    const isAdmin = currentMember?.groupRole === 'ADMIN' || team?.ownerId === user?.id;
+    const isAdmin = currentMember?.groupRole === 'ADMIN' || currentMember?.groupRole === 'OWNER' || team?.ownerId === user?.id;
     const isManager = !isSystemAdmin && isAdmin;
 
     useEffect(() => {
@@ -177,6 +183,15 @@ export default function GroupDetailPage() {
         }
     }, [showChat, chatTab, dmUserId, loadChatMessages]);
 
+    useEffect(() => {
+        if (showChat && chatTab === 'group') {
+            setUnreadGroupCount(0);
+        }
+        if (showChat && chatTab === 'dm' && dmUserId) {
+            setUnreadDmCounts(prev => ({ ...prev, [dmUserId]: 0 }));
+        }
+    }, [showChat, chatTab, dmUserId]);
+
     // WebSocket connection
     useEffect(() => {
         if (!id || !user) return;
@@ -202,6 +217,9 @@ export default function GroupDetailPage() {
                     if (chatTabRef.current === 'group') {
                         setChatMessages(prev => [...prev, newMsg]);
                     }
+                    if (newMsg.senderId !== user.id && !(showChatRef.current && chatTabRef.current === 'group')) {
+                        setUnreadGroupCount(prev => prev + 1);
+                    }
                 });
 
                 // Subscribe to ALL incoming DMs for this user in this team
@@ -212,6 +230,9 @@ export default function GroupDetailPage() {
                         // Only append to current chat view if we are actively chatting with them
                         if (chatTabRef.current === 'dm' && dmUserIdRef.current === m.userId) {
                             setChatMessages(prev => [...prev, newMsg]);
+                        }
+                        if (newMsg.senderId !== user.id && !(showChatRef.current && chatTabRef.current === 'dm' && dmUserIdRef.current === m.userId)) {
+                            setUnreadDmCounts(prev => ({ ...prev, [m.userId]: (prev[m.userId] || 0) + 1 }));
                         }
                         // Update DM previews
                         setDmPreviews(prev => {
@@ -250,6 +271,24 @@ export default function GroupDetailPage() {
         setChatInput('');
         loadChatMessages();
     };
+
+    const renderUnreadBadge = (count: number) => count > 0 ? (
+        <span style={{
+            minWidth: 20,
+            height: 20,
+            padding: '0 6px',
+            borderRadius: 999,
+            background: '#ef4444',
+            color: '#fff',
+            fontSize: 11,
+            fontWeight: 800,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            lineHeight: 1,
+            boxShadow: '0 4px 10px rgba(239,68,68,0.28)'
+        }}>{count > 99 ? '99+' : count}</span>
+    ) : null;
 
     const closeModal = () => { setShowAddMember(false); setInviteEmail(''); setError(''); setSuccessMsg(''); };
 
@@ -555,7 +594,7 @@ export default function GroupDetailPage() {
                             <span onClick={() => navigator.clipboard.writeText(team.inviteCode || '')} style={{ fontWeight: 800, letterSpacing: 3, color: 'var(--accent-primary)', cursor: 'pointer' }}>{team.inviteCode}</span>
                         </div>
                     )}
-                    <button onClick={() => setShowChat(!showChat)} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-primary)' }}><ion-icon name="chatbubbles-outline"></ion-icon> Chat</button>
+                    <button onClick={() => setShowChat(!showChat)} style={{ position: 'relative', background: unreadTotal > 0 ? '#fff7ed' : 'var(--bg-input)', border: unreadTotal > 0 ? '1px solid #fed7aa' : '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-primary)' }}><ion-icon name={unreadTotal > 0 ? 'chatbubbles' : 'chatbubbles-outline'}></ion-icon> Chat {renderUnreadBadge(unreadTotal)}</button>
                     {isAdmin && <button onClick={() => navigate(`/groups/${team.id}/create-task`)} style={{ background: 'var(--accent-gradient)', color: '#fffaf0', WebkitTextFillColor: '#fffaf0', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textShadow: '0 1px 2px rgba(0,0,0,0.28)' }}><ion-icon name="add"></ion-icon> Thêm công việc</button>}
                     {isAdmin && <button onClick={() => setShowAddMember(true)} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }}><ion-icon name="people-outline"></ion-icon> Mời</button>}
                     {isAdmin && <button onClick={handleDeleteTeam} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '8px', fontSize: 16, cursor: 'pointer', color: '#ef4444', display: 'flex' }}><ion-icon name="trash-outline"></ion-icon></button>}
@@ -682,22 +721,22 @@ export default function GroupDetailPage() {
                             </div>
 
                             {/* Tags / Job Labels */}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12, minHeight: 24 }}>
-                                {m.jobLabels && m.jobLabels.length > 0 ? (
-                                    m.jobLabels.map((lbl: string, i: number) => (
-                                        <span key={i} style={{ background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, border: '1px solid #c7d2fe' }}>
-                                            {lbl}
-                                        </span>
-                                    ))
-                                ) : (
-                                    <span style={{ fontSize: 11, color: '#cbd5e1', fontStyle: 'italic' }}>Chưa có nhãn</span>
-                                )}
-                                {isAdmin && (
-                                    <button onClick={() => { setSelectedMemberForLabels(m); setEditingLabels(m.jobLabels?.join(', ') || ''); setShowLabelModal(true); }} style={{ background: 'none', border: '1px dashed #cbd5e1', color: '#94a3b8', borderRadius: 6, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 12 }}>
-                                        <ion-icon name="pencil"></ion-icon>
-                                    </button>
-                                )}
-                            </div>
+                            {((m.jobLabels && m.jobLabels.filter((l: string) => l.trim().length > 0).length > 0) || isAdmin) && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12, minHeight: 24 }}>
+                                    {m.jobLabels && m.jobLabels.filter((l: string) => l.trim().length > 0).length > 0 && (
+                                        m.jobLabels.filter((l: string) => l.trim().length > 0).map((lbl: string, i: number) => (
+                                            <span key={i} style={{ background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, border: '1px solid #c7d2fe' }}>
+                                                {lbl}
+                                            </span>
+                                        ))
+                                    )}
+                                    {isAdmin && (
+                                        <button onClick={() => { setSelectedMemberForLabels(m); setEditingLabels(m.jobLabels?.join(', ') || ''); setShowLabelModal(true); }} style={{ background: 'none', border: '1px dashed #cbd5e1', color: '#94a3b8', borderRadius: 6, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 12 }}>
+                                            <ion-icon name="pencil"></ion-icon>
+                                        </button>
+                                    )}
+                                </div>
+                            )}
 
                             <div style={{ height: 6, background: '#f1f5f9', borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
                                 <div style={{ height: '100%', background: m.pct === 100 ? '#16a34a' : m.pct > 0 ? '#f59e0b' : '#e2e8f0', borderRadius: 3, width: `${m.pct}%`, transition: 'width 0.4s' }} />
@@ -1029,7 +1068,7 @@ export default function GroupDetailPage() {
                                         </td>
                                         <td style={{ padding: '12px 16px', minWidth: 180 }}>
                                             {(() => {
-                                                const target = Number(t.outputTarget ?? 0);
+                                                const target = Number(t.outputTarget ?? t.workload ?? 0);
                                                 const actual = Number(t.actualOutput ?? 0);
                                                 const progressPct = target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : (t.completionPercentage || 0);
                                                 return (
@@ -1056,7 +1095,33 @@ export default function GroupDetailPage() {
                                                             />
                                                             <span style={{ fontSize: 11, color: '#64748b' }}>/</span>
                                                             <span style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>Mong muốn</span>
-                                                            <span style={{ fontSize: 12, color: '#1e293b', fontWeight: 700 }}>{t.outputTarget ?? 0} kg</span>
+                                                            {isAdmin ? (
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                                    <input
+                                                                        type="number"
+                                                                        min={0}
+                                                                        defaultValue={t.outputTarget ?? t.workload ?? ''}
+                                                                        onBlur={async e => {
+                                                                            const value = e.currentTarget.value;
+                                                                            try {
+                                                                                setError('');
+                                                                                await taskService.update(t.id, { outputTarget: value === '' ? undefined : Number(value), actualOutput: t.actualOutput ?? undefined });
+                                                                                if (id) {
+                                                                                    const g = await goalService.getByTeam(id);
+                                                                                    setGoals(g);
+                                                                                    Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat()));
+                                                                                }
+                                                                            } catch (err: any) {
+                                                                                setError(err?.response?.data?.error || 'Không thể cập nhật sản lượng mong muốn');
+                                                                            }
+                                                                        }}
+                                                                        style={{ width: 72, padding: '4px 8px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 12 }}
+                                                                    />
+                                                                    <span style={{ fontSize: 12, color: '#1e293b', fontWeight: 700 }}>kg</span>
+                                                                </div>
+                                                            ) : (
+                                                                <span style={{ fontSize: 12, color: '#1e293b', fontWeight: 700 }}>{t.outputTarget ?? t.workload ?? 0} kg</span>
+                                                            )}
                                                         </div>
                                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                                                             <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 999, overflow: 'hidden' }}>
@@ -1241,11 +1306,11 @@ export default function GroupDetailPage() {
                     {/* Tab Bar (Only show if not currently inside a DM conversation) */}
                     {!(chatTab === 'dm' && dmUserId) && (
                         <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0' }}>
-                            <button onClick={() => { setChatTab('group'); setDmUserId(null); }} style={{ flex: 1, padding: '10px', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', background: chatTab === 'group' ? '#f9f1e3' : '#f8fafc', color: chatTab === 'group' ? '#d4a574' : '#64748b', borderBottom: chatTab === 'group' ? '2px solid #d4a574' : '1px solid #e2e8f0' }}>
-                                <ion-icon name="people-outline" style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Nhóm chung
+                            <button onClick={() => { setChatTab('group'); setDmUserId(null); }} style={{ flex: 1, padding: '10px', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', background: chatTab === 'group' ? '#f9f1e3' : '#f8fafc', color: chatTab === 'group' ? '#d4a574' : '#64748b', borderBottom: chatTab === 'group' ? '2px solid #d4a574' : '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                <ion-icon name="people-outline" style={{ fontSize: 14 }}></ion-icon> Nhóm chung {renderUnreadBadge(unreadGroupCount)}
                             </button>
-                            <button onClick={() => setChatTab('dm')} style={{ flex: 1, padding: '10px', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', background: chatTab === 'dm' ? '#f9f1e3' : '#f8fafc', color: chatTab === 'dm' ? '#d4a574' : '#64748b', borderBottom: chatTab === 'dm' ? '2px solid #d4a574' : '1px solid #e2e8f0' }}>
-                                <ion-icon name="person-outline" style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Cá nhân
+                            <button onClick={() => setChatTab('dm')} style={{ flex: 1, padding: '10px', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', background: chatTab === 'dm' ? '#f9f1e3' : '#f8fafc', color: chatTab === 'dm' ? '#d4a574' : '#64748b', borderBottom: chatTab === 'dm' ? '2px solid #d4a574' : '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                <ion-icon name="person-outline" style={{ fontSize: 14 }}></ion-icon> Cá nhân {renderUnreadBadge(unreadDmTotal)}
                             </button>
                         </div>
                     )}
@@ -1256,6 +1321,7 @@ export default function GroupDetailPage() {
                             {team.members?.filter(m => m.userId !== user?.id).map(m => {
                                 const isOnline = onlineUsers.includes(m.userId);
                                 const preview = dmPreviews.find(p => p.senderId === m.userId || p.recipientId === m.userId);
+                                const unreadCount = unreadDmCounts[m.userId] || 0;
                                 const previewText = preview ? (preview.content.length > 30 ? preview.content.substring(0, 30) + '...' : preview.content) : null;
                                 const previewTime = preview ? new Date(preview.createdAt) : null;
                                 const timeLabel = previewTime ? (() => {
@@ -1266,8 +1332,8 @@ export default function GroupDetailPage() {
                                     return previewTime.toLocaleDateString('vi-VN');
                                 })() : null;
                                 return (
-                                    <div key={m.userId} onClick={() => setDmUserId(m.userId)} style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                    <div key={m.userId} onClick={() => setDmUserId(m.userId)} style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s', background: unreadCount > 0 ? '#fff7ed' : 'transparent' }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')} onMouseLeave={e => (e.currentTarget.style.background = unreadCount > 0 ? '#fff7ed' : 'transparent')}>
                                         <div style={{ position: 'relative', flexShrink: 0 }}>
                                             <div style={{ width: 40, height: 40, borderRadius: '50%', background: avatarColor(m.fullName || m.username), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 14 }}>{getInitials(m.fullName || m.username)}</div>
                                             {isOnline && <div style={{ position: 'absolute', bottom: 0, right: 0, width: 12, height: 12, borderRadius: '50%', background: '#22c55e', border: '2px solid #fff' }} />}
@@ -1275,7 +1341,10 @@ export default function GroupDetailPage() {
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <span style={{ fontWeight: 600, fontSize: 14, color: '#1e293b' }}>{m.fullName || m.username}</span>
-                                                {timeLabel && <span style={{ fontSize: 10, color: '#94a3b8' }}>{timeLabel}</span>}
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    {timeLabel && <span style={{ fontSize: 10, color: '#94a3b8' }}>{timeLabel}</span>}
+                                                    {renderUnreadBadge(unreadCount)}
+                                                </span>
                                             </div>
                                             <div style={{ fontSize: 12, color: isOnline ? '#22c55e' : '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                 {previewText || (isOnline ? 'Đang hoạt động' : m.groupRole === 'ADMIN' ? 'Trưởng nhóm' : 'Thành viên')}
