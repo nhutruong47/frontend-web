@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Activity,
   AlertTriangle,
-  ArrowUpDown,
   BellRing,
   Brain,
   Building2,
@@ -21,7 +20,6 @@ import {
   GripVertical,
   Lock,
   MoreHorizontal,
-  Percent,
   Plus,
   ReceiptText,
   RotateCcw,
@@ -31,7 +29,6 @@ import {
   ShieldCheck,
   ShoppingCart,
   Unlock,
-  UserCheck,
   Users,
   Workflow,
   XCircle
@@ -148,13 +145,9 @@ const emptyOverview: AdminOverview = {
 
 const realDataNote = 'Từ dữ liệu hệ thống';
 
-const percentValue = (part: number, total: number) => total > 0 ? `${((part / total) * 100).toFixed(1)}%` : '0%';
 
-const periodChangeNote = (current: number, previous: number, period = 'tháng trước') => {
-  if (previous <= 0) return realDataNote;
-  const change = ((current - previous) / previous) * 100;
-  return `${change >= 0 ? '+' : ''}${change.toFixed(1)}% so với ${period}`;
-};
+
+
 
 const getDate = (value: string | null | undefined) => {
   if (!value) return null;
@@ -181,15 +174,7 @@ const buildKpis = (overview: AdminOverview): KpiItem[] => [
   { label: 'Doanh nghiệp / xưởng', value: number(overview.totalTeams), detail: realDataNote, icon: Building2, tone: 'coffee' },
   { label: 'Tổng người dùng', value: number(overview.totalUsers), detail: realDataNote, icon: Users, tone: 'blue' },
   { label: 'Đơn đang xử lý', value: number(overview.activeOrders + overview.activeProductionOrders), detail: 'Đơn liên xưởng + đơn sản xuất', icon: ShoppingCart, tone: 'amber' },
-  { label: 'Batch sản xuất', value: number(overview.totalBatches), detail: `${number(overview.activeBatches)} batch đang chạy`, icon: GitBranch, tone: 'green' },
-  { label: 'Tài khoản nhân viên', value: number(overview.memberUsers), detail: `${number(overview.adminUsers)} admin`, icon: UserCheck, tone: 'violet' },
-  { label: 'Doanh thu tháng', value: money(overview.revenueThisMonth), detail: periodChangeNote(overview.revenueThisMonth, overview.revenuePreviousMonth), icon: DollarSign, tone: 'green' },
-  { label: 'Doanh thu năm', value: money(overview.revenueThisYear), detail: periodChangeNote(overview.revenueThisYear, overview.revenuePreviousYear, 'năm trước'), icon: DollarSign, tone: 'coffee' },
-  { label: 'User mới tháng này', value: number(overview.newUsersThisMonth), detail: periodChangeNote(overview.newUsersThisMonth, overview.newUsersPreviousMonth), icon: ArrowUpDown, tone: 'blue' },
-  { label: 'Xưởng mới tháng này', value: number(overview.newTeamsThisMonth), detail: periodChangeNote(overview.newTeamsThisMonth, overview.newTeamsPreviousMonth), icon: Building2, tone: 'amber' },
-  { label: 'Công việc hoàn thành', value: percentValue(overview.completedTasks, overview.totalTasks), detail: `${number(overview.completedTasks)}/${number(overview.totalTasks)} task`, icon: Percent, tone: 'green' },
-  { label: 'Việc quá hạn', value: number(overview.overdueTasks + overview.overdueProductionOrders), detail: 'Task + đơn sản xuất quá hạn', icon: AlertTriangle, tone: 'amber' },
-  { label: 'Mục tiêu đang chạy', value: number(overview.activeGoals), detail: `${number(overview.totalGoals)} mục tiêu tổng`, icon: Gauge, tone: 'violet' }
+  { label: 'Batch sản xuất', value: number(overview.totalBatches), detail: `${number(overview.activeBatches)} batch đang chạy`, icon: GitBranch, tone: 'green' }
 ];
 
 const plans = [
