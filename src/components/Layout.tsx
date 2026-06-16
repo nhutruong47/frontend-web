@@ -139,7 +139,7 @@ export default function Layout() {
                                                 className="fb-notification-item msg-item"
                                                 onClick={() => {
                                                     setShowMessages(false);
-                                                    navigate(`/groups/${group.teamId}/chat`);
+                                                    navigate(`/groups/${group.id}/chat`);
                                                 }}
                                                 style={{cursor: 'pointer'}}
                                             >

@@ -1745,12 +1745,6 @@ function SalaryPanel({ teamId }: { teamId: string }) {
     const totalWorkload = salaryData.reduce((sum, s) => sum + s.totalWorkload, 0);
     const avgCompletion = totalTasks > 0 ? Math.round((totalCompleted / totalTasks) * 100) : 0;
 
-    const monthLabel = (() => {
-        const [year, month] = selectedMonth.split('-');
-        const date = new Date(parseInt(year), parseInt(month) - 1);
-        return date.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
-    })();
-
     return (
         <div style={{ background: '#fff', borderRadius: 20, padding: 0, marginTop: 24, border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
             {/* Header */}
