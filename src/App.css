@@ -954,8 +954,8 @@
 .sidebar-logo {
   display: flex;
   align-items: center;
-  gap: clamp(6px, 1.5vw, 12px);
-  padding: clamp(2px, 1vw, 4px) clamp(8px, 2vw, 14px) clamp(12px, 2.5vw, 22px);
+  justify-content: center;
+  padding: clamp(8px, 1.5vw, 16px) clamp(8px, 2vw, 14px) clamp(16px, 3vw, 28px);
   border-bottom: 1px solid var(--border);
   margin-bottom: clamp(12px, 2vw, 20px);
 }
@@ -976,8 +976,8 @@
 }
 
 .app-logo-mark {
-  width: 50px;
-  height: 42px;
+  width: 72px;
+  height: 60px;
   object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.28));
@@ -985,9 +985,9 @@
 
 /* Combined logo (whale + ORCA text in one image) */
 .sidebar-brand-logo {
-  height: 48px;
+  height: 64px;
   width: auto;
-  max-width: 160px;
+  max-width: 180px;
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 2px 8px rgba(180, 120, 40, 0.4));
@@ -1033,11 +1033,13 @@
 .nav-label {
   font-size: 10px;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--shell-accent);
   letter-spacing: 2px;
   padding: 0 14px;
   margin-bottom: 8px;
   text-transform: uppercase;
+  opacity: 0.85;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .nav-item {
@@ -1047,10 +1049,20 @@
   padding: 11px 14px;
   border-radius: 10px;
   color: var(--text-secondary);
-  font-size: 13.5px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   transition: var(--transition);
   position: relative;
+  border: 1px solid transparent;
+  background: transparent;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.nav-item:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  transform: translateX(2px);
+  border-color: var(--border);
 }
 
 .nav-item:hover {
@@ -1061,10 +1073,11 @@
 }
 
 .nav-item.active {
-  background: linear-gradient(90deg, rgba(212, 165, 116, 0.1) 0%, transparent 100%);
+  background: linear-gradient(90deg, rgba(212, 165, 116, 0.18) 0%, rgba(212, 165, 116, 0.06) 100%);
   color: var(--accent-primary);
-  font-weight: 600;
-  text-shadow: 0 0 8px rgba(212, 165, 116, 0.4);
+  font-weight: 700;
+  border-color: rgba(212, 165, 116, 0.35);
+  box-shadow: 0 2px 12px rgba(212, 165, 116, 0.22);
 }
 
 .nav-item.active::before {
@@ -1073,10 +1086,11 @@
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 3px;
-  height: 20px;
+  width: 4px;
+  height: 28px;
   background: var(--accent-gradient);
   border-radius: 0 4px 4px 0;
+  box-shadow: 0 2px 10px rgba(212, 165, 116, 0.5);
 }
 
 .nav-icon {
@@ -1135,15 +1149,29 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  gap: 4px;
+}
+
+.sidebar-avatar-initials {
+  background: var(--shell-avatar-bg);
+  color: var(--shell-avatar-text);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0;
+  border: 2px solid var(--shell-border-strong);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
 }
 
 .sidebar-username {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--shell-title);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: 0.2px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .role-badge {
@@ -3013,16 +3041,16 @@ body.theme-light .text-glow-active {
 
 .nav-item.active {
   background:
-    linear-gradient(90deg, rgba(255, 172, 96, 0.32), rgba(255, 172, 96, 0.11)),
+    linear-gradient(90deg, rgba(255, 172, 96, 0.28), rgba(255, 172, 96, 0.08)),
     var(--shell-surface-hover);
-  border-color: rgba(255, 172, 96, 0.72);
+  border-color: rgba(255, 172, 96, 0.65);
   color: #ffd7ad;
   box-shadow:
     inset 5px 0 0 #ffac60,
-    0 0 0 1px rgba(255, 172, 96, 0.12),
-    0 14px 34px rgba(255, 172, 96, 0.16);
+    0 0 0 1px rgba(255, 172, 96, 0.18),
+    0 14px 34px rgba(255, 172, 96, 0.2);
   opacity: 1;
-  text-shadow: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   transform: translateX(3px);
 }
 
@@ -3061,7 +3089,7 @@ body.theme-light .text-glow-active {
   align-items: center;
   gap: 10px;
   min-height: 64px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   margin-top: 0;
   border: 1px solid var(--shell-border);
   background: var(--shell-surface-soft);
@@ -3077,6 +3105,14 @@ body.theme-light .text-glow-active {
   background: var(--shell-surface-hover);
   border-color: var(--shell-border-strong);
   box-shadow: none;
+}
+
+.sidebar-user-wrap .sidebar-user-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .sidebar-user-menu {
@@ -3136,11 +3172,12 @@ body.theme-light .text-glow-active {
 }
 
 .sidebar-user-plan {
-  display: block;
-  margin-top: 2px;
-  color: var(--shell-text-soft);
-  font-size: 14px;
-  font-weight: 500;
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   line-height: 1.2;
 }
 
@@ -3189,9 +3226,14 @@ body.theme-light .text-glow-active {
   color: var(--shell-avatar-text);
 }
 
-.sidebar-avatar.sidebar-avatar-initials {
+.sidebar-user-wrap .sidebar-avatar.sidebar-avatar-initials {
   background: var(--shell-avatar-bg);
   color: var(--shell-avatar-text);
+  width: 44px;
+  height: 44px;
+  font-size: 16px;
+  border: 2px solid var(--shell-border-strong);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .topbar {

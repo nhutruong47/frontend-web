@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from './Sidebar';
 import { Bell, MoreHorizontal, Check, MessageSquare, AlertCircle, MessageCircle, Edit } from 'lucide-react';
 
 export default function Layout() {
     const { user, logout } = useAuth();
+    const navigate = useNavigate();
     const [showNotifications, setShowNotifications] = useState(false);
     const [showMessages, setShowMessages] = useState(false);
     const [activeTab, setActiveTab] = useState('all');
@@ -133,7 +134,15 @@ export default function Layout() {
                                     </div>
                                     <div className="fb-notification-list">
                                         {messageGroups.map(group => (
-                                            <div key={group.id} className="fb-notification-item msg-item">
+                                            <div 
+                                                key={group.id} 
+                                                className="fb-notification-item msg-item"
+                                                onClick={() => {
+                                                    setShowMessages(false);
+                                                    navigate(`/groups/${group.teamId}/chat`);
+                                                }}
+                                                style={{cursor: 'pointer'}}
+                                            >
                                                 <div className="fb-notif-avatar-wrapper">
                                                     <img src={group.avatar} alt="avatar" className="fb-notif-avatar" />
                                                     {group.isActive && <div className="online-indicator"></div>}
@@ -158,7 +167,7 @@ export default function Layout() {
                                         ))}
                                     </div>
                                     <div className="fb-notification-footer">
-                                        <button>Xem tất cả trong Messenger</button>
+                                        <button onClick={() => { setShowMessages(false); navigate('/groups'); }}>Xem tất cả trong Messenger</button>
                                     </div>
                                 </div>
                             )}

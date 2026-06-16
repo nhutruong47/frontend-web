@@ -14,6 +14,17 @@ export default function Sidebar() {
     const displayPlan = user?.aiPlan && user.aiPlan !== 'free' ? user.aiPlan : 'Plus';
     const userInitials = displayName.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase();
 
+    const getPlanColor = (plan: string) => {
+        switch (plan.toLowerCase()) {
+            case 'free': return { bg: '#6b7280', text: '#fff', label: 'Miễn phí' };
+            case 'plus': return { bg: 'linear-gradient(135deg, #f59e0b, #d97706)', text: '#fff', label: 'Plus' };
+            case 'pro': return { bg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', text: '#fff', label: 'Pro' };
+            case 'enterprise': return { bg: 'linear-gradient(135deg, #ec4899, #db2777)', text: '#fff', label: 'Enterprise' };
+            default: return { bg: '#6b7280', text: '#fff', label: plan };
+        }
+    };
+    const planStyle = getPlanColor(displayPlan);
+
     useEffect(() => {
         if (!user || user.role === 'ADMIN') {
             setPendingOrderCount(0);
@@ -132,13 +143,16 @@ export default function Sidebar() {
                                 {!!item.badge && item.badge > 0 && (
                                     <span className="nav-badge" style={{
                                         marginLeft: 'auto',
-                                        background: '#E53935',
+                                        background: 'linear-gradient(135deg, #ef4444, #dc2626)',
                                         color: '#fff',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 'bold',
-                                        padding: '2px 6px',
-                                        borderRadius: '10px',
-                                        lineHeight: 1
+                                        fontSize: '11px',
+                                        fontWeight: 800,
+                                        padding: '3px 8px',
+                                        borderRadius: '12px',
+                                        lineHeight: 1,
+                                        boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
+                                        minWidth: '20px',
+                                        textAlign: 'center'
                                     }}>
                                         {item.badge}
                                     </span>
@@ -199,7 +213,21 @@ export default function Sidebar() {
                         <div className="sidebar-avatar sidebar-avatar-initials">{userInitials || 'U'}</div>
                         <div className="sidebar-user-info">
                             <span className="sidebar-username">{displayName}</span>
-                            <span className="sidebar-user-plan">{displayPlan}</span>
+                            <span 
+                                className="sidebar-user-plan"
+                                style={{
+                                    background: planStyle.bg,
+                                    color: planStyle.text,
+                                    padding: '2px 10px',
+                                    borderRadius: '12px',
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px',
+                                    display: 'inline-block',
+                                    marginTop: '2px'
+                                }}
+                            >{planStyle.label}</span>
                         </div>
                         <ion-icon name={userMenuOpen ? 'chevron-down-outline' : 'storefront-outline'} style={{ marginLeft: 'auto', color: 'var(--shell-text-soft)', fontSize: '18px' }}></ion-icon>
                     </button>

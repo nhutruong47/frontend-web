@@ -1700,6 +1700,13 @@ function SalaryPanel({ teamId }: { teamId: string }) {
     const [salaryData, setSalaryData] = useState<SalaryReport[]>([]);
     const [loadingSalary, setLoadingSalary] = useState(false);
     const [showSalary, setShowSalary] = useState(false);
+    const [selectedMonth, setSelectedMonth] = useState(() => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    });
+    const [hourlyRateOverride, setHourlyRateOverride] = useState<Record<string, number>>({});
+    const [editingRate, setEditingRate] = useState<string | null>(null);
+    const [tempRate, setTempRate] = useState('');
 
     const loadSalary = async () => {
         setLoadingSalary(true);
@@ -1710,68 +1717,339 @@ function SalaryPanel({ teamId }: { teamId: string }) {
         setLoadingSalary(false);
     };
 
+    const handleRateEdit = (memberId: string, currentRate: number) => {
+        setEditingRate(memberId);
+        setTempRate(currentRate.toString());
+    };
+
+    const handleRateSave = (memberId: string) => {
+        const newRate = parseFloat(tempRate);
+        if (!isNaN(newRate) && newRate > 0) {
+            setHourlyRateOverride(prev => ({ ...prev, [memberId]: newRate }));
+        }
+        setEditingRate(null);
+    };
+
+    const getEffectiveRate = (memberId: string, defaultRate: number) => {
+        return hourlyRateOverride[memberId] || defaultRate;
+    };
+
+    const calculateSalary = (report: SalaryReport) => {
+        const rate = getEffectiveRate(report.memberId, report.hourlyRate);
+        return Math.round(report.totalWorkload * rate);
+    };
+
+    const totalSalary = salaryData.reduce((sum, s) => sum + calculateSalary(s), 0);
+    const totalTasks = salaryData.reduce((sum, s) => sum + s.totalTasks, 0);
+    const totalCompleted = salaryData.reduce((sum, s) => sum + s.completedTasks, 0);
+    const totalWorkload = salaryData.reduce((sum, s) => sum + s.totalWorkload, 0);
+    const avgCompletion = totalTasks > 0 ? Math.round((totalCompleted / totalTasks) * 100) : 0;
+
+    const monthLabel = (() => {
+        const [year, month] = selectedMonth.split('-');
+        const date = new Date(parseInt(year), parseInt(month) - 1);
+        return date.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+    })();
+
     return (
-        <div style={{ background: '#fff', borderRadius: 16, padding: 24, marginTop: 24, border: '1px solid #e2e8f0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: showSalary ? 16 : 0 }}>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <ion-icon name="wallet-outline" style={{ fontSize: 20, color: '#d4a574' }}></ion-icon>
-                    Bảng lương nhân viên
-                </h3>
+        <div style={{ background: '#fff', borderRadius: 20, padding: 0, marginTop: 24, border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
+            {/* Header */}
+            <div style={{ 
+                background: 'linear-gradient(135deg, #3d2b1d 0%, #5b3a1f 50%, #7a4f2a 100%)',
+                padding: '24px 28px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{ 
+                        width: 48, height: 48, borderRadius: 14, 
+                        background: 'rgba(255,255,255,0.15)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                        <svg width="24" height="24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="2" y="5" width="20" height="14" rx="2"/>
+                            <line x1="2" y1="10" x2="22" y2="10"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#fff' }}>Bảng Lương Nhân Viên</h3>
+                        <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>Theo dõi & quản lý chi phí nhân sự</p>
+                    </div>
+                </div>
                 <button onClick={() => { setShowSalary(p => !p); if (!showSalary) loadSalary(); }} style={{
-                    background: showSalary ? '#f1f5f9' : '#d4a574', color: showSalary ? '#475569' : '#fff',
-                    border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                    background: showSalary ? 'rgba(255,255,255,0.15)' : '#fff',
+                    color: showSalary ? '#fff' : '#3d2b1d',
+                    border: showSalary ? '1px solid rgba(255,255,255,0.3)' : 'none',
+                    borderRadius: 12, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    transition: 'all 0.2s'
                 }}>
-                    {showSalary ? 'Ẩn' : 'Xem bảng lương'}
+                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                        {showSalary ? <path d="M17 18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v12zM9 9h6m-6 3h6m-6 3h6"/> : <><path d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z"/></>}
+                    </svg>
+                    {showSalary ? 'Ẩn bảng' : 'Xem bảng lương'}
                 </button>
             </div>
 
+            {/* Month Selector */}
+            <div style={{ padding: '16px 28px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fafafa' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <button 
+                        onClick={() => {
+                            const [y, m] = selectedMonth.split('-').map(Number);
+                            const prev = new Date(y, m - 2);
+                            setSelectedMonth(`${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`);
+                        }}
+                        style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                        <svg width="16" height="16" fill="none" stroke="#64748b" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+                    </button>
+                    <select 
+                        value={selectedMonth} 
+                        onChange={e => setSelectedMonth(e.target.value)}
+                        style={{ 
+                            padding: '8px 16px', borderRadius: 10, border: '1px solid #e2e8f0',
+                            background: '#fff', fontSize: 14, fontWeight: 600, color: '#1e293b',
+                            cursor: 'pointer', outline: 'none'
+                        }}
+                    >
+                        {Array.from({ length: 12 }, (_, i) => {
+                            const d = new Date();
+                            d.setMonth(d.getMonth() - i);
+                            const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                            return <option key={val} value={val}>{d.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}</option>;
+                        })}
+                    </select>
+                    <button 
+                        onClick={() => {
+                            const [y, m] = selectedMonth.split('-').map(Number);
+                            const next = new Date(y, m);
+                            const now = new Date();
+                            if (next <= now) {
+                                setSelectedMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
+                            }
+                        }}
+                        style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                        <svg width="16" height="16" fill="none" stroke="#64748b" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                    </button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <span style={{ fontSize: 12, color: '#94a3b8' }}>
+                        <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" style={{ verticalAlign: 'middle', marginRight: 4 }}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                        Tự động cập nhật theo giờ công
+                    </span>
+                </div>
+            </div>
+
             {showSalary && (
-                loadingSalary ? (
-                    <div style={{ textAlign: 'center', padding: 20, color: '#94a3b8' }}>Đang tải...</div>
-                ) : salaryData.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: 20, color: '#94a3b8', fontSize: 13 }}>Chưa có dữ liệu lương</div>
-                ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ background: '#f8fafc' }}>
-                                {['Nhân viên', 'Tổng task', 'Hoàn thành', 'Tổng công (giờ)', 'Đơn giá/giờ', 'Lương ước tính'].map((h, i) => (
-                                    <th key={i} style={{ padding: '10px 14px', textAlign: i >= 1 ? 'center' : 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>{h}</th>
+                <>
+                    {/* Summary Stats */}
+                    <div style={{ padding: '20px 28px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                        {[
+                            { label: 'Tổng nhân viên', value: salaryData.length, icon: '👥', color: '#3b82f6', bg: '#eff6ff' },
+                            { label: 'Tổng công việc', value: totalTasks.toLocaleString(), icon: '📋', color: '#8b5cf6', bg: '#f5f3ff' },
+                            { label: 'Hoàn thành', value: `${avgCompletion}%`, icon: '✅', color: '#10b981', bg: '#ecfdf5' },
+                            { label: 'Tổng quỹ lương', value: `${(totalSalary / 1000000).toFixed(1)}M`, icon: '💰', color: '#f59e0b', bg: '#fffbeb' }
+                        ].map((stat, i) => (
+                            <div key={i} style={{ 
+                                padding: 16, borderRadius: 14, background: stat.bg,
+                                border: `1px solid ${stat.color}22`
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                    <span style={{ fontSize: 18 }}>{stat.icon}</span>
+                                    <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>{stat.label}</span>
+                                </div>
+                                <div style={{ fontSize: 24, fontWeight: 800, color: stat.color }}>{stat.value}</div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Employee Cards */}
+                    {loadingSalary ? (
+                        <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>
+                            <div style={{ width: 40, height: 40, border: '3px solid #e2e8f0', borderTopColor: '#d4a574', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }}></div>
+                            <p>Đang tải dữ liệu...</p>
+                        </div>
+                    ) : salaryData.length === 0 ? (
+                        <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>
+                            <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
+                            <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Chưa có dữ liệu lương</p>
+                            <p style={{ fontSize: 13 }}>Nhân viên chưa có task hoàn thành trong tháng này</p>
+                        </div>
+                    ) : (
+                        <div style={{ padding: '0 28px 24px' }}>
+                            {/* Table Header */}
+                            <div style={{ 
+                                display: 'grid', 
+                                gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr 1.3fr',
+                                gap: 12, padding: '12px 16px',
+                                background: '#f8fafc', borderRadius: '12px 12px 0 0',
+                                borderBottom: '1px solid #e2e8f0'
+                            }}>
+                                {['Nhân viên', 'Tổng task', 'Hoàn thành', 'Giờ công', 'Đơn giá/giờ', 'Lương thực nhận'].map((h, i) => (
+                                    <div key={i} style={{ 
+                                        fontSize: 11, fontWeight: 700, color: '#94a3b8', 
+                                        textTransform: 'uppercase', letterSpacing: '0.05em',
+                                        textAlign: i >= 1 ? 'center' : 'left'
+                                    }}>{h}</div>
                                 ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {salaryData.map(s => (
-                                <tr key={s.memberId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                    <td style={{ padding: '12px 14px', fontWeight: 600, fontSize: 14, color: '#1e293b' }}>{s.memberName}</td>
-                                    <td style={{ padding: '12px 14px', textAlign: 'center', fontSize: 13 }}>{s.totalTasks}</td>
-                                    <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                                        <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{s.completedTasks}</span>
-                                    </td>
-                                    <td style={{ padding: '12px 14px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>{s.totalWorkload.toFixed(1)}</td>
-                                    <td style={{ padding: '12px 14px', textAlign: 'center', fontSize: 13 }}>{s.hourlyRate.toLocaleString('vi-VN')} đ</td>
-                                    <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                                        <span style={{ background: '#f9f1e3', color: '#d4a574', padding: '4px 12px', borderRadius: 8, fontSize: 13, fontWeight: 800 }}>
-                                            {s.estimatedSalary.toLocaleString('vi-VN')} đ
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                            <tr style={{ background: '#fafafa', fontWeight: 700 }}>
-                                <td style={{ padding: '12px 14px', fontSize: 14, color: '#1e293b' }}>Tổng cộng</td>
-                                <td style={{ padding: '12px 14px', textAlign: 'center' }}>{salaryData.reduce((a, s) => a + s.totalTasks, 0)}</td>
-                                <td style={{ padding: '12px 14px', textAlign: 'center' }}>{salaryData.reduce((a, s) => a + s.completedTasks, 0)}</td>
-                                <td style={{ padding: '12px 14px', textAlign: 'center' }}>{salaryData.reduce((a, s) => a + s.totalWorkload, 0).toFixed(1)}</td>
-                                <td style={{ padding: '12px 14px', textAlign: 'center' }}>—</td>
-                                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                                    <span style={{ background: '#d4a574', color: '#fff', padding: '6px 16px', borderRadius: 8, fontSize: 14, fontWeight: 800 }}>
-                                        {salaryData.reduce((a, s) => a + s.estimatedSalary, 0).toLocaleString('vi-VN')} đ
-                                    </span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                )
+                            </div>
+
+                            {/* Employee Rows */}
+                            {salaryData.map((s, idx) => {
+                                const salary = calculateSalary(s);
+                                const completionRate = s.totalTasks > 0 ? Math.round((s.completedTasks / s.totalTasks) * 100) : 0;
+                                const isEditing = editingRate === s.memberId;
+                                
+                                return (
+                                    <div key={s.memberId} style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr 1.3fr',
+                                        gap: 12, padding: '14px 16px',
+                                        borderBottom: idx < salaryData.length - 1 ? '1px solid #f1f5f9' : 'none',
+                                        alignItems: 'center',
+                                        background: '#fff',
+                                        transition: 'background 0.2s'
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
+                                    onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                                    >
+                                        {/* Employee Info */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            <div style={{
+                                                width: 40, height: 40, borderRadius: 12,
+                                                background: ['#d4a574', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981'][idx % 6],
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                color: '#fff', fontWeight: 700, fontSize: 14
+                                            }}>
+                                                {(s.memberName || '?').split(' ').slice(-2).map(w => w[0]).join('').toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>{s.memberName}</div>
+                                                <div style={{ fontSize: 11, color: '#94a3b8' }}>ID: {s.memberId?.slice(0, 8)}...</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Total Tasks */}
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ fontSize: 16, fontWeight: 800, color: '#1e293b' }}>{s.totalTasks}</div>
+                                            <div style={{ fontSize: 10, color: '#94a3b8' }}>task</div>
+                                        </div>
+
+                                        {/* Completed */}
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ 
+                                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                                padding: '4px 10px', borderRadius: 20,
+                                                background: completionRate >= 80 ? '#dcfce7' : completionRate >= 50 ? '#fef3c7' : '#fee2e2',
+                                                color: completionRate >= 80 ? '#16a34a' : completionRate >= 50 ? '#d97706' : '#dc2626'
+                                            }}>
+                                                <span style={{ fontSize: 13, fontWeight: 700 }}>{s.completedTasks}</span>
+                                            </div>
+                                            <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{completionRate}%</div>
+                                        </div>
+
+                                        {/* Workload */}
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>{s.totalWorkload.toFixed(1)}</div>
+                                            <div style={{ fontSize: 10, color: '#94a3b8' }}>giờ</div>
+                                        </div>
+
+                                        {/* Hourly Rate */}
+                                        <div style={{ textAlign: 'center' }}>
+                                            {isEditing ? (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+                                                    <input 
+                                                        type="number" 
+                                                        value={tempRate}
+                                                        onChange={e => setTempRate(e.target.value)}
+                                                        autoFocus
+                                                        style={{ width: 60, padding: '4px 8px', borderRadius: 6, border: '1px solid #d4a574', fontSize: 13, textAlign: 'center' }}
+                                                    />
+                                                    <button onClick={() => handleRateSave(s.memberId)} style={{ padding: '4px 8px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>✓</button>
+                                                    <button onClick={() => setEditingRate(null)} style={{ padding: '4px 8px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>✕</button>
+                                                </div>
+                                            ) : (
+                                                <div 
+                                                    onClick={() => handleRateEdit(s.memberId, s.hourlyRate)}
+                                                    style={{ 
+                                                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                                                        padding: '4px 10px', borderRadius: 8,
+                                                        background: hourlyRateOverride[s.memberId] ? '#fef3c7' : '#f1f5f9',
+                                                        color: '#475569', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                                                        border: '1px dashed #cbd5e1'
+                                                    }}
+                                                    title="Nhấp để chỉnh sửa đơn giá"
+                                                >
+                                                    {getEffectiveRate(s.memberId, s.hourlyRate).toLocaleString('vi-VN')}
+                                                    <span style={{ fontSize: 10 }}>đ</span>
+                                                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Salary */}
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{
+                                                padding: '8px 14px', borderRadius: 12,
+                                                background: 'linear-gradient(135deg, #d4a574 0%, #b87536 100%)',
+                                                color: '#fff', fontWeight: 800, fontSize: 15,
+                                                boxShadow: '0 4px 12px rgba(212,165,116,0.3)'
+                                            }}>
+                                                {salary.toLocaleString('vi-VN')} đ
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {/* Total Row */}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr 1.3fr',
+                                gap: 12, padding: '18px 16px',
+                                background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+                                borderRadius: '0 0 16px 16px',
+                                alignItems: 'center'
+                            }}>
+                                <div style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>Tổng cộng</div>
+                                <div style={{ textAlign: 'center', color: '#fff' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalTasks}</span></div>
+                                <div style={{ textAlign: 'center', color: '#fff' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalCompleted}</span></div>
+                                <div style={{ textAlign: 'center', color: '#fff' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalWorkload.toFixed(1)}h</span></div>
+                                <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>—</div>
+                                <div style={{ textAlign: 'center' }}>
+                                    <div style={{
+                                        padding: '10px 16px', borderRadius: 12,
+                                        background: '#d4a574',
+                                        color: '#fff', fontWeight: 900, fontSize: 17,
+                                        boxShadow: '0 4px 16px rgba(212,165,116,0.4)'
+                                    }}>
+                                        {totalSalary.toLocaleString('vi-VN')} đ
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div style={{ padding: '16px 28px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: 12, background: '#fafafa' }}>
+                        <button style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Xuất Excel
+                        </button>
+                        <button style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            Phát lương
+                        </button>
+                    </div>
+                </>
             )}
+
+            <style>{`
+                @keyframes spin { to { transform: rotate(360deg); } }
+            `}</style>
         </div>
     );
 }
