@@ -75,6 +75,7 @@ type MarketplaceFactory = Team & {
     };
     certificatesMock?: { name: string; issueDate: string; expDate: string; status: string }[];
     portfolioMock?: { name: string; type: string; image: string }[];
+    reviewsMock?: { author: string; content: string; rating?: number; date?: string; company?: string }[];
 };
 
 const REGION_OPTIONS = ['Lâm Đồng', 'Đắk Lắk', 'Gia Lai', 'Kon Tum', 'Đồng Nai', 'Bình Dương', 'TP HCM', 'Khác'];
@@ -474,7 +475,7 @@ export default function MarketplacePage() {
         const minCapacity = Number(minCapacityFilter) || 0;
         
         return factories.filter(factory => {
-            const translatedRegion = t[factory.region] || factory.region || t.vietnam;
+            const translatedRegion = t[factory.region || ''] || factory.region || t.vietnam;
             const translatedType = t[factory.factoryType || ''] || factory.factoryType || t.roastery;
             const translatedTags = factory.specializationsMock?.map(tag => t[tag.replace(' ', '_')] || tag) || [];
             
@@ -494,7 +495,7 @@ export default function MarketplacePage() {
             const matchesSearch = !q || searchable.includes(q);
             const matchesRegion = !regionFilter || factory.region === regionFilter;
             const matchesType = !factoryTypeFilter || factory.factoryType === factoryTypeFilter;
-            const matchesSpecialty = !specialtyFilter || factory.capabilitiesMock.services.includes(specialtyFilter) || splitMultiValue(factory.specialty).includes(specialtyFilter);
+            const matchesSpecialty = !specialtyFilter || factory.capabilitiesMock?.services.includes(specialtyFilter) || splitMultiValue(factory.specialty).includes(specialtyFilter);
             const matchesStatus = !statusFilter || factory.statusBadgeMock === statusFilter;
             const matchesCapacity = !minCapacity || (factory.capacityValue || 0) >= minCapacity;
             const matchesVerified = !verifiedFilter
@@ -1136,9 +1137,7 @@ export default function MarketplacePage() {
                     ) : (
                         <div className="mp-factory-grid">
                             {featuredFactories.map((factory, index) => {
-                                const availability = availabilityCopy(factory.availabilityStatus);
                                 const isOwnFactory = factory.ownerId === user?.id;
-                                const rating = factory.totalOrders ? Math.min(5, Math.max(4.5, (getTrustScore(factory) || 90) / 20)).toFixed(1) : '4.9';
                                 const image = factory.factoryImageUrl || factory.factoryImages?.[0] || fallbackFactoryImages[index % fallbackFactoryImages.length];
                                 return (
                                     <article key={factory.id} className="mp-factory-card">
@@ -1154,12 +1153,12 @@ export default function MarketplacePage() {
                                                     }
                                                 }}
                                             />
-                                            <span className="mp-card-ribbon">{t[factory.statusBadgeMock.replace(' ', '_')] || factory.statusBadgeMock}</span>
+                                            <span className="mp-card-ribbon">{t[factory.statusBadgeMock?.replace(' ', '_') || ''] || factory.statusBadgeMock}</span>
                                         </div>
                                         <div className="mp-factory-card-body" style={{padding: '16px 20px'}}>
                                             <div className="mp-fcard-header">
                                                 <h3>{factory.name} {factory.verifiedFactory && <span className="material-symbols-outlined verified-icon" title={t.verifiedFactory} style={{fontSize: 16, color: '#10b981'}}>verified</span>}</h3>
-                                                <span className="mp-fcard-location"><span className="material-symbols-outlined" style={{fontSize: 14}}>location_on</span> {t[factory.region] || factory.region || t.vietnam}</span>
+                                                <span className="mp-fcard-location"><span className="material-symbols-outlined" style={{fontSize: 14}}>location_on</span> {t[factory.region || ''] || factory.region || t.vietnam}</span>
                                             </div>
                                             <div className="mp-fcard-type" style={{color: 'var(--text-muted)', fontSize: 13, marginBottom: 8}}>
                                                 {t[factory.factoryType || ''] || factory.factoryType || t.roastery} • {factory.yearsInOperationMock} {t.yearsInOperation}
@@ -1198,7 +1197,7 @@ export default function MarketplacePage() {
                                                 </div>
                                                 <div style={{display: 'flex', justifyContent: 'space-between'}}>
                                                     <span style={{color: 'var(--text-muted)'}}>{t.leadTime}</span>
-                                                    <strong style={{color: 'var(--text-primary)'}}>{factory.leadTimeMock.replace('Ngày', language === 'en' ? 'Days' : 'Ngày')}</strong>
+                                                    <strong style={{color: 'var(--text-primary)'}}>{factory.leadTimeMock?.replace('Ngày', language === 'en' ? 'Days' : 'Ngày')}</strong>
                                                 </div>
                                             </div>
                                         </div>
