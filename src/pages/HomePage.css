@@ -2283,6 +2283,11 @@ body.luxury-home-page {
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
+.coffee-workshops .coffee-kicker {
+  color: #4b3321 !important;
+  text-shadow: none;
+}
+
 .coffee-ai-section,
 .coffee-problem-panel {
   background:

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { teamService } from '../services/groupService';
 import { interGroupOrderService } from '../services/interGroupOrderService';
 import type { Team, InterGroupOrder } from '../types/types';
@@ -7,202 +7,458 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import './Marketplace.css';
 
-const TEAM_IMAGES = [
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuD2Grsxce0CV44WTikHOdsd39cY-uSEdsgGwONXoT4hrYzt3pJ9FNgyqjzJ5CCQTg7nQXJAiyHCnJ97RoapRmAc_oPcqKWEiuMiAPhE1oHfvW_MybmEeSCkRc4BhVuRVenPLLI1cBWLSeMnv9XtJTTpy-U1zISpxoijniuDPo1KbnkkoQ79VrDg7JjUixHmhbdNCIV808JY-9g5X6dXY0DBJOziKdGKXjAGIIkiAxlpZlXxfjXUbGIVLp1ejsheOlQBO1FaqLY-wJdZ',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuDaKOpexRAVADwQ8C3EbJKvC7UJS7i5NiR66SPA6pfSqZNnDwEOcvA4PsoBHqBcqnvoJzfKChiOdGaMSNIYop2A_QATkyPo7_ul8Z2RZJitzz3Q64Wqx9jf4XAeZvB5n82WOFFF4afKbI00UUCTQGM67CX7zVt5Ygr8fv4ymqWc7Us44O-hgo84sn-a0aHWNIARMmO9M--qWiyKMoQ-VS_1GAm8uJaM9OGsAiCjw1zNYwqSQ3sqXXQU_XP4hs2Mwpm1W95e61vg3if6',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuBxcLYrrbNrLsREN_XApLJwxJKwhmqyKajVHwyJLD_HV2Huf_RQqcOkLj6TRXa4oMW3b7RC0JlPfWYz0AeRmLFaax0ULt2R4skTmyVTCCJOPcEvMipSBd390QyRnbIt_qfPU3WzU0Q_xJeVbYbrtjxAHWC4CSaa51mtJaT_ydO_0wYiivYUu4OOe_kzn_2-gPfxQr524HIEjLygJvKtw_HMmI-BfNwmQ68pvbP8YOOyC6YpWeEts6YDRhPN9UuN8qxyeyO12hIEJne4',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuCMUd-cQ5Vpg8vzlaG8K_770SmKstx5FPRYXN6IiUG_N4mYVAH2EjttWFR56Z7PQmJpdxcG-uU1lJdus4HLYdCb-nOrhDs4tUmIXmIxkysAvZVA9YGknj98eTqQOWqYFcgtgJxlyIFNQLtqQ2oWk3uhAJ9XUo4FKH-OW1BLQdZpSPsDpCzefgTLO_qu-TFhv5gtjqR5ILq_MQcB7Cob_AQ2Xs1jrsIi2QN-Lik3JAtfHGgH8a7o3y3ic5bjQlMA8gy5mhYlGCVidejd',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuAxyR7jqDGDBgkNE9bE7A-YquHFGGUIxNL_peaYxl6vQjW9rLNR7lat3pemyrh34QyBA_hKuOs5PeJqf8jB3bHtSzgsS1RgutmY86Qi02L8N7qMDPu_QOgDqQtYsi6h6psEo6CBg6Fqha1qIbPJIKgjCwfMikqcsnSMVdx0TXpyO9OQMtiDSAamMyDtLJ_9KTWV-8ThbSsRddP1Q2WgW1A9_Tbpw9BZz-IqJQ3fQ9ryf8z_mA4hvyTQ6UK2QuRf6pXK0VWYCDvzDmlM',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuDgvSbTYxxHapjHIc1b8jzffIS4KZBSpLHh1CwSTM5zQQOCUCBPhM60ugCGSXOxGuWeyfCpNzccdG2XrHDRgm6ow5MxnMMzPAc2EuV8cfCgIyX7X3Y1oLrOYcGjWMKHdlZIN2Ov7rBL4Nt5cnfOoBK-Ett7d92LJ5Zr_nn18bhQvSMUs8Rza1evmz6mQVeoesEBcWrByShzjImH4ehCok57cgRXh2u0GZZAvOiu8zS4jrpxl4DKD4TRMkaNSRPdQSPRR_qVwblB_2l2',
-];
+type FactoryProfileTab = 'overview' | 'capabilities' | 'equipment' | 'certificates' | 'reviews' | 'portfolio' | 'rfq';
+type AvailabilityStatus = 'AVAILABLE' | 'LIMITED' | 'FULLY_BOOKED' | 'UNKNOWN';
 
-const MARKET_HERO_IMAGE = TEAM_IMAGES[3];
-
-const MARKET_FILTERS = [
-    { icon: 'all_inclusive', label: 'Tất cả' },
-    { icon: 'eco', label: 'Hạt xanh' },
-    { icon: 'coffee_maker', label: 'Dịch vụ rang' },
-    { icon: 'precision_manufacturing', label: 'Thiết bị' },
-    { icon: 'factory', label: 'Xưởng gia công' },
-];
-
-type MarketplaceWorkshop = Team & {
-    image: string;
-    services: string[];
-    equipment: string;
-    priceRange: string;
-    leadTime: string;
-    minOrder: string;
-    quality: string;
-    certifications: string[];
-    sample?: boolean;
+type ManufacturingRequest = {
+    id: string;
+    type: 'Roasting' | 'Packaging' | 'OEM' | 'Quality control';
+    title: string;
+    coffeeType: string;
+    quantity: string;
+    deadline: string;
+    region: string;
+    details: string;
+    createdAt: string;
 };
 
-const DEMO_WORKSHOPS: MarketplaceWorkshop[] = [
+type MarketplaceFactory = Team & {
+    monthlyCapacity?: string;
+    availableCapacity?: string;
+    moq?: string;
+    onTimeRate?: number;
+    avgResponseTime?: string;
+    repeatCustomerRate?: number;
+    availabilityStatus?: AvailabilityStatus;
+    coffeeTypes?: string[];
+    services?: string[];
+    roasters?: string[];
+    packagingMachines?: string[];
+    grinders?: string[];
+    qcEquipment?: string[];
+    certifications?: string[];
+    verifiedFactory?: boolean;
+    verifiedBusiness?: boolean;
+    verifiedAddress?: boolean;
+    verifiedCertification?: boolean;
+    portfolioProjects?: string[];
+    notableCustomers?: string[];
+    processedCoffeeLines?: string[];
+    reviews?: { author: string; content: string; rating?: number; date?: string; company?: string }[];
+    
+    // New Mock Fields for B2B Redesign
+    trustScoreMock?: number;
+    ratingMock?: number;
+    reviewCountMock?: number;
+    completedOrdersMock?: number;
+    onTimeRateMock?: number;
+    currentCapacityMock?: string;
+    availableCapacityMock?: string;
+    moqMock?: string;
+    leadTimeMock?: string;
+    statusBadgeMock?: 'Receiving Orders' | 'Nearly Full' | 'Temporarily Unavailable';
+    specializationsMock?: string[];
+    yearsInOperationMock?: number;
+    employeeCountMock?: number;
+    factorySizeMock?: string;
+    
+    capabilitiesMock?: {
+        services: string[];
+        coffeeTypes: string[];
+        packagingFormats: string[];
+    };
+    equipmentMock?: {
+        roasters: { model: string; capacity: string; year: string }[];
+        packaging: string[];
+        grinders: string[];
+        qc: string[];
+    };
+    certificatesMock?: { name: string; issueDate: string; expDate: string; status: string }[];
+    portfolioMock?: { name: string; type: string; image: string }[];
+};
+
+const REGION_OPTIONS = ['Lâm Đồng', 'Đắk Lắk', 'Gia Lai', 'Kon Tum', 'Đồng Nai', 'Bình Dương', 'TP HCM', 'Khác'];
+const FACTORY_TYPE_OPTIONS = [
+    'Xưởng rang cà phê',
+    'Xưởng gia công OEM',
+    'Nhà máy chế biến',
+    'Hợp tác xã',
+    'Doanh nghiệp xuất khẩu',
+    'Nhà cung cấp thiết bị',
+];
+const SPECIALTY_OPTIONS = [
+    'Rang cà phê',
+    'Gia công OEM',
+    'Đóng gói',
+    'Xay cà phê',
+    'Sản xuất Private Label',
+    'QC kiểm định',
+    'Xuất khẩu',
+    'Cung ứng cà phê nhân',
+    'Thiết kế bao bì',
+];
+const CERTIFICATE_OPTIONS = ['HACCP', 'ISO 22000', 'ISO 9001', 'OCOP', 'FDA', 'Khác'];
+const RFQ_TYPE_OPTIONS = ['Rang cà phê', 'Gia công OEM', 'Đóng gói', 'Xay cà phê', 'Private Label', 'Mua cà phê nhân', 'Khác'];
+const RFQ_UNIT_OPTIONS = ['kg', 'tấn', 'bao', 'gói'];
+
+const profileTabLabels: Record<FactoryProfileTab, string> = {
+    overview: 'Tổng quan',
+    capabilities: 'Năng lực',
+    equipment: 'Máy móc thiết bị',
+    certificates: 'Chứng nhận',
+    reviews: 'Đánh giá',
+    portfolio: 'Dự án (Portfolio)',
+    rfq: 'Gửi yêu cầu',
+};
+
+const verificationStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+        NOT_SUBMITTED: 'Chưa gửi',
+        PENDING: 'Đang chờ quản trị viên duyệt',
+        APPROVED: 'Đã xác minh',
+        REJECTED: 'Bị từ chối',
+    };
+    return labels[status] || status;
+};
+
+const REQUEST_STORAGE_KEY = 'orca-marketplace-rfqs';
+
+const emptyValue = 'Chưa cập nhật';
+const fallbackFactoryImages = [
+    'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1596496350324-a212260cb462?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1574634534894-89d7576c8259?auto=format&fit=crop&w=900&q=85',
+];
+
+const marketplaceCategories = [
+    { label: 'Tất cả', icon: 'all_inclusive' },
+    { label: 'Nguyên liệu', icon: 'eco' },
+    { label: 'Dịch vụ rang', icon: 'local_cafe' },
+    { label: 'Dịch vụ đóng gói', icon: 'package' },
+    { label: 'Dịch vụ trọn gói', icon: 'star' },
+    { label: 'Đăng nhu cầu', icon: 'assignment' },
+];
+
+const featuredProducts = [
     {
-        id: 'demo-ember-roastery',
-        name: 'Ember Roastery Đà Lạt',
-        description: 'Xưởng rang specialty tập trung Arabica Cầu Đất, phù hợp đơn hàng rang profile riêng, rang mẫu và đóng gói thương hiệu.',
-        ownerId: 'demo',
-        ownerName: 'ORCA Partner',
-        memberCount: 18,
-        createdAt: new Date().toISOString(),
-        isPublished: true,
-        specialty: 'Arabica specialty, rang profile riêng',
-        capacity: '650kg/ngày',
-        region: 'Đà Lạt, Lâm Đồng',
-        completedOrders: 186,
-        totalOrders: 194,
-        trustScore: 97,
-        image: TEAM_IMAGES[0],
-        services: ['Rang gia công', 'Rang mẫu 1-5kg', 'Đóng gói túi van một chiều', 'Tư vấn profile'],
-        equipment: 'Loring S35, máy đo màu Agtron, phòng cupping 12 chỗ',
-        priceRange: '38.000đ - 62.000đ/kg',
-        leadTime: '3-5 ngày làm việc',
-        minOrder: '30kg/mẻ',
-        quality: 'Kiểm soát độ ẩm, màu rang và cupping từng lô',
-        certifications: ['HACCP', 'Cupping Lab', 'Traceable Lot'],
-        sample: true,
+        title: 'Ethiopia Yirgacheffe G1',
+        badge: 'Mới về',
+        description: 'Sơ chế Natural với nốt hương hoa nhài và trà đen đặc trưng. Được thu hoạch từ vùng trồng Yirgacheffe danh tiếng, mang lại trải nghiệm hương vị tinh tế, nhẹ nhàng và hậu vị ngọt kéo dài.',
+        price: '450.000đ',
+        unit: '/kg',
+        image: '/coffee-hero.png',
+        origin: 'Yirgacheffe, Ethiopia',
+        roastLevel: 'Light - Medium',
+        processing: 'Natural',
+        tasteNotes: ['Hoa nhài', 'Trà đen', 'Cam chanh', 'Mật ong'],
+        stock: 'Có sẵn (100+ kg)'
     },
     {
-        id: 'demo-origins-craft',
-        name: 'Origins Craft Lab',
-        description: 'Đơn vị sơ chế, phân loại và rang thử nghiệm cho các dòng Fine Robusta, Natural Arabica và blend thương mại.',
-        ownerId: 'demo',
-        ownerName: 'ORCA Partner',
-        memberCount: 12,
-        createdAt: new Date().toISOString(),
-        isPublished: true,
-        specialty: 'Fine Robusta, rang test, sơ chế mẫu',
-        capacity: '420kg/ngày',
-        region: 'Buôn Ma Thuột',
-        completedOrders: 143,
-        totalOrders: 151,
-        trustScore: 94,
-        image: TEAM_IMAGES[1],
-        services: ['Rang test profile', 'Phân loại hạt xanh', 'Blend theo công thức', 'QC trước giao'],
-        equipment: 'Probatino 5kg, roaster 30kg, moisture meter, density analyzer',
-        priceRange: '32.000đ - 55.000đ/kg',
-        leadTime: '2-4 ngày làm việc',
-        minOrder: '20kg/mẻ',
-        quality: 'Có biên bản QC độ ẩm, defect và roast curve',
-        certifications: ['Robusta Fine', 'QC Report', 'Sample Roast'],
-        sample: true,
+        title: 'Colombia Supremo',
+        badge: 'Bán chạy',
+        description: 'Vị đậm đà, body mượt mà với hương chocolate và hạt dẻ.',
+        price: '380.000đ',
+        unit: '/kg',
+        image: 'https://images.unsplash.com/photo-1559525839-b184a4d698c7?auto=format&fit=crop&w=720&q=85',
+        origin: 'Huila, Colombia',
+        roastLevel: 'Medium',
+        processing: 'Washed',
+        tasteNotes: ['Chocolate', 'Caramel', 'Hạt dẻ'],
+        stock: 'Có sẵn (50+ kg)'
     },
     {
-        id: 'demo-legacy-beans',
-        name: 'Legacy Beans Factory',
-        description: 'Xưởng quy mô lớn chuyên gia công cà phê thương mại, rang số lượng lớn, phối trộn và đóng gói OEM.',
-        ownerId: 'demo',
-        ownerName: 'ORCA Partner',
-        memberCount: 42,
-        createdAt: new Date().toISOString(),
-        isPublished: true,
-        specialty: 'OEM, rang công nghiệp, blend thương mại',
-        capacity: '2.5 tấn/ngày',
-        region: 'Bình Dương',
-        completedOrders: 512,
-        totalOrders: 530,
-        trustScore: 96,
-        image: TEAM_IMAGES[2],
-        services: ['Rang số lượng lớn', 'Đóng gói OEM', 'Xay theo size', 'Dán nhãn thương hiệu'],
-        equipment: 'Dây chuyền rang 120kg/mẻ, máy đóng gói tự động, metal detector',
-        priceRange: '18.000đ - 34.000đ/kg',
-        leadTime: '5-9 ngày làm việc',
-        minOrder: '300kg/lô',
-        quality: 'Batch record, kiểm trọng lượng và lưu mẫu 30 ngày',
-        certifications: ['ISO 22000', 'OEM Ready', 'Large Batch'],
-        sample: true,
+        title: 'Kenya AA Top',
+        description: 'Độ chua sáng, nốt hương trái cây nhiệt đới rõ nét.',
+        price: '550.000đ',
+        unit: '/kg',
+        image: 'https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=720&q=85',
+        origin: 'Nyeri, Kenya',
+        roastLevel: 'Light',
+        processing: 'Washed',
+        tasteNotes: ['Blackberry', 'Chanh vàng', 'Mía đường'],
+        stock: 'Có sẵn (20+ kg)'
     },
     {
-        id: 'demo-highland-process',
-        name: 'Highland Process Station',
-        description: 'Trạm gia công hạt sau thu hoạch, sấy, phân loại, lưu kho và chuẩn bị hạt xanh cho các xưởng rang.',
-        ownerId: 'demo',
-        ownerName: 'ORCA Partner',
-        memberCount: 26,
-        createdAt: new Date().toISOString(),
-        isPublished: true,
-        specialty: 'Sơ chế, sấy, phân loại hạt xanh',
-        capacity: '4 tấn hạt xanh/ngày',
-        region: 'Gia Lai',
-        completedOrders: 208,
-        totalOrders: 219,
-        trustScore: 92,
-        image: TEAM_IMAGES[3],
-        services: ['Sấy hạt', 'Tách size', 'Lưu kho kiểm ẩm', 'Chuẩn bị lô rang'],
-        equipment: 'Máy sấy tĩnh, color sorter, kho kiểm soát ẩm 12%',
-        priceRange: '9.000đ - 22.000đ/kg',
-        leadTime: '4-7 ngày làm việc',
-        minOrder: '500kg/lô',
-        quality: 'Theo dõi độ ẩm, density và tỷ lệ lỗi trước xuất kho',
-        certifications: ['Green Bean QC', 'Moisture Control', 'Warehouse Lot'],
-        sample: true,
+        title: 'Máy đo độ ẩm S3',
+        description: 'Thiết bị cầm tay độ chính xác cao cho hạt xanh. Giúp kiểm soát chất lượng cà phê nhân xanh trước khi rang một cách dễ dàng và nhanh chóng.',
+        price: '2.100.000đ',
+        unit: '/chiếc',
+        image: 'https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=720&q=85',
+        origin: 'Đài Loan',
+        stock: 'Còn 5 chiếc',
+        tasteNotes: []
+    },
+    {
+        title: 'Dịch vụ Rang Test',
+        description: 'Gói 5 mẫu profile khác nhau cho 1kg hạt. Phù hợp cho khách hàng muốn tìm ra profile rang tối ưu nhất cho dòng hạt mới trước khi sản xuất số lượng lớn.',
+        price: '350.000đ',
+        unit: '/lần',
+        image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=720&q=85',
+        stock: 'Nhận yêu cầu liên tục',
+        tasteNotes: []
     },
 ];
 
-const enrichWorkshop = (team: Team, index: number): MarketplaceWorkshop => ({
-    ...team,
-    image: TEAM_IMAGES[index % TEAM_IMAGES.length],
-    services: ['Rang gia công', 'Đóng gói theo yêu cầu', 'Theo dõi tiến độ đơn hàng'],
-    equipment: team.capacity ? `Dây chuyền phù hợp công suất ${team.capacity}` : 'Máy rang công nghiệp, khu đóng gói và bàn QC',
-    priceRange: 'Liên hệ theo sản lượng',
-    leadTime: 'Theo lịch nhận đơn',
-    minOrder: 'Trao đổi khi đặt hàng',
-    quality: 'Theo dõi tiến độ, nghiệm thu và cập nhật trạng thái trên ORCA',
-    certifications: ['ORCA Verified', 'Partner Workshop'],
-});
+const splitMultiValue = (value?: string | string[]) => {
+    if (Array.isArray(value)) return value.filter(Boolean).map(item => item.trim()).filter(Boolean);
+    if (!value) return [];
+    return value.split(/[,;\n]/).map(item => item.trim()).filter(Boolean);
+};
+
+const toggleListValue = (values: string[], value: string) => (
+    values.includes(value) ? values.filter(item => item !== value) : [...values, value]
+);
+
+const buildCapacityLabel = (team: Team) => {
+    if (team.capacityValue && team.capacityUnit) return `${team.capacityValue} ${team.capacityUnit}`;
+    return team.capacity || undefined;
+};
+
+const normalizeFactory = (team: Team): MarketplaceFactory => {
+    // Generate deterministic mock data based on team name length
+    const seed = team.name.length + (team.completedOrders || 0);
+    const mockTrustScore = 85 + (seed % 15);
+    const mockRating = 4.2 + (seed % 9) / 10;
+    const mockReviewCount = 10 + (seed % 50);
+    const mockOnTimeRate = 90 + (seed % 10);
+    const mockAvailableCap = (1 + (seed % 5)) + " Tấn";
+    const statusBadges: ('Receiving Orders' | 'Nearly Full' | 'Temporarily Unavailable')[] = ['Receiving Orders', 'Nearly Full', 'Temporarily Unavailable'];
+    
+    return {
+        ...team,
+        monthlyCapacity: buildCapacityLabel(team),
+        services: splitMultiValue(team.specialty),
+        availabilityStatus: 'UNKNOWN',
+        verifiedFactory: team.verificationStatus === 'APPROVED',
+        verifiedBusiness: team.verificationStatus === 'APPROVED' && Boolean(team.businessLicense),
+        verifiedAddress: team.verificationStatus === 'APPROVED' && Boolean(team.businessAddress),
+        verifiedCertification: team.verificationStatus === 'APPROVED' && Boolean(team.certificationDocument || team.certificates?.length),
+        certifications: team.certificates?.length ? team.certificates : splitMultiValue(team.certificationDocument),
+        
+        // Mock B2B assignments
+        trustScoreMock: mockTrustScore,
+        ratingMock: mockRating,
+        reviewCountMock: mockReviewCount,
+        completedOrdersMock: team.completedOrders || (20 + seed % 100),
+        onTimeRateMock: mockOnTimeRate,
+        currentCapacityMock: team.capacityValue ? `${team.capacityValue} ${team.capacityUnit}` : '5 Tấn / Tháng',
+        availableCapacityMock: mockAvailableCap,
+        moqMock: (50 + (seed % 5) * 50) + " kg",
+        leadTimeMock: (5 + seed % 10) + " - " + (10 + seed % 10) + " Ngày",
+        statusBadgeMock: statusBadges[seed % 3],
+        specializationsMock: splitMultiValue(team.specialty).length > 0 ? splitMultiValue(team.specialty) : ['Arabica Specialty', 'OEM Coffee'],
+        yearsInOperationMock: 2 + (seed % 10),
+        employeeCountMock: 10 + (seed % 40),
+        factorySizeMock: (500 + (seed % 10) * 100) + " m2",
+        
+        capabilitiesMock: {
+            services: splitMultiValue(team.specialty).length > 0 ? splitMultiValue(team.specialty) : ['Rang cà phê', 'Đóng gói', 'Gia công OEM'],
+            coffeeTypes: ['Arabica', 'Robusta', 'Blend', 'Specialty Coffee'],
+            packagingFormats: ['250g', '500g', '1kg', 'Drip Bag', 'Bulk']
+        },
+        equipmentMock: {
+            roasters: [
+                { model: 'Probat P25', capacity: '25kg/mẻ', year: '2021' },
+                { model: 'Bühler Infinity', capacity: '120kg/mẻ', year: '2019' }
+            ],
+            packaging: ['Máy đóng gói tự động', 'Máy hút chân không công nghiệp'],
+            grinders: ['Mahlkönig EK43', 'Ditting KR804'],
+            qc: ['Máy đo màu rang', 'Máy đo độ ẩm', 'Khúc xạ kế']
+        },
+        certificatesMock: [
+            { name: 'ISO 22000:2018', issueDate: '12/05/2022', expDate: '12/05/2025', status: 'Verified' },
+            { name: 'HACCP', issueDate: '10/08/2023', expDate: '10/08/2026', status: 'Verified' }
+        ],
+        portfolioMock: [
+            { name: 'Dự án OEM Chuỗi Cafe', type: 'OEM', image: fallbackFactoryImages[2] },
+            { name: 'Gia công xuất khẩu', type: 'Export', image: fallbackFactoryImages[3] }
+        ],
+        reviewsMock: [
+            { author: 'Nguyen Van A', company: 'The Coffee Shop', rating: 5, date: '10/06/2026', content: 'Chất lượng rang ổn định, giao hàng đúng hẹn.' },
+            { author: 'Tran Thi B', company: 'Daily Roast', rating: 4, date: '02/05/2026', content: 'Máy móc hiện đại, làm việc chuyên nghiệp, hỗ trợ tốt.' }
+        ]
+    };
+};
+
+const getCompletionRate = (factory: MarketplaceFactory) => {
+    if (!factory.totalOrders) return undefined;
+    return Math.round(((factory.completedOrders || 0) / factory.totalOrders) * 100);
+};
+
+const getTrustScore = (factory: MarketplaceFactory) => {
+    if (!factory.totalOrders) return undefined;
+    if (typeof factory.trustScore === 'number') return factory.trustScore;
+    return getCompletionRate(factory);
+};
+
+const availabilityCopy = (status?: AvailabilityStatus) => {
+    switch (status) {
+        case 'AVAILABLE':
+            return { label: 'Còn nhận đơn', className: 'available' };
+        case 'LIMITED':
+            return { label: 'Công suất hạn chế', className: 'limited' };
+        case 'FULLY_BOOKED':
+            return { label: 'Fully Booked', className: 'booked' };
+        default:
+            return { label: 'Chưa cập nhật', className: 'unknown' };
+    }
+};
+
+const displayPercent = (value?: number) => (typeof value === 'number' ? `${value}%` : emptyValue);
+const displayText = (value?: string | number | null) => (value || value === 0 ? String(value) : emptyValue);
+
+const loadRequests = (): ManufacturingRequest[] => {
+    try {
+        const raw = localStorage.getItem(REQUEST_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch {
+        return [];
+    }
+};
+
+const translations = {
+    vi: {
+        trustScore: 'Điểm uy tín',
+        rating: 'Đánh giá',
+        orders: 'Đơn hàng',
+        onTime: 'Đúng hạn',
+        availableCapacity: 'Công suất trống',
+        moq: 'SL tối thiểu',
+        leadTime: 'Thời gian giao',
+        roastery: 'Xưởng rang cà phê',
+        vietnam: 'Việt Nam',
+        yearsInOperation: 'Năm hoạt động',
+        viewCapacity: 'Xem năng lực',
+        sendRequest: 'Gửi yêu cầu',
+        verifiedFactory: 'Xưởng đã xác thực',
+        manageFactory: 'Quản lý xưởng',
+        Receiving_Orders: 'Đang nhận đơn',
+        Nearly_Full: 'Sắp kín lịch',
+        Temporarily_Unavailable: 'Tạm ngưng',
+        Arabica_Specialty: 'Arabica Đặc sản',
+        OEM_Coffee: 'Gia công OEM'
+    },
+    en: {
+        trustScore: 'Trust Score',
+        rating: 'Rating',
+        orders: 'Orders',
+        onTime: 'On-time',
+        availableCapacity: 'Available Capacity',
+        moq: 'MOQ',
+        leadTime: 'Lead Time',
+        roastery: 'Roastery',
+        vietnam: 'Vietnam',
+        yearsInOperation: 'Years Operating',
+        viewCapacity: 'View Capacity',
+        sendRequest: 'Send Request',
+        verifiedFactory: 'Verified Factory',
+        manageFactory: 'Manage Factory',
+        Receiving_Orders: 'Receiving Orders',
+        Nearly_Full: 'Nearly Full',
+        Temporarily_Unavailable: 'Temporarily Unavailable',
+        Arabica_Specialty: 'Arabica Specialty',
+        OEM_Coffee: 'OEM Coffee'
+    }
+};
 
 export default function MarketplacePage() {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const [language, setLanguage] = useState<'vi' | 'en'>('vi');
+    const t = translations[language] as Record<string, string>;
+
     const [allTeams, setAllTeams] = useState<Team[]>([]);
     const [myTeams, setMyTeams] = useState<Team[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeFilter, setActiveFilter] = useState(MARKET_FILTERS[0].label);
-    const [selectedWorkshop, setSelectedWorkshop] = useState<MarketplaceWorkshop | null>(null);
+    const [regionFilter, setRegionFilter] = useState('');
+    const [factoryTypeFilter, setFactoryTypeFilter] = useState('');
+    const [specialtyFilter, setSpecialtyFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
+    const [minCapacityFilter, setMinCapacityFilter] = useState('');
+    const [verifiedFilter, setVerifiedFilter] = useState('');
+    const [certificateFilter, setCertificateFilter] = useState('');
+    const [selectedFactory, setSelectedFactory] = useState<MarketplaceFactory | null>(null);
+    const [selectedProduct, setSelectedProduct] = useState<any>(null);
+    const [showProductFactories, setShowProductFactories] = useState(false);
+    const [activeProfileTab, setActiveProfileTab] = useState<FactoryProfileTab>('overview');
+    const [compareIds, setCompareIds] = useState<string[]>([]);
 
-    // Order Modal
+    const [manufacturingRequests, setManufacturingRequests] = useState<ManufacturingRequest[]>([]);
+
+    const [showChatModal, setShowChatModal] = useState(false);
+    const [chatTarget, setChatTarget] = useState<MarketplaceFactory | null>(null);
+    const [chatDraft, setChatDraft] = useState('');
+    const [chatMessages, setChatMessages] = useState<{sender: 'me' | 'other', text: string}[]>([]);
+
     const [showOrderModal, setShowOrderModal] = useState(false);
     const [selectedSeller, setSelectedSeller] = useState<Team | null>(null);
     const [buyerTeamId, setBuyerTeamId] = useState('');
-    const [orderTitle, setOrderTitle] = useState('');
-    const [orderDesc, setOrderDesc] = useState('');
-    const [orderQty, setOrderQty] = useState(1);
-    const [orderDeadline, setOrderDeadline] = useState('');
+    const [rfqTitle, setRfqTitle] = useState('');
+    const [rfqRequestType, setRfqRequestType] = useState(RFQ_TYPE_OPTIONS[0]);
+    const [rfqProductName, setRfqProductName] = useState('');
+    const [rfqQuantity, setRfqQuantity] = useState(1);
+    const [rfqUnit, setRfqUnit] = useState(RFQ_UNIT_OPTIONS[0]);
+    const [rfqDeadline, setRfqDeadline] = useState('');
+    const [rfqBudget, setRfqBudget] = useState('');
+    const [rfqQuality, setRfqQuality] = useState('');
+    const [rfqPackaging, setRfqPackaging] = useState('');
+    const [rfqNote, setRfqNote] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [showAiMatching, setShowAiMatching] = useState(false);
+    const [aiMatchingProgress, setAiMatchingProgress] = useState(0);
 
-    // Publish Modal
+    // Delivery profile fields
+    const [deliveryPhone, setDeliveryPhone] = useState('');
+    const [deliveryPhoneAlt, setDeliveryPhoneAlt] = useState('');
+    const [deliveryAddress, setDeliveryAddress] = useState('');
+    const [deliveryFrom, setDeliveryFrom] = useState('');
+    const [deliveryTo, setDeliveryTo] = useState('');
+    const [deliveryFailureAction, setDeliveryFailureAction] = useState('RETRY_LATER');
+    const [deliveryNote, setDeliveryNote] = useState('');
+
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [publishTeamId, setPublishTeamId] = useState('');
+    const [pubFactoryType, setPubFactoryType] = useState('');
     const [pubSpecialty, setPubSpecialty] = useState('');
-    const [pubCapacity, setPubCapacity] = useState('');
+    const [pubCapacityValue, setPubCapacityValue] = useState('');
+    const [pubCapacityUnit, setPubCapacityUnit] = useState('kg/tháng');
     const [pubRegion, setPubRegion] = useState('');
     const [pubDescription, setPubDescription] = useState('');
+    const [pubFactoryImageUrl, setPubFactoryImageUrl] = useState('');
+    const [pubFactoryImages, setPubFactoryImages] = useState<string[]>([]);
+    const [pubBusinessLicense, setPubBusinessLicense] = useState('');
+    const [pubBusinessAddress, setPubBusinessAddress] = useState('');
+    const [pubWebsiteUrl, setPubWebsiteUrl] = useState('');
+    const [pubFacebookUrl, setPubFacebookUrl] = useState('');
+    const [pubCertificates, setPubCertificates] = useState<string[]>([]);
+    const [pubCertificationDocument, setPubCertificationDocument] = useState('');
     const [publishing, setPublishing] = useState(false);
+    const editingPublishedTeam = myTeams.find(team => team.id === publishTeamId && team.isPublished);
+    const selectedPublishTeam = myTeams.find(team => team.id === publishTeamId);
+    const publishVerificationStatus = selectedPublishTeam?.verificationStatus || 'NOT_SUBMITTED';
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const [teamsAll, teamsMine] = await Promise.all([
                     teamService.getAllTeams(),
-                    teamService.getMyTeams()
+                    teamService.getMyTeams(),
                 ]);
-                const publishedTeams = teamsAll.filter(t => t.isPublished && t.ownerId !== user?.id);
-                setAllTeams(publishedTeams);
+                const publishedTeams = teamsAll.filter(t => t.isPublished);
                 const ownedTeams = teamsMine.filter(t => t.ownerId === user?.id);
+                setAllTeams(publishedTeams);
                 setMyTeams(ownedTeams);
                 if (ownedTeams.length > 0) {
                     setBuyerTeamId(ownedTeams[0].id);
                     setPublishTeamId(ownedTeams[0].id);
                 }
+                setManufacturingRequests(loadRequests());
             } catch (err) {
-                console.error("Failed to load marketplace", err);
-                setAllTeams([]);
-                setMyTeams([]);
-                setError('');
+                console.error('Failed to load marketplace', err);
+                setError('Không thể tải dữ liệu thị trường.');
             } finally {
                 setLoading(false);
             }
@@ -210,114 +466,500 @@ export default function MarketplacePage() {
         fetchData();
     }, [user]);
 
-    const handleOrderClick = (seller: Team) => {
-        if (myTeams.length === 0) {
-            alert('Bạn cần sở hữu ít nhất 1 xưởng để đặt hàng. Mình sẽ đưa bạn tới trang Nhóm xưởng để tạo nhóm trước.');
-            navigate('/groups');
-            return;
-        }
-        setSelectedSeller(seller);
-        setOrderTitle('');
-        setOrderDesc('');
-        setOrderQty(1);
-        setOrderDeadline('');
-        setShowOrderModal(true);
+    const factories = useMemo(() => allTeams.map(normalizeFactory), [allTeams]);
+
+    const displayedFactories = useMemo(() => {
+        const removeAccents = (str: string) => str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
+        const q = removeAccents(searchQuery.trim());
+        const minCapacity = Number(minCapacityFilter) || 0;
+        
+        return factories.filter(factory => {
+            const translatedRegion = t[factory.region] || factory.region || t.vietnam;
+            const translatedType = t[factory.factoryType || ''] || factory.factoryType || t.roastery;
+            const translatedTags = factory.specializationsMock?.map(tag => t[tag.replace(' ', '_')] || tag) || [];
+            
+            const searchable = removeAccents([
+                factory.name,
+                factory.region,
+                translatedRegion,
+                factory.factoryType,
+                translatedType,
+                factory.specialty,
+                factory.description,
+                ...(factory.services || []),
+                ...(factory.coffeeTypes || []),
+                ...translatedTags
+            ].filter(Boolean).join(' '));
+
+            const matchesSearch = !q || searchable.includes(q);
+            const matchesRegion = !regionFilter || factory.region === regionFilter;
+            const matchesType = !factoryTypeFilter || factory.factoryType === factoryTypeFilter;
+            const matchesSpecialty = !specialtyFilter || factory.capabilitiesMock.services.includes(specialtyFilter) || splitMultiValue(factory.specialty).includes(specialtyFilter);
+            const matchesStatus = !statusFilter || factory.statusBadgeMock === statusFilter;
+            const matchesCapacity = !minCapacity || (factory.capacityValue || 0) >= minCapacity;
+            const matchesVerified = !verifiedFilter
+                || (verifiedFilter === 'verified' ? factory.verificationStatus === 'APPROVED' : factory.verificationStatus !== 'APPROVED');
+            const matchesCertificate = !certificateFilter
+                || (certificateFilter === 'has' ? Boolean(factory.certifications?.length) : !factory.certifications?.length);
+
+            return matchesSearch && matchesRegion && matchesType && matchesSpecialty && matchesStatus && matchesCapacity && matchesVerified && matchesCertificate;
+        });
+    }, [certificateFilter, factories, factoryTypeFilter, minCapacityFilter, regionFilter, searchQuery, specialtyFilter, statusFilter, verifiedFilter, t]);
+
+    const selectedCompareFactories = factories.filter(factory => compareIds.includes(factory.id));
+    const myPublishedTeams = myTeams.filter(team => team.isPublished);
+    const featuredFactories = displayedFactories.slice(0, 3);
+    const totalCompletedOrders = factories.reduce((sum, factory) => sum + (factory.completedOrders || 0), 0);
+
+    const fillPublishForm = (team: Team) => {
+        const images = team.factoryImages?.length ? team.factoryImages : team.factoryImageUrl ? [team.factoryImageUrl] : [];
+        setPublishTeamId(team.id);
+        setPubFactoryType(team.factoryType || '');
+        setPubSpecialty(team.specialty || '');
+        setPubCapacityValue(team.capacityValue ? String(team.capacityValue) : '');
+        setPubCapacityUnit(team.capacityUnit || 'kg/tháng');
+        setPubRegion(team.region || '');
+        setPubDescription(team.description || '');
+        setPubFactoryImageUrl(team.factoryImageUrl || images[0] || '');
+        setPubFactoryImages(images);
+        setPubBusinessLicense(team.businessLicense || '');
+        setPubBusinessAddress(team.businessAddress || '');
+        setPubWebsiteUrl(team.websiteUrl || '');
+        setPubFacebookUrl(team.facebookUrl || '');
+        setPubCertificates(team.certificates || []);
+        setPubCertificationDocument(team.certificationDocument || '');
     };
 
     const openPublishModal = () => {
         if (myTeams.length === 0) {
-            alert('Bạn cần tạo ít nhất 1 nhóm xưởng trước khi đăng tải. Mình sẽ đưa bạn tới trang Nhóm xưởng.');
+            alert('Bạn cần tạo ít nhất 1 nhóm xưởng trước khi đăng tải.');
             navigate('/groups');
             return;
         }
+        fillPublishForm(myTeams[0]);
         setShowPublishModal(true);
     };
 
-    const handleSubmitOrder = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!buyerTeamId || !orderTitle || !orderDeadline || !selectedSeller) return;
-        if ((selectedSeller as MarketplaceWorkshop).sample) {
-            setShowOrderModal(false);
-            alert('Đây là xưởng mẫu để xem giao diện. Yêu cầu gia công mẫu đã được ghi nhận trong giao diện demo.');
+    const openEditPublishedTeam = (team: Team) => {
+        fillPublishForm(team);
+        setShowPublishModal(true);
+    };
+
+    const handleFactoryImageFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(event.target.files || []);
+        if (files.length === 0) return;
+        if (pubFactoryImages.length + files.length > 10) {
+            alert('Chỉ được tải tối đa 10 ảnh xưởng.');
+            event.target.value = '';
             return;
         }
+        const invalid = files.find(file => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type));
+        if (invalid) {
+            alert('Ảnh xưởng chỉ hỗ trợ JPG, PNG hoặc WEBP.');
+            event.target.value = '';
+            return;
+        }
+        const tooLarge = files.find(file => file.size > 5 * 1024 * 1024);
+        if (tooLarge) {
+            alert('Mỗi ảnh xưởng tối đa 5MB.');
+            event.target.value = '';
+            return;
+        }
+        Promise.all(files.map(file => new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.readAsDataURL(file);
+        }))).then(images => {
+            setPubFactoryImages(current => {
+                const next = [...current, ...images].slice(0, 10);
+                setPubFactoryImageUrl(next[0] || '');
+                return next;
+            });
+        });
+        event.target.value = '';
+    };
+
+    const handleDocumentFile = (event: React.ChangeEvent<HTMLInputElement>, setter: (value: string) => void) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!['application/pdf', 'image/jpeg', 'image/png'].includes(file.type)) {
+            alert('Tài liệu chỉ hỗ trợ PDF, JPG hoặc PNG.');
+            event.target.value = '';
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            alert('Tài liệu tối đa 10MB.');
+            event.target.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => setter(String(reader.result || ''));
+        reader.readAsDataURL(file);
+        event.target.value = '';
+    };
+
+    const openChat = (factory: MarketplaceFactory) => {
+        setChatTarget(factory);
+        setChatDraft('');
+        setChatMessages([{ sender: 'other', text: `Chào bạn, ${factory.name} có thể giúp gì cho bạn?` }]);
+        setShowChatModal(true);
+    };
+
+    const handleSaveChatDraft = () => {
+        if (!chatDraft.trim()) return;
+        const newMsg = chatDraft.trim();
+        setChatMessages(prev => [...prev, { sender: 'me', text: newMsg }]);
+        setChatDraft('');
+        
+        setTimeout(() => {
+            setChatMessages(prev => [...prev, { sender: 'other', text: 'Dạ, xưởng đã nhận được thông tin và sẽ phản hồi lại sớm ạ.' }]);
+        }, 1500);
+    };
+
+    const handleOrderClick = (seller?: Team) => {
+        setSelectedSeller(seller || null);
+        setBuyerTeamId(myTeams[0]?.id || '');
+        setRfqTitle('');
+        setRfqRequestType(RFQ_TYPE_OPTIONS[0]);
+        setRfqProductName('');
+        setRfqQuantity(1);
+        setRfqUnit(RFQ_UNIT_OPTIONS[0]);
+        setRfqDeadline('');
+        setRfqBudget('');
+        setRfqQuality('');
+        setRfqPackaging('');
+        setRfqNote('');
+        setDeliveryPhone('');
+        setDeliveryPhoneAlt('');
+        setDeliveryAddress('');
+        setDeliveryFrom('');
+        setDeliveryTo('');
+        setDeliveryFailureAction('RETRY_LATER');
+        setDeliveryNote('');
+        setShowOrderModal(true);
+    };
+
+    const handleSubmitOrder = async (event: React.FormEvent) => {
+        event.preventDefault();
+        if (!rfqTitle.trim() || !rfqProductName.trim()) return;
+        if (rfqQuantity <= 0) {
+            alert('Số lượng phải lớn hơn 0.');
+            return;
+        }
+        if (rfqDeadline && new Date(rfqDeadline) <= new Date()) {
+            alert('Deadline mong muốn phải là ngày trong tương lai.');
+            return;
+        }
+
         try {
             setSubmitting(true);
-            const dto: Partial<InterGroupOrder> = {
-                buyerTeamId,
-                sellerTeamId: selectedSeller.id,
-                title: orderTitle,
-                description: orderDesc,
-                quantity: orderQty,
-                deadline: orderDeadline,
-            };
-            await interGroupOrderService.placeOrder(dto);
+            const detailLines = [
+                `Dịch vụ yêu cầu: ${rfqRequestType}`,
+                `Loại sản phẩm: ${rfqProductName}`,
+                `Số lượng: ${rfqQuantity} ${rfqUnit}`,
+                rfqQuality ? `Mức rang: ${rfqQuality}` : '',
+                rfqPackaging ? `Quy cách đóng gói: ${rfqPackaging}` : '',
+                rfqBudget ? `Ngân sách dự kiến: ${rfqBudget}` : '',
+                rfqNote ? `Ghi chú: ${rfqNote}` : '',
+            ].filter(Boolean).join('\n');
+            
             setShowOrderModal(false);
-            alert('Đặt hàng thành công! Chuyển sang trang Đơn hàng để theo dõi.');
-            navigate('/orders');
+            setShowAiMatching(true);
+            setAiMatchingProgress(0);
+            
+            const interval = setInterval(() => {
+                setAiMatchingProgress(prev => {
+                    if (prev >= 100) {
+                        clearInterval(interval);
+                        return 100;
+                    }
+                    return prev + 15;
+                });
+            }, 300);
+
+            setTimeout(async () => {
+                try {
+                    if (selectedSeller) {
+                        const dto: Partial<InterGroupOrder> = {
+                            ...(buyerTeamId ? { buyerTeamId } : {}),
+                            sellerTeamId: selectedSeller.id,
+                            title: rfqTitle,
+                            description: detailLines,
+                            quantity: rfqQuantity,
+                            deadline: rfqDeadline,
+                            contactPhone: deliveryPhone || undefined,
+                            contactPhoneAlt: deliveryPhoneAlt || undefined,
+                            deliveryAddress: deliveryAddress || undefined,
+                            preferredDeliveryFrom: deliveryFrom || undefined,
+                            preferredDeliveryTo: deliveryTo || undefined,
+                            deliveryFailureAction: deliveryFailureAction || undefined,
+                            deliveryNote: deliveryNote || undefined,
+                        };
+                        await interGroupOrderService.placeOrder(dto);
+                    }
+                    const request: ManufacturingRequest = {
+                        id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`,
+                        type: rfqRequestType as ManufacturingRequest['type'],
+                        title: rfqTitle,
+                        coffeeType: rfqProductName,
+                        quantity: `${rfqQuantity} ${rfqUnit}`,
+                        deadline: rfqDeadline,
+                        region: selectedSeller?.region || 'Toàn quốc',
+                        details: detailLines,
+                        createdAt: new Date().toISOString(),
+                    };
+                    const next = [request, ...manufacturingRequests];
+                    setManufacturingRequests(next);
+                    localStorage.setItem(REQUEST_STORAGE_KEY, JSON.stringify(next));
+                } catch {
+                    alert('Gửi RFQ qua API thất bại. (Chế độ mock vẫn hoạt động)');
+                } finally {
+                    setSubmitting(false);
+                }
+            }, 2500);
+
         } catch {
-            alert('Không thể đặt hàng. Vui lòng thử lại.');
-        } finally {
+            alert('Không thể gửi RFQ. Vui lòng thử lại.');
             setSubmitting(false);
         }
     };
 
-    const handlePublish = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handlePublish = async (event: React.FormEvent) => {
+        event.preventDefault();
         if (!publishTeamId) return;
+        const capacityValue = pubCapacityValue.trim() ? Number(pubCapacityValue) : undefined;
+        const capacityText = [pubCapacityValue.trim(), pubCapacityUnit].filter(Boolean).join(' ');
+
         try {
             setPublishing(true);
             await teamService.advertise(publishTeamId, {
+                factoryType: pubFactoryType,
                 specialty: pubSpecialty,
-                capacity: pubCapacity,
+                capacity: capacityText,
+                capacityValue: typeof capacityValue === 'number' && Number.isFinite(capacityValue) ? capacityValue : undefined,
+                capacityUnit: pubCapacityUnit,
                 region: pubRegion,
                 description: pubDescription,
+                factoryImageUrl: pubFactoryImages[0] || pubFactoryImageUrl,
+                factoryImages: pubFactoryImages,
+            } as Partial<Team>);
+            await teamService.submitVerification(publishTeamId, {
+                businessLicense: pubBusinessLicense,
+                businessAddress: pubBusinessAddress,
+                websiteUrl: pubWebsiteUrl,
+                facebookUrl: pubFacebookUrl,
+                certificates: pubCertificates,
+                certificationDocument: pubCertificationDocument,
             } as Partial<Team>);
             setShowPublishModal(false);
-            alert('Xưởng đã được đăng tải lên thị trường!');
-            // Refresh
-            const teamsAll = await teamService.getAllTeams();
-            setAllTeams(teamsAll.filter(t => t.isPublished && t.ownerId !== user?.id));
+            alert('Xưởng đã được lưu và hồ sơ xác minh đã gửi Admin duyệt.');
+            const [teamsAll, teamsMine] = await Promise.all([teamService.getAllTeams(), teamService.getMyTeams()]);
+            setAllTeams(teamsAll.filter(t => t.isPublished));
+            setMyTeams(teamsMine.filter(t => t.ownerId === user?.id));
         } catch {
-            alert('Không thể đăng tải. Vui lòng thử lại.');
+            alert('Không thể đăng xưởng. Vui lòng thử lại.');
         } finally {
             setPublishing(false);
         }
     };
 
     const handleUnpublish = async (teamId: string) => {
-        if (!confirm('Bạn có chắc muốn gỡ xưởng này khỏi thị trường?')) return;
+        if (!confirm('Gỡ xưởng này khỏi thị trường?')) return;
         try {
             await teamService.unpublish(teamId);
             alert('Đã gỡ xưởng khỏi thị trường.');
-            const teamsAll = await teamService.getAllTeams();
-            setAllTeams(teamsAll.filter(t => t.isPublished && t.ownerId !== user?.id));
+            const [teamsAll, teamsMine] = await Promise.all([teamService.getAllTeams(), teamService.getMyTeams()]);
+            setAllTeams(teamsAll.filter(t => t.isPublished));
+            setMyTeams(teamsMine.filter(t => t.ownerId === user?.id));
         } catch {
             alert('Không thể gỡ xưởng.');
         }
     };
 
-    const marketplaceTeams: MarketplaceWorkshop[] = [
-        ...DEMO_WORKSHOPS,
-        ...allTeams.map((team, index) => enrichWorkshop(team, index + DEMO_WORKSHOPS.length)),
-    ];
+    const renderMetric = (label: string, value?: string | number) => (
+        <div className="mp-capacity-metric">
+            <span>{label}</span>
+            <strong>{displayText(value)}</strong>
+        </div>
+    );
 
-    const displayedTeams = marketplaceTeams.filter(team => {
-        const q = searchQuery.toLowerCase();
-        const matchesSearch = !q || team.name.toLowerCase().includes(q) ||
-            (team.specialty || '').toLowerCase().includes(q) ||
-            (team.region || '').toLowerCase().includes(q) ||
-            team.services.some(service => service.toLowerCase().includes(q));
-        const filterText = activeFilter.toLowerCase();
-        const matchesFilter = activeFilter === 'Tất cả' ||
-            team.name.toLowerCase().includes(filterText) ||
-            (team.specialty || '').toLowerCase().includes(filterText) ||
-            team.services.some(service => service.toLowerCase().includes(filterText));
-        return matchesSearch && matchesFilter;
-    });
+    const renderVerification = (factory: MarketplaceFactory) => {
+        const badges = [
+            { label: 'Xưởng đã xác minh', active: factory.verifiedFactory },
+            { label: 'Doanh nghiệp đã xác minh', active: factory.verifiedBusiness },
+            { label: 'Địa chỉ đã xác minh', active: factory.verifiedAddress },
+            { label: 'Chứng nhận đã xác minh', active: factory.verifiedCertification },
+        ];
+        const hasAny = badges.some(badge => badge.active);
+        if (!hasAny) return <p className="mp-empty-inline">Chưa xác minh</p>;
+        return (
+            <div className="mp-verification-list">
+                {badges.map(badge => (
+                    <span className={badge.active ? 'verified' : ''} key={badge.label}>
+                        <span className="material-symbols-outlined">{badge.active ? 'verified' : 'radio_button_unchecked'}</span>
+                        {badge.label}
+                    </span>
+                ))}
+            </div>
+        );
+    };
 
-    // My published teams
-    const myPublishedTeams = myTeams.filter(t => t.isPublished);
+    const renderProfileTab = (factory: MarketplaceFactory) => {
+        switch (activeProfileTab) {
+            case 'overview':
+                return (
+                    <div className="mp-profile-overview" style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
+                        <p style={{fontSize: '15px', color: '#ece8e1', lineHeight: '1.6'}}>{factory.description || 'Chưa cập nhật mô tả xưởng'}</p>
+                        <div className="mp-profile-grid" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px'}}>
+                            {renderMetric('Năm hoạt động', factory.yearsInOperationMock + ' Năm')}
+                            {renderMetric('Quy mô nhân sự', factory.employeeCountMock + ' Người')}
+                            {renderMetric('Diện tích', factory.factorySizeMock)}
+                            {renderMetric('Loại hình', factory.factoryType)}
+                            {renderMetric('Công suất', factory.currentCapacityMock)}
+                            {renderMetric('Đơn đã hoàn thành', factory.completedOrdersMock)}
+                        </div>
+                    </div>
+                );
+            case 'capabilities':
+                return (
+                    <div className="mp-profile-overview" style={{display: 'flex', flexDirection: 'column', gap: '24px'}}>
+                        <div>
+                            <h4 style={{marginBottom: '12px', color: '#d4a574'}}>Dịch vụ gia công</h4>
+                            <div className="mp-detail-tags">
+                                {factory.capabilitiesMock?.services.map(s => <span key={s}>{s}</span>)}
+                            </div>
+                        </div>
+                        <div>
+                            <h4 style={{marginBottom: '12px', color: '#d4a574'}}>Dòng cà phê</h4>
+                            <div className="mp-detail-tags">
+                                {factory.capabilitiesMock?.coffeeTypes.map(c => <span key={c}>{c}</span>)}
+                            </div>
+                        </div>
+                        <div>
+                            <h4 style={{marginBottom: '12px', color: '#d4a574'}}>Quy cách đóng gói</h4>
+                            <div className="mp-detail-tags">
+                                {factory.capabilitiesMock?.packagingFormats.map(p => <span key={p}>{p}</span>)}
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'equipment':
+                return (
+                    <div className="mp-profile-overview" style={{display: 'flex', flexDirection: 'column', gap: '24px'}}>
+                        <div>
+                            <h4 style={{marginBottom: '12px', color: '#d4a574'}}>Máy rang</h4>
+                            <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                                {factory.equipmentMock?.roasters.map(r => (
+                                    <div key={r.model} style={{display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)'}}>
+                                        <strong style={{color: '#ece8e1'}}>{r.model}</strong>
+                                        <span style={{color: '#a79d94'}}>{r.capacity} • Đời {r.year}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <h4 style={{marginBottom: '12px', color: '#d4a574'}}>Máy đóng gói & Xay</h4>
+                            <ul style={{color: '#a79d94', paddingLeft: '20px', lineHeight: '1.8'}}>
+                                {factory.equipmentMock?.packaging.map(p => <li key={p}>{p}</li>)}
+                                {factory.equipmentMock?.grinders.map(p => <li key={p}>{p}</li>)}
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 style={{marginBottom: '12px', color: '#d4a574'}}>Thiết bị kiểm định (QC)</h4>
+                            <div className="mp-detail-tags">
+                                {factory.equipmentMock?.qc.map(q => <span key={q} style={{background: 'transparent', border: '1px dashed #d4a574', color: '#d4a574'}}>{q}</span>)}
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'certificates':
+                return (
+                    <div className="mp-profile-overview" style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                        {renderVerification(factory)}
+                        <div style={{display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px'}}>
+                            {factory.certificatesMock?.map(cert => (
+                                <div key={cert.name} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)'}}>
+                                    <div>
+                                        <h4 style={{margin: '0 0 4px 0', color: '#ece8e1', fontSize: '15px'}}>{cert.name}</h4>
+                                        <span style={{fontSize: '13px', color: '#a79d94'}}>Ngày cấp: {cert.issueDate} • Hết hạn: {cert.expDate}</span>
+                                    </div>
+                                    <span style={{color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 600}}>
+                                        <span className="material-symbols-outlined" style={{fontSize: '16px'}}>verified</span> {cert.status}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            case 'reviews':
+                return (
+                    <div className="mp-profile-overview" style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '24px', padding: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)'}}>
+                            <div style={{textAlign: 'center'}}>
+                                <div style={{fontSize: '36px', fontWeight: 700, color: '#f59e0b'}}>{factory.ratingMock}</div>
+                                <div style={{color: '#f59e0b', margin: '4px 0', letterSpacing: '2px'}}>★★★★☆</div>
+                                <div style={{fontSize: '13px', color: '#a79d94'}}>{factory.reviewCountMock} đánh giá</div>
+                            </div>
+                            <div style={{flex: 1}}>
+                                {['5', '4', '3', '2', '1'].map((star, i) => (
+                                    <div key={star} style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px'}}>
+                                        <span style={{fontSize: '12px', color: '#a79d94', width: '20px'}}>{star}★</span>
+                                        <div style={{flex: 1, height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden'}}>
+                                            <div style={{height: '100%', background: '#f59e0b', width: i === 0 ? '70%' : i === 1 ? '20%' : '0%'}}></div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div style={{display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px'}}>
+                            {factory.reviewsMock?.map((r, i) => (
+                                <div key={i} style={{padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px'}}>
+                                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px'}}>
+                                        <div>
+                                            <strong style={{color: '#ece8e1', marginRight: '8px'}}>{r.company}</strong>
+                                            <span style={{color: '#f59e0b', fontSize: '14px'}}>{"★".repeat(r.rating || 5)}</span>
+                                        </div>
+                                        <span style={{fontSize: '12px', color: '#8f8580'}}>{r.date}</span>
+                                    </div>
+                                    <p style={{margin: 0, color: '#a79d94', fontSize: '14px', lineHeight: '1.5'}}>{r.content}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            case 'portfolio':
+                return (
+                    <div className="mp-profile-overview" style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px'}}>
+                            {factory.portfolioMock?.map((p, i) => (
+                                <div key={i} style={{background: 'rgba(255,255,255,0.03)', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)'}}>
+                                    <img src={p.image} alt={p.name} style={{width: '100%', height: '140px', objectFit: 'cover'}} />
+                                    <div style={{padding: '12px'}}>
+                                        <strong style={{color: '#ece8e1', display: 'block', marginBottom: '4px'}}>{p.name}</strong>
+                                        <span style={{fontSize: '12px', color: '#d4a574', background: 'rgba(212, 165, 116, 0.1)', padding: '4px 8px', borderRadius: '4px'}}>{p.type}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            case 'rfq':
+                return (
+                    <div className="mp-profile-overview">
+                        <p>Gửi yêu cầu Báo giá & Gia công (RFQ) trực tiếp tới xưởng này. Xưởng sẽ phản hồi trong vòng {factory.leadTimeMock}.</p>
+                        <button
+                            className="mp-submit-btn"
+                            disabled={factory.ownerId === user?.id}
+                            onClick={() => handleOrderClick(factory)}
+                        >
+                            {factory.ownerId === user?.id ? 'Xưởng của bạn' : 'Gửi yêu cầu RFQ'}
+                        </button>
+                    </div>
+                );
+            default:
+                return null;
+        }
+    };
 
     if (loading) {
         return (
@@ -328,86 +970,142 @@ export default function MarketplacePage() {
     }
 
     return (
-        <div className="mp-body mp-market-style">
+        <div className="mp-body mp-market-style mp-manufacturing-market">
             <Sidebar />
 
             <header className="mp-topbar">
-                <div className="mp-top-search">
-                    <span className="material-symbols-outlined">search</span>
-                    <input
-                        type="text"
-                        placeholder="Tìm xưởng, chuyên môn, khu vực..."
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                    />
-                </div>
+                <div className="mp-top-spacer" />
                 <div className="mp-top-actions">
-                    <button aria-label="Thông báo" onClick={() => window.alert('Chưa có thông báo Marketplace mới.')}>
+                    <button aria-label="Thông báo">
                         <span className="material-symbols-outlined">notifications</span>
                     </button>
-                    <button aria-label="Lịch sử" onClick={() => navigate('/orders')}>
+                    <button aria-label="Lịch sử">
                         <span className="material-symbols-outlined">history</span>
+                    </button>
+                    <button aria-label="Đơn liên xưởng" onClick={() => navigate('/orders')}>
+                        <span className="material-symbols-outlined">receipt_long</span>
                     </button>
                     <button aria-label="Bộ lọc" onClick={() => document.getElementById('mp-filters')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
                         <span className="material-symbols-outlined">tune</span>
+                    </button>
+                    <button aria-label="Language Toggle" onClick={() => setLanguage(lang => lang === 'vi' ? 'en' : 'vi')} style={{ fontSize: '13px', fontWeight: 'bold', padding: '0 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)' }}>
+                        {language === 'vi' ? 'EN' : 'VI'}
                     </button>
                     <div className="mp-user-avatar">{(user?.username || user?.fullName || 'O').charAt(0).toUpperCase()}</div>
                 </div>
             </header>
 
             <main className="mp-main">
-                <section className="mp-showcase-hero">
-                    <img src={MARKET_HERO_IMAGE} alt="Xưởng rang cà phê chuyên nghiệp" />
-                    <div className="mp-showcase-overlay" />
-                    <div className="mp-showcase-content">
+                <section className="mp-market-hero">
+                    <div className="mp-market-hero-copy">
                         <span className="mp-verified">
                             <span className="material-symbols-outlined">verified</span>
                             Hệ sinh thái đối tác
                         </span>
-                        <h1>Mạng Lưới Xưởng Rang<br /><span>Chuyên Nghiệp</span></h1>
-                        <p>Kết nối trực tiếp với những xưởng rang thủ công và công nghiệp hàng đầu Việt Nam. Đặt hàng, theo dõi và mở rộng năng lực sản xuất trên cùng một nền tảng.</p>
+                        <h1>Mạng Lưới Xưởng Rang <em>Chuyên Nghiệp</em></h1>
+                        <p>Kết nối trực tiếp với những xưởng rang thủ công và công nghiệp hàng đầu Việt Nam. Nâng tầm chất lượng cà phê cho doanh nghiệp của bạn.</p>
                         <div className="mp-hero-buttons">
                             <button onClick={() => document.getElementById('mp-partners')?.scrollIntoView({ behavior: 'smooth' })}>Tìm đối tác ngay</button>
-                            <button onClick={() => navigate('/orders')}>Theo dõi đơn hàng</button>
+                            <button onClick={() => document.getElementById('mp-products')?.scrollIntoView({ behavior: 'smooth' })}>Tìm hiểu thêm</button>
                         </div>
                     </div>
-                    <div className="mp-quick-widget">
+                    <aside className="mp-hero-control-card">
                         <h3>Quản lý Cửa hàng</h3>
-                        <div><span>Xưởng đang bán</span><strong>{myPublishedTeams.length}</strong></div>
-                        <div><span>Đối tác khả dụng</span><strong>{displayedTeams.length}</strong></div>
-                        <div><span>Hỗ trợ đặt hàng</span><strong>24/7</strong></div>
-                        <button onClick={openPublishModal}>
-                            <span className="material-symbols-outlined">publish</span>
+                        <dl>
+                            {factories.length > 0 && (
+                                <div>
+                                    <dt>Sản phẩm đang bán</dt>
+                                    <dd>{factories.length}</dd>
+                                </div>
+                            )}
+                            {manufacturingRequests.length > 0 && (
+                                <div>
+                                    <dt>Đơn hàng mới</dt>
+                                    <dd>{manufacturingRequests.length}</dd>
+                                </div>
+                            )}
+                            {totalCompletedOrders > 0 && (
+                                <div>
+                                    <dt>Lượt giao dịch</dt>
+                                    <dd>{totalCompletedOrders}</dd>
+                                </div>
+                            )}
+                        </dl>
+                        <button type="button" onClick={openPublishModal}>
+                            <span className="material-symbols-outlined">upload</span>
                             Đăng tải sản phẩm
                         </button>
-                    </div>
+                    </aside>
                 </section>
 
-                <div id="mp-filters" className="mp-filter-row">
-                    {MARKET_FILTERS.map((filter) => (
+                <section id="mp-filters" className="mp-category-row" aria-label="Bộ lọc thị trường">
+                    {marketplaceCategories.map((category, index) => (
                         <button
-                            key={filter.label}
-                            className={activeFilter === filter.label ? 'active' : ''}
-                            onClick={() => setActiveFilter(filter.label)}
+                            key={category.label}
+                            type="button"
+                            className={
+                                (index === 0 && !specialtyFilter && !factoryTypeFilter && !statusFilter)
+                                    || (category.label === 'Nguyên liệu' && specialtyFilter === 'Cung ứng cà phê nhân')
+                                    || (category.label === 'Dịch vụ rang' && specialtyFilter === 'Rang cà phê')
+                                    || (category.label === 'Dịch vụ đóng gói' && specialtyFilter === 'Đóng gói')
+                                    || (category.label === 'Dịch vụ trọn gói' && specialtyFilter === 'Gia công OEM')
+                                    ? 'active'
+                                    : ''
+                            }
+                            onClick={() => {
+                                if (category.label === 'Đăng nhu cầu') {
+                                    handleOrderClick();
+                                    return;
+                                }
+                                if (index === 0) {
+                                    setRegionFilter('');
+                                    setFactoryTypeFilter('');
+                                    setSpecialtyFilter('');
+                                    setStatusFilter('');
+                                    setMinCapacityFilter('');
+                                    setVerifiedFilter('');
+                                    setCertificateFilter('');
+                                    return;
+                                }
+
+                                setFactoryTypeFilter('');
+                                setSpecialtyFilter('');
+                                setStatusFilter('');
+
+                                if (category.label === 'Nguyên liệu') setSpecialtyFilter('Cung ứng cà phê nhân');
+                                if (category.label === 'Dịch vụ rang') setSpecialtyFilter('Rang cà phê');
+                                if (category.label === 'Dịch vụ đóng gói') setSpecialtyFilter('Đóng gói');
+                                if (category.label === 'Dịch vụ trọn gói') setSpecialtyFilter('Gia công OEM');
+                            }}
                         >
-                            <span className="material-symbols-outlined">{filter.icon}</span>
-                            {filter.label}
+                            <span className="material-symbols-outlined">{category.icon}</span>
+                            {category.label}
                         </button>
                     ))}
-                    <span className="mp-result-count">{displayedTeams.length} xưởng</span>
-                </div>
+                    <div className="mp-top-search" style={{marginLeft: 'auto'}}>
+                        <span className="material-symbols-outlined">search</span>
+                        <input
+                            type="text"
+                            placeholder="Tìm hạt, xưởng, hoặc thiết bị..."
+                            value={searchQuery}
+                            onChange={event => setSearchQuery(event.target.value)}
+                            style={{ height: '38px', borderRadius: '10px' }}
+                        />
+                    </div>
+                </section>
 
                 {myPublishedTeams.length > 0 && (
                     <section className="mp-published-panel">
                         <h3><span className="material-symbols-outlined">storefront</span>Xưởng của bạn trên thị trường</h3>
                         <div className="mp-my-published-list">
-                            {myPublishedTeams.map(t => (
-                                <div key={t.id} className="mp-my-pub-item">
+                            {myPublishedTeams.map(team => (
+                                <div key={team.id} className="mp-my-pub-item">
                                     <div>
-                                        <strong>{t.name}</strong>
+                                        <strong>{team.name}</strong>
                                         <span className="mp-pub-badge">Đang hiển thị</span>
                                     </div>
-                                    <button className="mp-unpub-btn" onClick={() => handleUnpublish(t.id)}>Gỡ xuống</button>
+                                    <button className="mp-edit-pub-btn" onClick={() => openEditPublishedTeam(team)}>Chỉnh sửa</button>
+                                    <button className="mp-unpub-btn" onClick={() => handleUnpublish(team.id)}>Gỡ xuống</button>
                                 </div>
                             ))}
                         </div>
@@ -420,7 +1118,7 @@ export default function MarketplacePage() {
                             <h2>Xưởng Đối Tác</h2>
                             <p>Những đơn vị rang uy tín hàng đầu trong mạng lưới ORCA</p>
                         </div>
-                        <button onClick={() => setSearchQuery('')}>
+                        <button className="mp-view-all-btn" onClick={() => document.getElementById('mp-partners')?.scrollIntoView({ behavior: 'smooth' })}>
                             Xem tất cả xưởng
                             <span className="material-symbols-outlined">arrow_forward</span>
                         </button>
@@ -428,86 +1126,191 @@ export default function MarketplacePage() {
 
                     {error && <div className="mp-error">{error}</div>}
 
-                    {displayedTeams.length === 0 && !error ? (
+                    {displayedFactories.length === 0 ? (
                         <div className="mp-empty mp-styled-empty">
-                            <span className="material-symbols-outlined">file_tray</span>
-                            <h3>Chưa có xưởng nào trên thị trường</h3>
-                            <p>Hãy là người đầu tiên đăng tải xưởng của bạn lên mạng lưới ORCA.</p>
-                            {myTeams.length > 0 ? (
-                                <button className="mp-publish-btn" onClick={openPublishModal}>
-                                    Đăng tải xưởng ngay
-                                </button>
-                            ) : (
-                                <button className="mp-publish-btn" onClick={() => navigate('/groups')}>
-                                    Tạo nhóm xưởng trước
-                                </button>
-                            )}
+                            <span className="material-symbols-outlined">factory</span>
+                            <h3>Chưa có xưởng đối tác</h3>
+                            <p>Đăng xưởng của bạn để bắt đầu nhận yêu cầu gia công và hiển thị trong mạng lưới ORCA.</p>
+                            <button className="mp-publish-btn" onClick={openPublishModal}>Đăng xưởng ngay</button>
                         </div>
                     ) : (
-                        <div className="mp-partner-grid">
-                            {displayedTeams.map((team) => (
-                                <article key={team.id} className="mp-partner-card">
-                                    <div className="mp-partner-image">
-                                        <img src={team.image} alt={team.name} />
-                                        <span>Premium Partner</span>
-                                    </div>
-                                    <div className="mp-partner-body">
-                                        <div className="mp-partner-heading">
-                                            <h3>{team.name}</h3>
-                                            {team.trustScore !== undefined && team.trustScore !== null && (
-                                                <strong><span className="material-symbols-outlined">star</span>{team.trustScore}%</strong>
+                        <div className="mp-factory-grid">
+                            {featuredFactories.map((factory, index) => {
+                                const availability = availabilityCopy(factory.availabilityStatus);
+                                const isOwnFactory = factory.ownerId === user?.id;
+                                const rating = factory.totalOrders ? Math.min(5, Math.max(4.5, (getTrustScore(factory) || 90) / 20)).toFixed(1) : '4.9';
+                                const image = factory.factoryImageUrl || factory.factoryImages?.[0] || fallbackFactoryImages[index % fallbackFactoryImages.length];
+                                return (
+                                    <article key={factory.id} className="mp-factory-card">
+                                        <div className="mp-factory-image">
+                                            <img 
+                                                src={image} 
+                                                alt={`Ảnh xưởng ${factory.name}`} 
+                                                onError={(e) => {
+                                                    const target = e.target as HTMLImageElement;
+                                                    if (!target.dataset.fallback) {
+                                                        target.dataset.fallback = 'true';
+                                                        target.src = fallbackFactoryImages[index % fallbackFactoryImages.length];
+                                                    }
+                                                }}
+                                            />
+                                            <span className="mp-card-ribbon">{t[factory.statusBadgeMock.replace(' ', '_')] || factory.statusBadgeMock}</span>
+                                        </div>
+                                        <div className="mp-factory-card-body" style={{padding: '16px 20px'}}>
+                                            <div className="mp-fcard-header">
+                                                <h3>{factory.name} {factory.verifiedFactory && <span className="material-symbols-outlined verified-icon" title={t.verifiedFactory} style={{fontSize: 16, color: '#10b981'}}>verified</span>}</h3>
+                                                <span className="mp-fcard-location"><span className="material-symbols-outlined" style={{fontSize: 14}}>location_on</span> {t[factory.region] || factory.region || t.vietnam}</span>
+                                            </div>
+                                            <div className="mp-fcard-type" style={{color: 'var(--text-muted)', fontSize: 13, marginBottom: 8}}>
+                                                {t[factory.factoryType || ''] || factory.factoryType || t.roastery} • {factory.yearsInOperationMock} {t.yearsInOperation}
+                                            </div>
+                                            <div className="mp-fcard-tags" style={{display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16}}>
+                                                {factory.specializationsMock?.slice(0, 3).map(tag => (
+                                                    <span key={tag} style={{background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: 4, fontSize: 12, border: '1px solid rgba(255,255,255,0.1)'}}>{t[tag.replace(' ', '_')] || tag}</span>
+                                                ))}
+                                            </div>
+                                            <div className="mp-fcard-metrics" style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16, padding: '12px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)'}}>
+                                                <div className="mp-metric" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4}}>
+                                                    <span style={{fontSize: 14, fontWeight: 600, color: '#10b981'}}>{factory.trustScoreMock}</span>
+                                                    <span style={{fontSize: 11, color: 'var(--text-muted)'}}>{t.trustScore}</span>
+                                                </div>
+                                                <div className="mp-metric" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4}}>
+                                                    <span style={{fontSize: 14, fontWeight: 600, color: '#f59e0b'}}>{factory.ratingMock}★</span>
+                                                    <span style={{fontSize: 11, color: 'var(--text-muted)'}}>{t.rating} ({factory.reviewCountMock})</span>
+                                                </div>
+                                                <div className="mp-metric" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4}}>
+                                                    <span style={{fontSize: 14, fontWeight: 600}}>{factory.completedOrdersMock}</span>
+                                                    <span style={{fontSize: 11, color: 'var(--text-muted)'}}>{t.orders}</span>
+                                                </div>
+                                                <div className="mp-metric" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4}}>
+                                                    <span style={{fontSize: 14, fontWeight: 600}}>{factory.onTimeRateMock}%</span>
+                                                    <span style={{fontSize: 11, color: 'var(--text-muted)'}}>{t.onTime}</span>
+                                                </div>
+                                            </div>
+                                            <div className="mp-fcard-capacity" style={{display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13, marginBottom: 16}}>
+                                                <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                                                    <span style={{color: 'var(--text-muted)'}}>{t.availableCapacity}</span>
+                                                    <strong style={{color: 'var(--text-primary)'}}>{factory.availableCapacityMock}</strong>
+                                                </div>
+                                                <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                                                    <span style={{color: 'var(--text-muted)'}}>{t.moq}</span>
+                                                    <strong style={{color: 'var(--text-primary)'}}>{factory.moqMock}</strong>
+                                                </div>
+                                                <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                                                    <span style={{color: 'var(--text-muted)'}}>{t.leadTime}</span>
+                                                    <strong style={{color: 'var(--text-primary)'}}>{factory.leadTimeMock.replace('Ngày', language === 'en' ? 'Days' : 'Ngày')}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="mp-factory-actions" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '0 16px 16px'}}>
+                                            {isOwnFactory ? (
+                                                <button onClick={() => openEditPublishedTeam(factory)} style={{gridColumn: '1 / -1', background: 'var(--bg-input)', color: '#fff', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer'}}>{t.manageFactory}</button>
+                                            ) : (
+                                                <>
+                                                    <button onClick={() => { setSelectedFactory(factory); setActiveProfileTab('overview'); }} style={{background: 'var(--bg-input)', color: '#fff', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer'}}>{t.viewCapacity}</button>
+                                                    <button onClick={() => { const fact = factory; handleOrderClick(fact); }} style={{background: '#d4a574', color: '#1a1a1a', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600}}>{t.sendRequest}</button>
+                                                </>
                                             )}
                                         </div>
-                                        <p>{team.description || 'Xưởng gia công cà phê chuyên nghiệp với năng lực rang ổn định, phù hợp cho đơn hàng B2B và thử nghiệm profile.'}</p>
-                                        <div className="mp-partner-tags">
-                                            {team.region && <span>{team.region}</span>}
-                                            {team.specialty && <span>{team.specialty}</span>}
-                                            {team.capacity && <span>{team.capacity}</span>}
-                                            <span>{team.memberCount || 0} thành viên</span>
-                                        </div>
-                                        <div className="mp-partner-actions">
-                                            <button onClick={() => setSelectedWorkshop(team)}>Xem chi tiết</button>
-                                            <button onClick={() => setSelectedWorkshop(team)}>Gia công</button>
-                                        </div>
+                                    </article>
+                                );
+                            })}
+                        </div>
+                    )}
+                </section>
+
+                <section id="mp-products" className="mp-product-section">
+                    <div className="mp-section-title-row">
+                        <div>
+                            <h2>Sản phẩm Mới</h2>
+                        </div>
+                    </div>
+                    <div className="mp-marquee-container">
+                        <div className="mp-marquee-track">
+                            {[...featuredProducts, ...featuredProducts].map((product, index) => (
+                                <article className="mp-clean-product-card" key={product.title + index}>
+                                    <div className="mp-cpc-image" onClick={() => { setSelectedProduct({ ...product, factories: featuredFactories.slice((index % featuredProducts.length) % featuredFactories.length, ((index % featuredProducts.length) % featuredFactories.length) + 2) }); setShowProductFactories(false); }}>
+                                        <img src={product.image} alt={product.title} />
                                     </div>
+                                    <div className="mp-cpc-info">
+                                        <h3>{product.title.toUpperCase()}</h3>
+                                        <p>{product.origin || product.description}</p>
+                                        <strong>{product.price}</strong>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {selectedCompareFactories.length > 0 && (
+                    <section className="mp-compare-panel">
+                        <div className="mp-section-title-row">
+                            <div>
+                                <h2>So sánh xưởng</h2>
+                                <p>So sánh 2-4 xưởng theo chỉ số năng lực chính.</p>
+                            </div>
+                            <button onClick={() => setCompareIds([])}>Xóa so sánh</button>
+                        </div>
+                        <div className="mp-compare-table-wrap">
+                            <table className="mp-compare-table">
+                                <thead>
+                                    <tr>
+                                        <th>Chỉ số</th>
+                                        {selectedCompareFactories.map(factory => <th key={factory.id}>{factory.name}</th>)}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Công suất</td>{selectedCompareFactories.map(factory => <td key={factory.id}>{displayText(factory.monthlyCapacity)}</td>)}</tr>
+                                    <tr><td>MOQ</td>{selectedCompareFactories.map(factory => <td key={factory.id}>{displayText(factory.moq)}</td>)}</tr>
+                                    <tr><td>Giá</td>{selectedCompareFactories.map(factory => <td key={factory.id}>{emptyValue}</td>)}</tr>
+                                    <tr><td>Uy tín</td>{selectedCompareFactories.map(factory => <td key={factory.id}>{displayPercent(getTrustScore(factory))}</td>)}</tr>
+                                    <tr><td>Đúng hạn</td>{selectedCompareFactories.map(factory => <td key={factory.id}>{displayPercent(factory.onTimeRate)}</td>)}</tr>
+                                    <tr><td>Chứng nhận</td>{selectedCompareFactories.map(factory => <td key={factory.id}>{factory.certifications?.join(', ') || emptyValue}</td>)}</tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                )}
+
+                <section className="mp-open-requests">
+                    <div className="mp-section-title-row">
+                        <div>
+                            <h2>Yêu cầu gia công đang mở</h2>
+                            <p>Nhu cầu rang, đóng gói, OEM và kiểm định đang mở để xưởng gửi báo giá.</p>
+                        </div>
+                    </div>
+
+                    {manufacturingRequests.length === 0 ? (
+                        <div className="mp-empty mp-styled-empty">
+                            <span className="material-symbols-outlined">request_quote</span>
+                            <h3>Chưa có nhu cầu sản xuất đang mở</h3>
+                            <p>Các nhu cầu gia công đang mở sẽ hiển thị tại đây khi có dữ liệu mới.</p>
+                        </div>
+                    ) : (
+                        <div className="mp-request-grid">
+                            {manufacturingRequests.map(request => (
+                                <article className="mp-request-card" key={request.id}>
+                                    <span>{request.type}</span>
+                                    <h3>{request.title}</h3>
+                                    <dl>
+                                        <div><dt>Cà phê</dt><dd>{displayText(request.coffeeType)}</dd></div>
+                                        <div><dt>Sản lượng</dt><dd>{displayText(request.quantity)}</dd></div>
+                                        <div><dt>Deadline</dt><dd>{request.deadline ? new Date(request.deadline).toLocaleDateString('vi-VN') : emptyValue}</dd></div>
+                                        <div><dt>Khu vực</dt><dd>{displayText(request.region)}</dd></div>
+                                    </dl>
+                                    <p>{request.details || 'Chưa cập nhật yêu cầu chi tiết'}</p>
                                 </article>
                             ))}
                         </div>
                     )}
                 </section>
 
-                <section className="mp-arrivals">
-                    <div className="mp-arrivals-header">
-                        <h2>Sản phẩm Mới</h2>
-                        <div />
-                    </div>
-                    <div className="mp-arrivals-grid">
-                        <article className="mp-feature-product">
-                            <img src={TEAM_IMAGES[5]} alt="Hạt cà phê đặc tuyển" />
-                            <div>
-                                <span>Mới về</span>
-                                <h3>Ethiopia Yirgacheffe G1</h3>
-                                <p>Sơ chế Natural với nốt hương hoa nhài và trà đen đặc trưng. Số lượng giới hạn từ đối tác ORCA.</p>
-                                <strong>450.000đ/kg</strong>
-                            </div>
-                        </article>
-                        <article className="mp-side-product">
-                            <img src={TEAM_IMAGES[4]} alt="Thiết bị rang cà phê" />
-                            <h3>Máy đo độ ẩm S3</h3>
-                            <p>Thiết bị cầm tay độ chính xác cao cho hạt xanh.</p>
-                        </article>
-                        <article className="mp-side-product">
-                            <img src={TEAM_IMAGES[1]} alt="Dịch vụ rang test" />
-                            <h3>Dịch vụ Rang Test</h3>
-                            <p>Gói 5 mẫu profile khác nhau cho 1kg hạt.</p>
-                        </article>
-                    </div>
-                </section>
-
                 <section className="mp-cta">
                     <h2>Sẵn sàng đưa xưởng của bạn lên ORCA?</h2>
-                    <p>Gia nhập cộng đồng xưởng rang lớn nhất Việt Nam. Quản lý bán hàng, tiếp cận khách hàng B2B và tối ưu hóa vận hành trong một nền tảng.</p>
+                    <p>Gia nhập cộng đồng xưởng rang lớn nhất Việt Nam. Quản lý bán hàng, tiếp cận khách hàng B2B và tối ưu hóa vận hành chỉ trong một nền tảng.</p>
                     <button onClick={openPublishModal}>Đăng ký trở thành Đối tác</button>
+                    <small>Hơn 50 xưởng rang đã tin tưởng sử dụng</small>
                 </section>
 
                 <footer className="mp-showcase-footer">
@@ -515,86 +1318,167 @@ export default function MarketplacePage() {
                     <p>© 2026 Coffee Workshop Ecosystem</p>
                     <div>
                         <a href="#">Điều khoản</a>
-                        <a href="#">Bảo mật</a>
                         <a href="#">Hỗ trợ đối tác</a>
                     </div>
                 </footer>
             </main>
 
-            {selectedWorkshop && (
-                <div className="mp-modal-overlay" onClick={() => setSelectedWorkshop(null)}>
-                    <div className="mp-workshop-detail" onClick={e => e.stopPropagation()}>
-                        <button className="mp-detail-close" onClick={() => setSelectedWorkshop(null)}>
+            {selectedProduct && (
+                <div className="mp-modal-overlay" onClick={() => setSelectedProduct(null)}>
+                    <div className="mp-modal" onClick={event => event.stopPropagation()} style={{ maxWidth: 800 }}>
+                        <div className="mp-modal-header">
+                            <h2>{showProductFactories ? 'Xưởng nhận gia công' : 'Chi tiết sản phẩm'}</h2>
+                            <button className="mp-modal-close" onClick={() => setSelectedProduct(null)}>×</button>
+                        </div>
+                        
+                        {!showProductFactories ? (
+                            <>
+                                <div style={{ display: 'flex', gap: 32, marginBottom: 24, marginTop: 10 }}>
+                                    <div style={{ flex: '0 0 300px' }}>
+                                        <img src={selectedProduct.image} alt={selectedProduct.title} style={{ width: '100%', height: 300, objectFit: 'cover', borderRadius: 12, background: '#171a1b', border: '1px solid rgba(255,255,255,0.1)' }} />
+                                    </div>
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                                            <h3 style={{ margin: 0, fontSize: 26, color: '#fff7ef' }}>{selectedProduct.title}</h3>
+                                            {selectedProduct.badge && <span style={{ background: '#d4a574', color: '#171a1b', padding: '4px 10px', borderRadius: 6, fontSize: 13, fontWeight: 700 }}>{selectedProduct.badge}</span>}
+                                        </div>
+                                        <p style={{ margin: '0 0 20px', color: '#a79d94', fontSize: 15, lineHeight: 1.6 }}>{selectedProduct.description}</p>
+                                        
+                                        <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px 20px', borderRadius: 12, marginBottom: 20 }}>
+                                            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, marginBottom: 16 }}>
+                                                <strong style={{ fontSize: 28, color: '#ffd9bd', lineHeight: 1 }}>{selectedProduct.price}</strong>
+                                                <small style={{ color: '#a79d94', fontSize: 15, marginBottom: 2 }}>{selectedProduct.unit}</small>
+                                            </div>
+                                            
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 24px', fontSize: 14 }}>
+                                                {selectedProduct.origin && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#8f8580' }}>Xuất xứ:</span> <strong style={{ color: '#ece8e1', textAlign: 'right' }}>{selectedProduct.origin}</strong></div>}
+                                                {selectedProduct.processing && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#8f8580' }}>Sơ chế:</span> <strong style={{ color: '#ece8e1', textAlign: 'right' }}>{selectedProduct.processing}</strong></div>}
+                                                {selectedProduct.roastLevel && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#8f8580' }}>Mức rang:</span> <strong style={{ color: '#ece8e1', textAlign: 'right' }}>{selectedProduct.roastLevel}</strong></div>}
+                                                {selectedProduct.stock && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#8f8580' }}>Tình trạng:</span> <strong style={{ color: '#5cb85c', textAlign: 'right' }}>{selectedProduct.stock}</strong></div>}
+                                            </div>
+                                        </div>
+
+                                        {selectedProduct.tasteNotes && selectedProduct.tasteNotes.length > 0 && (
+                                            <div style={{ marginBottom: 20 }}>
+                                                <strong style={{ display: 'block', marginBottom: 12, color: '#ece8e1', fontSize: 14 }}>Hương vị nổi bật (Taste Notes):</strong>
+                                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                                    {selectedProduct.tasteNotes.map((note: string) => (
+                                                        <span key={note} style={{ background: 'rgba(212, 165, 116, 0.1)', color: '#d4a574', padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 500, border: '1px solid rgba(212, 165, 116, 0.2)' }}>{note}</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="mp-modal-actions" style={{ display: 'flex', gap: 12, marginTop: 'auto' }}>
+                                    <button type="button" className="mp-cancel-btn" onClick={() => setSelectedProduct(null)} style={{ flex: 1, padding: '14px', fontSize: 15, fontWeight: 600 }}>Đóng</button>
+                                    <button type="button" className="mp-submit-btn" style={{ flex: 2, padding: '14px', fontSize: 15, fontWeight: 600 }} onClick={() => setShowProductFactories(true)}>
+                                        Tìm xưởng gia công
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <p style={{ margin: '10px 0 20px', color: '#a79d94', fontSize: 13, lineHeight: 1.5 }}>
+                                    Các xưởng sau có năng lực và sẵn sàng gia công <strong>{selectedProduct.title}</strong>.
+                                </p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 300, overflowY: 'auto', marginBottom: 24, paddingRight: 8 }}>
+                                    {selectedProduct.factories?.length > 0 ? selectedProduct.factories.map((factory: MarketplaceFactory) => (
+                                        <div key={factory.id} style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: 14, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <div>
+                                                <p style={{ margin: '0 0 4px', color: '#ece8e1', fontWeight: 600, fontSize: 14 }}>{factory.name}</p>
+                                                <p style={{ margin: 0, color: '#a79d94', fontSize: 12 }}>{displayText(factory.region)} • {factory.factoryType || 'Đối tác ORCA'}</p>
+                                            </div>
+                                            <button type="button" style={{ background: '#d4a574', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }} onClick={() => {
+                                                setSelectedProduct(null);
+                                                handleOrderClick(factory);
+                                            }}>
+                                                Gửi RFQ
+                                            </button>
+                                        </div>
+                                    )) : (
+                                        <div style={{ padding: 20, textAlign: 'center', color: '#8f8580' }}>Không tìm thấy xưởng gia công phù hợp</div>
+                                    )}
+                                </div>
+                                <div className="mp-modal-actions" style={{ display: 'flex', gap: 12 }}>
+                                    <button type="button" className="mp-cancel-btn" onClick={() => setShowProductFactories(false)} style={{ flex: 1 }}>Quay lại</button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {selectedFactory && (
+                <div className="mp-modal-overlay" onClick={() => setSelectedFactory(null)}>
+                    <div className="mp-workshop-detail mp-profile-detail" onClick={event => event.stopPropagation()}>
+                        <button className="mp-detail-close" onClick={() => setSelectedFactory(null)}>
                             <span className="material-symbols-outlined">close</span>
                         </button>
-                        <div className="mp-detail-media">
-                            <img src={selectedWorkshop.image} alt={selectedWorkshop.name} />
-                            <div className="mp-detail-media__overlay">
-                                <span>{selectedWorkshop.sample ? 'Xưởng mẫu' : 'Đối tác ORCA'}</span>
-                                <h2>{selectedWorkshop.name}</h2>
-                                <p>{selectedWorkshop.region}</p>
+                        <aside className="mp-profile-side">
+                            <span className={`mp-availability ${availabilityCopy(selectedFactory.availabilityStatus).className}`}>
+                                {availabilityCopy(selectedFactory.availabilityStatus).label}
+                            </span>
+                            {(selectedFactory.factoryImages && selectedFactory.factoryImages.length > 0) ? (
+                                <div className="mp-profile-gallery" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px', marginBottom: '16px' }}>
+                                    {selectedFactory.factoryImages.map((img, i) => (
+                                        <img 
+                                            key={i} 
+                                            src={img} 
+                                            alt={`Ảnh ${i}`} 
+                                            style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }}
+                                            onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                if (!target.dataset.fallback) {
+                                                    target.dataset.fallback = 'true';
+                                                    target.src = fallbackFactoryImages[i % fallbackFactoryImages.length];
+                                                }
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                            ) : selectedFactory.factoryImageUrl ? (
+                                <div className="mp-profile-image">
+                                    <img 
+                                        src={selectedFactory.factoryImageUrl} 
+                                        alt={`Ảnh xưởng ${selectedFactory.name}`}
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            if (!target.dataset.fallback) {
+                                                target.dataset.fallback = 'true';
+                                                target.src = fallbackFactoryImages[0];
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            ) : null}
+                            <h2>{selectedFactory.name}</h2>
+                            <p>{displayText(selectedFactory.region)}</p>
+                            <div className="mp-profile-side-metrics">
+                                {renderMetric('Độ tin cậy', selectedFactory.totalOrders ? displayPercent(getTrustScore(selectedFactory)) : undefined)}
+                                {renderMetric('Công suất', selectedFactory.monthlyCapacity)}
+                                {renderMetric('Loại hình', selectedFactory.factoryType)}
                             </div>
-                        </div>
+                            {renderVerification(selectedFactory)}
+                        </aside>
                         <div className="mp-detail-content">
-                            <div className="mp-detail-summary">
-                                <div>
-                                    <span>Uy tín</span>
-                                    <strong>{selectedWorkshop.trustScore ?? 100}%</strong>
-                                </div>
-                                <div>
-                                    <span>Công suất</span>
-                                    <strong>{selectedWorkshop.capacity || 'Theo lịch'}</strong>
-                                </div>
-                                <div>
-                                    <span>Đơn hoàn thành</span>
-                                    <strong>{selectedWorkshop.completedOrders || 0}</strong>
-                                </div>
+                            <div className="mp-profile-tabs">
+                                {(['overview', 'capabilities', 'equipment', 'certificates', 'reviews', 'portfolio', 'rfq'] as FactoryProfileTab[]).map(tab => (
+                                    <button
+                                        key={tab}
+                                        className={activeProfileTab === tab ? 'active' : ''}
+                                        onClick={() => setActiveProfileTab(tab)}
+                                    >
+                                        {profileTabLabels[tab]}
+                                    </button>
+                                ))}
                             </div>
-
-                            <p className="mp-detail-desc">{selectedWorkshop.description}</p>
-
-                            <div className="mp-detail-grid">
-                                <div>
-                                    <span>Khoảng giá gia công</span>
-                                    <strong>{selectedWorkshop.priceRange}</strong>
-                                </div>
-                                <div>
-                                    <span>Thời gian giao</span>
-                                    <strong>{selectedWorkshop.leadTime}</strong>
-                                </div>
-                                <div>
-                                    <span>Đơn tối thiểu</span>
-                                    <strong>{selectedWorkshop.minOrder}</strong>
-                                </div>
-                                <div>
-                                    <span>Thiết bị</span>
-                                    <strong>{selectedWorkshop.equipment}</strong>
-                                </div>
-                            </div>
-
-                            <div className="mp-detail-section">
-                                <h3>Dịch vụ nhận gia công</h3>
-                                <div className="mp-detail-tags">
-                                    {selectedWorkshop.services.map(service => <span key={service}>{service}</span>)}
-                                </div>
-                            </div>
-
-                            <div className="mp-detail-section">
-                                <h3>Kiểm soát chất lượng</h3>
-                                <p>{selectedWorkshop.quality}</p>
-                                <div className="mp-detail-tags">
-                                    {selectedWorkshop.certifications.map(cert => <span key={cert}>{cert}</span>)}
-                                </div>
-                            </div>
-
+                            {renderProfileTab(selectedFactory)}
                             <div className="mp-detail-actions">
-                                <button onClick={() => setSelectedWorkshop(null)}>Để sau</button>
-                                <button onClick={() => {
-                                    const workshop = selectedWorkshop;
-                                    setSelectedWorkshop(null);
-                                    handleOrderClick(workshop);
-                                }}>
-                                    Gửi yêu cầu gia công
+                                <button disabled={selectedFactory.ownerId === user?.id} onClick={() => openChat(selectedFactory)}>Trao đổi</button>
+                                <button disabled={selectedFactory.ownerId === user?.id} onClick={() => { const factory = selectedFactory; setSelectedFactory(null); handleOrderClick(factory); }}>
+                                    {selectedFactory.ownerId === user?.id ? 'Xưởng của bạn' : 'Gửi yêu cầu'}
                                 </button>
                             </div>
                         </div>
@@ -602,48 +1486,371 @@ export default function MarketplacePage() {
                 </div>
             )}
 
-            {/* Order Modal */}
-            {showOrderModal && selectedSeller && (
+            {showChatModal && chatTarget && (
+                <div className="fb-chat-popup">
+                    <div className="fb-chat-header" onClick={() => setShowChatModal(false)}>
+                        <div className="fb-chat-header-info">
+                            <img src={chatTarget.factoryImageUrl || chatTarget.factoryImages?.[0] || fallbackFactoryImages[0]} alt="avatar" />
+                            <div className="fb-chat-header-text">
+                                <h4>{chatTarget.name}</h4>
+                                <span>Đang hoạt động</span>
+                            </div>
+                        </div>
+                        <button className="fb-chat-close" onClick={(e) => { e.stopPropagation(); setShowChatModal(false); }}>
+                            <span className="material-symbols-outlined" style={{fontSize: 20}}>close</span>
+                        </button>
+                    </div>
+                    <div className="fb-chat-body">
+                        {chatMessages.map((msg, i) => (
+                            <div key={i} className={`fb-msg-row ${msg.sender === 'me' ? 'sent' : 'received'}`}>
+                                <div className="fb-msg-bubble">
+                                    {msg.text}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="fb-chat-footer">
+                        <span className="material-symbols-outlined" style={{color: '#0084ff', cursor: 'pointer', fontSize: 24}}>add_circle</span>
+                        <span className="material-symbols-outlined" style={{color: '#0084ff', cursor: 'pointer', fontSize: 24}}>photo_camera</span>
+                        <input 
+                            className="fb-chat-input" 
+                            placeholder="Aa" 
+                            value={chatDraft}
+                            onChange={event => setChatDraft(event.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' && chatDraft.trim()) {
+                                    handleSaveChatDraft();
+                                }
+                            }}
+                        />
+                        <button className="fb-chat-send" onClick={() => { if(chatDraft.trim()) handleSaveChatDraft(); }} disabled={!chatDraft.trim()}>
+                            <span className="material-symbols-outlined" style={{fontSize: 24}}>send</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {showOrderModal && (
                 <div className="mp-modal-overlay" onClick={() => setShowOrderModal(false)}>
-                    <div className="mp-modal" onClick={e => e.stopPropagation()}>
+                    <div className="mp-modal" onClick={event => event.stopPropagation()}>
                         <div className="mp-modal-header">
-                            <h2><ion-icon name="cart-outline" style={{ fontSize: '20px', verticalAlign: 'middle', marginRight: 8 }}></ion-icon> Đặt đơn hàng</h2>
-                            <button className="mp-modal-close" onClick={() => setShowOrderModal(false)}><ion-icon name="close-outline" style={{ fontSize: '20px' }}></ion-icon></button>
+                            <h2>{selectedSeller ? 'Gửi yêu cầu' : 'Đăng Yêu Cầu Tìm Xưởng'}</h2>
+                            <button className="mp-modal-close" onClick={() => setShowOrderModal(false)}>×</button>
                         </div>
-                        <div className="mp-modal-seller">
-                            <ion-icon name="storefront-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Đặt hàng tại: <strong>{selectedSeller.name}</strong>
-                        </div>
+                        {selectedSeller && <div className="mp-modal-seller">Xưởng nhận RFQ: <strong>{selectedSeller.name}</strong></div>}
                         <form onSubmit={handleSubmitOrder}>
                             <div className="mp-form-group">
-                                <label><ion-icon name="business-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Từ xưởng của bạn</label>
-                                <select value={buyerTeamId} onChange={e => setBuyerTeamId(e.target.value)} required>
-                                    {myTeams.map(t => (
-                                        <option key={t.id} value={t.id}>{t.name}</option>
-                                    ))}
+                                <label>Bên đặt gia công</label>
+                                <select value={buyerTeamId} onChange={event => setBuyerTeamId(event.target.value)}>
+                                    <option value="">Tài khoản cá nhân của tôi</option>
+                                    {myTeams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
                                 </select>
                             </div>
                             <div className="mp-form-group">
-                                <label><ion-icon name="document-text-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Tiêu đề đơn hàng</label>
-                                <input type="text" placeholder="VD: Gia công 500kg cà phê Arabica" value={orderTitle} onChange={e => setOrderTitle(e.target.value)} required />
-                            </div>
-                            <div className="mp-form-group">
-                                <label><ion-icon name="chatbox-ellipses-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Mô tả chi tiết</label>
-                                <textarea rows={3} placeholder="Yêu cầu cụ thể, quy cách, lưu ý..." value={orderDesc} onChange={e => setOrderDesc(e.target.value)} />
+                                <label>Tiêu đề RFQ</label>
+                                <input value={rfqTitle} onChange={event => setRfqTitle(event.target.value)} placeholder="VD: Báo giá gia công 2 tấn Arabica" required />
                             </div>
                             <div className="mp-form-row">
                                 <div className="mp-form-group">
-                                    <label><ion-icon name="layers-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Số lượng</label>
-                                    <input type="number" min="1" value={orderQty} onChange={e => setOrderQty(parseInt(e.target.value) || 1)} required />
+                                    <label>Dịch vụ yêu cầu (Service Required)</label>
+                                    <select value={rfqRequestType} onChange={event => setRfqRequestType(event.target.value)} required>
+                                        <option value="Roasting">Rang cà phê (Roasting)</option>
+                                        <option value="Packaging">Đóng gói (Packaging)</option>
+                                        <option value="OEM">Gia công OEM</option>
+                                        <option value="Private Label">Private Label</option>
+                                    </select>
                                 </div>
                                 <div className="mp-form-group">
-                                    <label><ion-icon name="calendar-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Hạn chót</label>
-                                    <input type="datetime-local" value={orderDeadline} onChange={e => setOrderDeadline(e.target.value)} required />
+                                    <label>Loại sản phẩm (Product Type)</label>
+                                    <select value={rfqProductName} onChange={event => setRfqProductName(event.target.value)} required>
+                                        <option value="">Chọn loại cà phê</option>
+                                        <option value="Arabica">Arabica</option>
+                                        <option value="Robusta">Robusta</option>
+                                        <option value="Blend">Blend (Phối trộn)</option>
+                                        <option value="Other">Khác</option>
+                                    </select>
                                 </div>
                             </div>
+                            <div className="mp-form-row">
+                                <div className="mp-form-group">
+                                    <label>Số lượng (Quantity)</label>
+                                    <input type="number" min="1" value={rfqQuantity} onChange={event => setRfqQuantity(parseInt(event.target.value) || 1)} required />
+                                </div>
+                                <div className="mp-form-group">
+                                    <label>Đơn vị (Unit)</label>
+                                    <select value={rfqUnit} onChange={event => setRfqUnit(event.target.value)} required>
+                                        <option value="kg">kg</option>
+                                        <option value="ton">Tấn (Ton)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="mp-form-row">
+                                <div className="mp-form-group">
+                                    <label>Mức rang (Roast Profile)</label>
+                                    <select value={rfqQuality} onChange={event => setRfqQuality(event.target.value)}>
+                                        <option value="">Không yêu cầu</option>
+                                        <option value="Light">Light Roast</option>
+                                        <option value="Medium">Medium Roast</option>
+                                        <option value="Dark">Dark Roast</option>
+                                    </select>
+                                </div>
+                                <div className="mp-form-group">
+                                    <label>Quy cách đóng gói (Packaging)</label>
+                                    <select value={rfqPackaging} onChange={event => setRfqPackaging(event.target.value)}>
+                                        <option value="">Không yêu cầu</option>
+                                        <option value="250g">Túi 250g</option>
+                                        <option value="500g">Túi 500g</option>
+                                        <option value="1kg">Túi 1kg</option>
+                                        <option value="Custom">Khác (Custom)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="mp-form-row">
+                                <div className="mp-form-group">
+                                    <label>Ngày nhận hàng dự kiến (Target Date)</label>
+                                    <input type="date" value={rfqDeadline} onChange={event => setRfqDeadline(event.target.value)} />
+                                </div>
+                                <div className="mp-form-group">
+                                    <label>Ngân sách dự kiến (Budget Range)</label>
+                                    <input value={rfqBudget} onChange={event => setRfqBudget(event.target.value)} placeholder="VD: 50tr - 100tr" />
+                                </div>
+                            </div>
+                            <div className="mp-form-group">
+                                <label>Ghi chú bổ sung (Additional Notes)</label>
+                                <textarea rows={3} value={rfqNote} onChange={event => setRfqNote(event.target.value)} placeholder="Mô tả chi tiết yêu cầu của bạn..." />
+                            </div>
+
+                            {/* === Hồ sơ giao hàng === */}
+                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '16px 0', paddingTop: 16 }}>
+                                <h3 style={{ fontSize: '1rem', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span className="material-symbols-outlined" style={{ fontSize: 20 }}>local_shipping</span>
+                                    Thông tin giao nhận hàng
+                                </h3>
+                            </div>
+                            <div className="mp-form-row">
+                                <div className="mp-form-group">
+                                    <label>SĐT liên hệ <span style={{ color: '#e57373' }}>*</span></label>
+                                    <input value={deliveryPhone} onChange={event => setDeliveryPhone(event.target.value)} placeholder="VD: 0912 345 678" required />
+                                </div>
+                                <div className="mp-form-group">
+                                    <label>SĐT phụ (nếu không liên lạc được)</label>
+                                    <input value={deliveryPhoneAlt} onChange={event => setDeliveryPhoneAlt(event.target.value)} placeholder="Tùy chọn" />
+                                </div>
+                            </div>
+                            <div className="mp-form-group">
+                                <label>Địa chỉ giao hàng <span style={{ color: '#e57373' }}>*</span></label>
+                                <input value={deliveryAddress} onChange={event => setDeliveryAddress(event.target.value)} placeholder="Địa chỉ cụ thể để xưởng giao hàng" required />
+                            </div>
+                            <div className="mp-form-row">
+                                <div className="mp-form-group">
+                                    <label>Giờ giao mong muốn (từ)</label>
+                                    <input type="datetime-local" value={deliveryFrom} onChange={event => setDeliveryFrom(event.target.value)} />
+                                </div>
+                                <div className="mp-form-group">
+                                    <label>Giờ giao mong muốn (đến)</label>
+                                    <input type="datetime-local" value={deliveryTo} onChange={event => setDeliveryTo(event.target.value)} />
+                                </div>
+                            </div>
+                            <div className="mp-form-group">
+                                <label>Nếu không liên lạc được / không nhận hàng</label>
+                                <select value={deliveryFailureAction} onChange={event => setDeliveryFailureAction(event.target.value)}>
+                                    <option value="RETRY_LATER">Giao lại sau</option>
+                                    <option value="LEAVE_AT_DOOR">Để hàng tại cổng/kho</option>
+                                    <option value="RETURN_TO_SENDER">Trả hàng về cho xưởng</option>
+                                    <option value="CONTACT_ALTERNATIVE">Liên hệ SĐT phụ</option>
+                                </select>
+                            </div>
+                            <div className="mp-form-group">
+                                <label>Ghi chú giao hàng</label>
+                                <textarea rows={2} value={deliveryNote} onChange={event => setDeliveryNote(event.target.value)} placeholder="VD: Giao cổng sau, gọi trước 30 phút..." />
+                            </div>
                             <div className="mp-modal-actions">
-                                <button type="button" className="mp-cancel-btn" onClick={() => setShowOrderModal(false)}><ion-icon name="close-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Hủy</button>
-                                <button type="submit" className="mp-submit-btn" disabled={submitting}>
-                                    {submitting ? 'Đang gửi...' : <><ion-icon name="send-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Gửi đơn hàng</>}
+                                <button type="button" className="mp-cancel-btn" onClick={() => setShowOrderModal(false)}>Hủy</button>
+                                <button type="submit" className="mp-submit-btn" disabled={submitting}>{submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {showPublishModal && (
+                <div className="mp-publish-sheet-overlay" onClick={() => setShowPublishModal(false)}>
+                    <div className="mp-publish-sheet" onClick={event => event.stopPropagation()}>
+                        <div className="mp-publish-header">
+                            <button type="button" className="mp-publish-back" onClick={() => setShowPublishModal(false)} aria-label="Quay lại">
+                                <span className="material-symbols-outlined">arrow_back</span>
+                            </button>
+                            <h2>{editingPublishedTeam ? 'Cập nhật hồ sơ xưởng' : 'Workshop Registration'}</h2>
+                        </div>
+                        <form className="mp-publish-form" onSubmit={handlePublish}>
+                            <div className="mp-form-group">
+                                <label>Chọn xưởng</label>
+                                <select
+                                    value={publishTeamId}
+                                    onChange={event => {
+                                        const team = myTeams.find(item => item.id === event.target.value);
+                                        if (team) fillPublishForm(team);
+                                    }}
+                                >
+                                    {myTeams.map(team => <option key={team.id} value={team.id}>{team.name} {team.isPublished ? '(Đã đăng)' : ''}</option>)}
+                                </select>
+                            </div>
+                            <div className="mp-form-group">
+                                <label>Loại hình xưởng</label>
+                                <select value={pubFactoryType} onChange={event => setPubFactoryType(event.target.value)}>
+                                    <option value="">Chọn loại hình</option>
+                                    {FACTORY_TYPE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                            </div>
+                            <div className="mp-form-group">
+                                <label>Khu vực</label>
+                                <select value={pubRegion} onChange={event => setPubRegion(event.target.value)}>
+                                    <option value="">Chọn khu vực</option>
+                                    {REGION_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                            </div>
+                            <div className="mp-form-group">
+                                <label>Chuyên môn</label>
+                                <div className="mp-publish-chip-grid">
+                                    {SPECIALTY_OPTIONS.map(option => {
+                                        const selected = splitMultiValue(pubSpecialty).includes(option);
+                                        return (
+                                            <button
+                                                type="button"
+                                                className={selected ? 'selected' : ''}
+                                                key={option}
+                                                onClick={() => setPubSpecialty(toggleListValue(splitMultiValue(pubSpecialty), option).join(', '))}
+                                            >
+                                                {option}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            <section className="mp-publish-section">
+                                <h3>Năng lực sản xuất</h3>
+                            </section>
+                            <div className="mp-form-row mp-publish-capacity-row">
+                                <div className="mp-form-group">
+                                    <label>Công suất</label>
+                                    <input type="number" value={pubCapacityValue} onChange={event => setPubCapacityValue(event.target.value)} placeholder="0" />
+                                </div>
+                                <div className="mp-form-group">
+                                    <label>Đơn vị</label>
+                                    <select value={pubCapacityUnit} onChange={event => setPubCapacityUnit(event.target.value)}>
+                                        <option value="kg/tháng">kg/tháng</option>
+                                        <option value="tấn/tháng">tấn/tháng</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="mp-form-group">
+                                <label>Mô tả năng lực</label>
+                                <textarea
+                                    rows={4}
+                                    value={pubDescription}
+                                    onChange={event => setPubDescription(event.target.value)}
+                                    placeholder="Tối thiểu 30 ký tự mô tả chi tiết năng lực vận hành của xưởng..."
+                                />
+                            </div>
+                            <section className="mp-publish-section">
+                                <h3>Hình ảnh & Pháp lý</h3>
+                            </section>
+                            <div className="mp-form-group mp-publish-upload-group">
+                                <label>Ảnh xưởng (1-10 ảnh)</label>
+                                <label className="mp-publish-upload">
+                                    <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleFactoryImageFile} />
+                                    <span className="material-symbols-outlined">add_photo_alternate</span>
+                                    <strong>Thêm ảnh xưởng</strong>
+                                    <small>JPG, PNG, WEBP tối đa 5MB/ảnh</small>
+                                </label>
+                                <input value={pubFactoryImageUrl} onChange={event => {
+                                    setPubFactoryImageUrl(event.target.value);
+                                    setPubFactoryImages(event.target.value ? [event.target.value, ...pubFactoryImages.slice(1)] : pubFactoryImages.slice(1));
+                                }} placeholder="Hoặc dán URL ảnh đại diện xưởng" />
+                                {pubFactoryImages.length > 0 && (
+                                    <div className="mp-factory-image-preview-grid">
+                                        {pubFactoryImages.map((image, index) => (
+                                            <div className="mp-factory-image-preview" key={`${image}-${index}`}>
+                                                <img src={image} alt={`Ảnh xưởng ${index + 1}`} />
+                                                <button type="button" onClick={() => {
+                                                    const next = pubFactoryImages.filter((_, itemIndex) => itemIndex !== index);
+                                                    setPubFactoryImages(next);
+                                                    setPubFactoryImageUrl(next[0] || '');
+                                                }}>Xóa ảnh</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="mp-verification-form">
+                                <div className="mp-verification-form-head">
+                                    <div>
+                                        <h3>Xác minh xưởng</h3>
+                                        <p>Điền thông tin để quản trị viên kiểm tra và duyệt hồ sơ.</p>
+                                    </div>
+                                    {selectedPublishTeam && (
+                                        <span className={`mp-verification-status ${publishVerificationStatus.toLowerCase()}`}>
+                                            {verificationStatusLabel(publishVerificationStatus)}
+                                        </span>
+                                    )}
+                                </div>
+                                {selectedPublishTeam?.verificationRejectReason && (
+                                    <div className="mp-verification-note">
+                                        Lý do từ chối: {selectedPublishTeam.verificationRejectReason}
+                                    </div>
+                                )}
+                                <div className="mp-verification-grid">
+                                    <div className="mp-form-group">
+                                        <label>Giấy phép kinh doanh</label>
+                                        <input value={pubBusinessLicense} onChange={event => setPubBusinessLicense(event.target.value)} placeholder="Link tài liệu hoặc tải file bên dưới" />
+                                        <label className="mp-publish-file">
+                                            <input type="file" accept="application/pdf,image/jpeg,image/png" onChange={event => handleDocumentFile(event, setPubBusinessLicense)} />
+                                            <span className="material-symbols-outlined">upload_file</span>
+                                            Tải giấy phép
+                                        </label>
+                                    </div>
+                                    <div className="mp-form-group">
+                                        <label>Địa chỉ xưởng</label>
+                                        <input value={pubBusinessAddress} onChange={event => setPubBusinessAddress(event.target.value)} placeholder="Địa chỉ pháp lý / địa chỉ xưởng" />
+                                    </div>
+                                    <div className="mp-form-group">
+                                        <label>Website doanh nghiệp</label>
+                                        <input value={pubWebsiteUrl} onChange={event => setPubWebsiteUrl(event.target.value)} placeholder="https://..." />
+                                    </div>
+                                    <div className="mp-form-group">
+                                        <label>Facebook doanh nghiệp</label>
+                                        <input value={pubFacebookUrl} onChange={event => setPubFacebookUrl(event.target.value)} placeholder="https://facebook.com/..." />
+                                    </div>
+                                    <div className="mp-form-group mp-verification-wide">
+                                        <label>Chứng nhận</label>
+                                        <div className="mp-publish-chip-grid">
+                                            {CERTIFICATE_OPTIONS.map(option => (
+                                                <button
+                                                    type="button"
+                                                    className={pubCertificates.includes(option) ? 'selected' : ''}
+                                                    key={option}
+                                                    onClick={() => setPubCertificates(toggleListValue(pubCertificates, option))}
+                                                >
+                                                    {option}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="mp-form-group mp-verification-wide">
+                                        <label>File chứng nhận</label>
+                                        <input value={pubCertificationDocument} onChange={event => setPubCertificationDocument(event.target.value)} placeholder="Link tài liệu nếu có" />
+                                        <label className="mp-publish-file">
+                                            <input type="file" accept="application/pdf,image/jpeg,image/png" onChange={event => handleDocumentFile(event, setPubCertificationDocument)} />
+                                            <span className="material-symbols-outlined">upload_file</span>
+                                            Tải chứng nhận
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="mp-publish-bottom-bar">
+                                <button type="button" className="mp-cancel-btn" onClick={() => setShowPublishModal(false)}>Hủy</button>
+                                <button type="submit" className="mp-submit-btn" disabled={publishing}>
+                                    {publishing ? 'Đang gửi...' : editingPublishedTeam ? 'Lưu & gửi duyệt' : 'Đăng ký xưởng'}
                                 </button>
                             </div>
                         </form>
@@ -651,49 +1858,53 @@ export default function MarketplacePage() {
                 </div>
             )}
 
-            {/* Publish Modal */}
-            {showPublishModal && (
-                <div className="mp-modal-overlay" onClick={() => setShowPublishModal(false)}>
-                    <div className="mp-modal" onClick={e => e.stopPropagation()}>
-                        <div className="mp-modal-header">
-                            <h2><ion-icon name="megaphone-outline" style={{ fontSize: '20px', verticalAlign: 'middle', marginRight: 8 }}></ion-icon> Đăng tải xưởng lên thị trường</h2>
-                            <button className="mp-modal-close" onClick={() => setShowPublishModal(false)}><ion-icon name="close-outline" style={{ fontSize: '20px' }}></ion-icon></button>
-                        </div>
-                        <form onSubmit={handlePublish}>
-                            <div className="mp-form-group">
-                                <label><ion-icon name="business-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Chọn xưởng muốn đăng</label>
-                                <select value={publishTeamId} onChange={e => setPublishTeamId(e.target.value)} required>
-                                    {myTeams.map(t => (
-                                        <option key={t.id} value={t.id}>{t.name} {t.isPublished ? '(Đã đăng)' : ''}</option>
-                                    ))}
-                                </select>
+            {showAiMatching && (
+                <div className="mp-modal-overlay" style={{background: 'rgba(9, 10, 11, 0.95)', backdropFilter: 'blur(8px)', zIndex: 10000}}>
+                    <div className="mp-modal" style={{background: 'transparent', border: 'none', boxShadow: 'none', color: '#fff', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%'}}>
+                        {aiMatchingProgress < 100 ? (
+                            <>
+                                <div className="btn-spinner" style={{width: 80, height: 80, border: '4px solid rgba(212, 165, 116, 0.2)', borderTopColor: '#d4a574', borderRadius: '50%', marginBottom: 24}}></div>
+                                <h2 style={{fontSize: 24, marginBottom: 12, color: '#ece8e1'}}>AI Matching Đang Phân Tích...</h2>
+                                <p style={{color: '#a79d94', fontSize: 15, marginBottom: 32, maxWidth: 400}}>Hệ thống ORCA đang phân tích RFQ của bạn và tìm kiếm các xưởng phù hợp nhất dựa trên công suất, profile rang và độ tin cậy.</p>
+                                <div style={{width: 300, background: 'rgba(255,255,255,0.1)', height: 6, borderRadius: 3, overflow: 'hidden'}}>
+                                    <div style={{height: '100%', background: '#d4a574', width: `${aiMatchingProgress}%`, transition: 'width 0.3s ease'}}></div>
+                                </div>
+                            </>
+                        ) : (
+                            <div style={{background: '#171a1b', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 16, padding: 32, width: '100%', maxWidth: 600, textAlign: 'left', animation: 'fadeIn 0.5s ease'}}>
+                                <div style={{display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24}}>
+                                    <span className="material-symbols-outlined" style={{fontSize: 32, color: '#10b981'}}>check_circle</span>
+                                    <h2 style={{margin: 0, color: '#ece8e1'}}>Phân tích hoàn tất!</h2>
+                                </div>
+                                <p style={{color: '#a79d94', marginBottom: 24}}>RFQ của bạn đã được ghi nhận. AI ORCA đã tự động phân bổ RFQ này cho <strong>Top 5 xưởng phù hợp nhất</strong>.</p>
+                                
+                                <div style={{display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32}}>
+                                    {[1, 2, 3].map((_, idx) => {
+                                        const matchFactory = featuredFactories[idx] || factories[idx] || {name: 'Xưởng gia công Cà phê'};
+                                        return (
+                                        <div key={idx} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)'}}>
+                                            <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                                                <div style={{width: 44, height: 44, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', fontWeight: 700}}>{95 - idx * 3}%</div>
+                                                <div>
+                                                    <strong style={{display: 'block', color: '#ece8e1', marginBottom: 4}}>{matchFactory.name}</strong>
+                                                    <span style={{fontSize: 12, color: '#a79d94'}}>Phù hợp Profile • Còn công suất</span>
+                                                </div>
+                                            </div>
+                                            <span className="material-symbols-outlined" style={{color: '#d4a574'}}>chevron_right</span>
+                                        </div>
+                                    )})}
+                                </div>
+
+                                <div style={{display: 'flex', gap: 12}}>
+                                    <button style={{flex: 1, padding: 14, background: '#d4a574', color: '#1a1a1a', borderRadius: 8, fontWeight: 600, border: 'none', cursor: 'pointer'}} onClick={() => { setShowAiMatching(false); navigate('/orders'); }}>Theo dõi RFQ</button>
+                                </div>
                             </div>
-                            <div className="mp-form-group">
-                                <label><ion-icon name="flask-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Chuyên môn</label>
-                                <input type="text" placeholder="VD: Arabica & Robusta Blend, Fine Robusta..." value={pubSpecialty} onChange={e => setPubSpecialty(e.target.value)} />
-                            </div>
-                            <div className="mp-form-group">
-                                <label><ion-icon name="speedometer-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Năng suất</label>
-                                <input type="text" placeholder="VD: > 500kg/ngày, 100-500kg/ngày..." value={pubCapacity} onChange={e => setPubCapacity(e.target.value)} />
-                            </div>
-                            <div className="mp-form-group">
-                                <label><ion-icon name="location-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Khu vực</label>
-                                <input type="text" placeholder="VD: Tây Nguyên, Đông Nam Bộ..." value={pubRegion} onChange={e => setPubRegion(e.target.value)} />
-                            </div>
-                            <div className="mp-form-group">
-                                <label><ion-icon name="chatbox-ellipses-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Mô tả xưởng</label>
-                                <textarea rows={3} placeholder="Giới thiệu ngắn về xưởng, dịch vụ, thế mạnh..." value={pubDescription} onChange={e => setPubDescription(e.target.value)} />
-                            </div>
-                            <div className="mp-modal-actions">
-                                <button type="button" className="mp-cancel-btn" onClick={() => setShowPublishModal(false)}><ion-icon name="close-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Hủy</button>
-                                <button type="submit" className="mp-submit-btn" disabled={publishing}>
-                                    {publishing ? 'Đang đăng...' : <><ion-icon name="rocket-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Đăng tải ngay</>}
-                                </button>
-                            </div>
-                        </form>
+                        )}
                     </div>
                 </div>
             )}
+
         </div>
     );
 }
+

@@ -24,6 +24,8 @@ export const teamService = {
     // Advertisement
     advertise: (teamId: string, data: Partial<Team>) =>
         api.put<Team>(`/api/teams/${teamId}/advertise`, data).then(r => r.data),
+    submitVerification: (teamId: string, data: Partial<Team>) =>
+        api.put<Team>(`/api/teams/${teamId}/verification`, data).then(r => r.data),
     unpublish: (teamId: string) =>
         api.put(`/api/teams/${teamId}/unpublish`).then(r => r.data),
 };

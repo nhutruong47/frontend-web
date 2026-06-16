@@ -23,7 +23,7 @@ interface Plan {
 const plans: Plan[] = [
     {
         id: 'starter',
-        name: 'Starter',
+        name: 'Cơ bản',
         price: '0đ',
         priceNote: '/tháng',
         subtitle: 'AI quản lý công việc',
@@ -40,7 +40,7 @@ const plans: Plan[] = [
     },
     {
         id: 'professional',
-        name: 'Professional',
+        name: 'Chuyên nghiệp',
         price: '129.000đ',
         priceNote: '/tháng',
         subtitle: 'AI điều phối sản xuất',
@@ -58,7 +58,7 @@ const plans: Plan[] = [
     },
     {
         id: 'enterprise',
-        name: 'Enterprise',
+        name: 'Doanh nghiệp',
         price: '249.000đ',
         priceNote: '/tháng',
         subtitle: 'AI quản lý doanh nghiệp',

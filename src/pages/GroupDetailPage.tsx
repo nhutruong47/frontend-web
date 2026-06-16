@@ -81,6 +81,7 @@ export default function GroupDetailPage() {
     const [activeGoalTitle] = useState('');
 
     // Job Labels
+    const [showMemberRoles, setShowMemberRoles] = useState(false);
     const [showLabelModal, setShowLabelModal] = useState(false);
     const [selectedMemberForLabels, setSelectedMemberForLabels] = useState<any>(null);
     const [editingLabels, setEditingLabels] = useState<string>('');
@@ -599,6 +600,15 @@ export default function GroupDetailPage() {
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <style>
+                        {`
+                        @keyframes pulse-ai-btn {
+                            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+                            70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+                            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+                        }
+                        `}
+                    </style>
                     {team.inviteCode && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-input)', padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)' }}>
                             <ion-icon name="key-outline" style={{ fontSize: 14, color: 'var(--text-muted)' }}></ion-icon>
@@ -606,21 +616,49 @@ export default function GroupDetailPage() {
                             <span onClick={() => navigator.clipboard.writeText(team.inviteCode || '')} style={{ fontWeight: 800, letterSpacing: 3, color: 'var(--accent-primary)', cursor: 'pointer' }}>{team.inviteCode}</span>
                         </div>
                     )}
+                    
+                    {/* NÚT AI NỔI BẬT ĐƯA LÊN TRƯỚC */}
+                    {isAdmin && (
+                        <button 
+                            onClick={() => navigate(`/groups/${team.id}/create-task`)} 
+                            style={{ 
+                                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
+                                color: '#fff', 
+                                border: 'none', 
+                                borderRadius: 10, 
+                                padding: '8px 20px', 
+                                fontSize: 14, 
+                                fontWeight: 800, 
+                                cursor: 'pointer', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: 8, 
+                                textShadow: '0 1px 2px rgba(0,0,0,0.28)',
+                                animation: 'pulse-ai-btn 2s infinite',
+                                transition: 'all 0.3s ease'
+                            }}
+                        >
+                            <ion-icon name="sparkles" style={{ fontSize: '18px' }}></ion-icon> 
+                            Phân chia công việc tự động
+                        </button>
+                    )}
+
                     <button onClick={() => setShowChat(!showChat)} style={{ position: 'relative', background: unreadTotal > 0 ? '#fff7ed' : 'var(--bg-input)', border: unreadTotal > 0 ? '1px solid #fed7aa' : '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-primary)' }}><ion-icon name={unreadTotal > 0 ? 'chatbubbles' : 'chatbubbles-outline'}></ion-icon> Chat {renderUnreadBadge(unreadTotal)}</button>
-                    {isAdmin && <button onClick={() => navigate(`/groups/${team.id}/create-task`)} style={{ background: 'var(--accent-gradient)', color: '#fffaf0', WebkitTextFillColor: '#fffaf0', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textShadow: '0 1px 2px rgba(0,0,0,0.28)' }}><ion-icon name="add"></ion-icon> Thêm công việc</button>}
+                    {isAdmin && <button onClick={() => setShowMemberRoles(!showMemberRoles)} style={{ background: showMemberRoles ? '#fff7ed' : 'var(--bg-input)', border: showMemberRoles ? '1px solid #fed7aa' : '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: showMemberRoles ? '#d97706' : 'var(--text-secondary)' }}><ion-icon name="id-card-outline"></ion-icon> Phân vai trò</button>}
+                    
                     {isAdmin && <button onClick={() => setShowAddMember(true)} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }}><ion-icon name="people-outline"></ion-icon> Mời</button>}
                     {isAdmin && <button onClick={handleDeleteTeam} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '8px', fontSize: 16, cursor: 'pointer', color: '#ef4444', display: 'flex' }}><ion-icon name="trash-outline"></ion-icon></button>}
                 </div>
             </div>
 
             {/* ===== STATS CARDS ===== */}
-            {isManager && (
+            {isManager && totalTasks > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 18 }}>
                 {[
                     { label: 'Tổng công việc', value: totalTasks, icon: 'clipboard-outline', bg: '#f9f1e3', color: '#d4a574' },
+                    { label: 'Chưa bắt đầu', value: pendingTasks, icon: 'time-outline', bg: '#f8fafc', color: '#94a3b8' },
                     { label: 'Đang thực hiện', value: inProgressTasks, icon: 'sync-outline', bg: '#fff7ed', color: '#f59e0b' },
                     { label: 'Hoàn thành', value: completedTasks, icon: 'checkmark-circle-outline', bg: '#f0fdf4', color: '#16a34a' },
-                    { label: 'Chưa bắt đầu', value: pendingTasks, icon: 'time-outline', bg: '#f8fafc', color: '#94a3b8' },
                 ].map((s, i) => (
                     <div key={i} style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '16px 18px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14 }}>
                         <div style={{ width: 48, height: 48, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color, fontSize: 24 }}>
@@ -636,19 +674,7 @@ export default function GroupDetailPage() {
             )}
 
             {/* ===== EMPTY STATE / ANALYTICS ===== */}
-            {isManager && (totalTasks === 0 ? (
-                <div style={{ background: 'var(--bg-card)', borderRadius: 16, padding: '28px 24px', border: '1px solid var(--border)', marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                        <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(212, 165, 116, 0.12)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
-                            <ion-icon name="clipboard-outline"></ion-icon>
-                        </div>
-                        <div>
-                            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Chưa có công việc để thống kê</h3>
-                            <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 13 }}>Tạo công việc đầu tiên, sau đó biểu đồ tiến độ và hiệu suất sẽ xuất hiện ở đây.</p>
-                        </div>
-                    </div>
-                </div>
-            ) : (
+            {isManager && totalTasks > 0 && (
             <>
             {/* ===== LINE CHART ===== */}
             {isManager && (
@@ -714,10 +740,10 @@ export default function GroupDetailPage() {
                 )}
             </div>
             </>
-            ))}
+            )}
 
             {/* ===== MEMBER CARDS ===== */}
-            {visibleMemberStats.length > 0 && (
+            {showMemberRoles && visibleMemberStats.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 260px))', gap: 14, marginBottom: 18 }}>
                 {visibleMemberStats.map(m => {
                         const displayName = m.fullName || m.username;
@@ -743,8 +769,8 @@ export default function GroupDetailPage() {
                                         ))
                                     )}
                                     {isAdmin && (
-                                        <button onClick={() => { setSelectedMemberForLabels(m); setEditingLabels(m.jobLabels?.join(', ') || ''); setShowLabelModal(true); }} style={{ background: 'none', border: '1px dashed #cbd5e1', color: '#94a3b8', borderRadius: 6, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 12 }}>
-                                            <ion-icon name="pencil"></ion-icon>
+                                        <button onClick={() => { setSelectedMemberForLabels(m); setEditingLabels(m.jobLabels?.join(', ') || ''); setShowLabelModal(true); }} style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', color: '#64748b', borderRadius: 6, padding: '2px 8px', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 11, fontWeight: 600, transition: 'all 0.2s' }}>
+                                            <ion-icon name="add"></ion-icon> Phân vai trò
                                         </button>
                                     )}
                                 </div>
@@ -1236,17 +1262,7 @@ export default function GroupDetailPage() {
                     )}
                 </div>
 
-                {/* Add Inventory inline form */}
-                {showAddInventory && isAdmin && (
-                    <div style={{ padding: '16px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <input value={invName} onChange={e => setInvName(e.target.value)} placeholder="Tên hàng hóa *" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, flex: 1, minWidth: 200 }} />
-                        <input type="number" value={invQty} onChange={e => setInvQty(e.target.value)} placeholder="Số lượng *" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, width: 100 }} />
-                        <input value={invUnit} onChange={e => setInvUnit(e.target.value)} placeholder="Đơn vị (VD: Cái)" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, width: 130 }} />
-                        <input type="number" value={invThreshold} onChange={e => setInvThreshold(e.target.value)} placeholder="Báo sắp hết (< 10)" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, width: 140 }} />
-                        <button onClick={handleAddInventory} disabled={loading || !invName.trim() || !invQty} style={{ background: '#d4a574', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Lưu</button>
-                        <button onClick={() => setShowAddInventory(false)} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: 12, cursor: 'pointer', color: '#64748b' }}>Hủy</button>
-                    </div>
-                )}
+
 
                 {/* Table */}
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -1615,6 +1631,41 @@ export default function GroupDetailPage() {
                             <button onClick={() => setShowLabelModal(false)} style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
                             <button onClick={handleSaveLabels} disabled={loading} style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                                 {loading ? 'Đang lưu...' : 'Lưu nhãn'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Inventory Modal */}
+            {showAddInventory && isAdmin && (
+                <div className="modal-overlay" onClick={() => setShowAddInventory(false)} style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 450, width: '90%', background: '#fff', color: '#1a1a1a', borderRadius: 16, padding: '24px' }}>
+                        <h2 style={{ margin: '0 0 20px', color: '#1e293b', fontSize: 18 }}>Nhập hàng hóa mới</h2>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>Tên hàng hóa <span style={{ color: '#dc2626' }}>*</span></label>
+                                <input value={invName} onChange={e => setInvName(e.target.value)} placeholder="Ví dụ: Cà phê hạt loại A..." style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, outline: 'none', background: '#f8fafc', boxSizing: 'border-box' }} autoFocus />
+                            </div>
+                            <div style={{ display: 'flex', gap: 14 }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>Số lượng <span style={{ color: '#dc2626' }}>*</span></label>
+                                    <input type="number" value={invQty} onChange={e => setInvQty(e.target.value)} placeholder="0" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, outline: 'none', background: '#f8fafc', boxSizing: 'border-box' }} />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>Đơn vị</label>
+                                    <input value={invUnit} onChange={e => setInvUnit(e.target.value)} placeholder="VD: kg, hộp..." style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, outline: 'none', background: '#f8fafc', boxSizing: 'border-box' }} />
+                                </div>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>Mức báo sắp hết</label>
+                                <input type="number" value={invThreshold} onChange={e => setInvThreshold(e.target.value)} placeholder="Cảnh báo khi nhỏ hơn hoặc bằng (VD: 10)" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, outline: 'none', background: '#f8fafc', boxSizing: 'border-box' }} />
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 28 }}>
+                            <button onClick={() => setShowAddInventory(false)} style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
+                            <button onClick={handleAddInventory} disabled={loading || !invName.trim() || !invQty} style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: (loading || !invName.trim() || !invQty) ? 0.6 : 1 }}>
+                                {loading ? 'Đang lưu...' : 'Lưu vào kho'}
                             </button>
                         </div>
                     </div>

@@ -258,7 +258,7 @@ export default function CreateTaskPage() {
             const successMsg: ChatMessage = {
                 id: Date.now().toString() + '-success',
                 role: 'assistant',
-                content: '🎉 **Tuyệt vời!** Công việc đã được phân bổ thành công vào nhóm. Vui lòng bấm vào "Quay lại Dashboard" để xem chi tiết, hoặc bạn có thể tiếp tục tạo mục tiêu mới ở đây.',
+                content: '🎉 **Tuyệt vời!** Công việc đã được phân bổ thành công vào nhóm. Vui lòng bấm vào "Quay lại tổng quan" để xem chi tiết, hoặc bạn có thể tiếp tục tạo mục tiêu mới ở đây.',
                 timestamp: new Date()
             };
             setMessages(prev => [...prev.map(m => m.result ? { ...m, result: undefined } : m), successMsg]);
@@ -1073,7 +1073,7 @@ export default function CreateTaskPage() {
                 <div className="task-studio-top">
                     <button className="task-studio-back" onClick={() => navigate(`/groups/${teamId}`)}>
                         <ion-icon name="arrow-back-outline"></ion-icon>
-                        Dashboard
+                        Tổng quan
                     </button>
                     <div className="task-studio-title">
                         <h1>Thiết lập Công việc</h1>
@@ -1291,7 +1291,7 @@ export default function CreateTaskPage() {
                         cursor: 'pointer', padding: 0, marginBottom: 16
                     }}
                 >
-                    <ion-icon name="arrow-back-outline"></ion-icon> Quay lại Dashboard
+                    <ion-icon name="arrow-back-outline"></ion-icon> Quay lại tổng quan
                 </button>
                 <h1 style={{ margin: 0, fontSize: 32, fontWeight: 800, color: 'var(--text-primary)' }}>
                     Tạo công việc mới

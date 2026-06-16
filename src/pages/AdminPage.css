@@ -362,6 +362,7 @@
 
 .admin-badge-active,
 .admin-badge-paid,
+.admin-badge-approved,
 .admin-badge-low {
   background: rgba(34, 197, 94, 0.12);
   color: #22c55e;
@@ -376,10 +377,16 @@
 
 .admin-badge-locked,
 .admin-badge-failed,
+.admin-badge-rejected,
 .admin-badge-critical,
 .admin-badge-high {
   background: rgba(239, 68, 68, 0.13);
   color: #ef4444;
+}
+
+.admin-badge-not_submitted {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-secondary);
 }
 
 .admin-alert-list,
@@ -556,6 +563,19 @@
   gap: 10px;
   text-align: center;
   color: var(--text-primary);
+}
+
+.admin-verification-cell {
+  min-width: 190px;
+  display: grid;
+  gap: 4px;
+}
+
+.admin-verification-cell small {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 1280px) {

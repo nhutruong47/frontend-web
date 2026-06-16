@@ -101,7 +101,7 @@ const workflowSteps = [
 
 const curvedShowcaseImages = [
   {
-    title: 'Dashboard điều hành sản xuất',
+    title: 'Bảng điều hành sản xuất',
     image: 'https://images.pexels.com/photos/35968323/pexels-photo-35968323.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop'
   },
   {
@@ -199,7 +199,7 @@ const workshops = [
 const pricingPlans = [
   {
     id: 'starter',
-    name: 'Starter',
+    name: 'Cơ bản',
     price: '0đ',
     priceNote: '/tháng',
     subTitle: 'AI quản lý công việc',
@@ -215,7 +215,7 @@ const pricingPlans = [
   },
   {
     id: 'professional',
-    name: 'Professional',
+    name: 'Chuyên nghiệp',
     price: '129.000đ',
     priceNote: '/tháng',
     subTitle: 'AI điều phối sản xuất',
@@ -232,7 +232,7 @@ const pricingPlans = [
   },
   {
     id: 'enterprise',
-    name: 'Enterprise',
+    name: 'Doanh nghiệp',
     price: '249.000đ',
     priceNote: '/tháng',
     subTitle: 'AI quản lý doanh nghiệp',

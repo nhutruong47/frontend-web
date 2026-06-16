@@ -1,113 +1,137 @@
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-
 import './SettingsPage.css';
 
 export default function SettingsPage() {
     const { theme, toggleTheme } = useTheme();
     const { user } = useAuth();
+    const displayName = user?.fullName || user?.username || 'ORCA Roaster';
+    const displayEmail = user?.email || (user?.username ? `${user.username}@orca-roastery.vn` : 'member@orca-roastery.vn');
+    const displayRole = user?.role === 'ADMIN' ? 'Master Roaster' : 'Roastery Member';
 
     return (
         <div className="settings-page">
-            <h1 className="settings-title text-glow-active" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span className="icon-container glow" style={{ width: 32, height: 32, fontSize: 20 }}><ion-icon name="settings-outline"></ion-icon></span> Cài đặt
-            </h1>
+            <section className="settings-hero">
+                <span>Settings</span>
+                <h1>Quản lý tài khoản</h1>
+                <p>Cá nhân hóa trải nghiệm rang xay và quản lý các thiết lập bảo mật cho tài khoản ORCA của bạn.</p>
+            </section>
 
-            {/* Theme Section */}
-            <div className="settings-card glass-panel">
-                <div className="settings-card-header">
-                    <h2 className="text-glow-active" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span className="icon-container glow" style={{ width: 28, height: 28, fontSize: 16 }}><ion-icon name="color-palette-outline"></ion-icon></span> Giao diện
-                    </h2>
-                    <p className="settings-card-desc">Tùy chỉnh giao diện ứng dụng theo sở thích của bạn</p>
-                </div>
-                <div className="settings-row">
-                    <div className="settings-row-info">
-                        <span className="settings-row-label">Chế độ hiển thị</span>
-                        <span className="settings-row-hint">
-                            {theme === 'dark' ? 'Đang dùng giao diện tối' : 'Đang dùng giao diện sáng'}
-                        </span>
+            <div className="settings-account-layout">
+                <section className="settings-profile-card">
+                    <div className="settings-card-top">
+                        <span className="settings-pill">Thông tin cá nhân</span>
+                        <button type="button">
+                            <span className="material-symbols-outlined">edit</span>
+                            Chỉnh sửa
+                        </button>
                     </div>
-                    <button className={`theme-toggle-btn ${theme}`} onClick={toggleTheme}>
-                        <span className="toggle-icon">{theme === 'dark' ? <ion-icon name="moon-outline" style={{ fontSize: '14px' }}></ion-icon> : <ion-icon name="sunny-outline" style={{ fontSize: '14px' }}></ion-icon>}</span>
-                        <span className="toggle-knob" />
-                    </button>
-                </div>
-
-                <div className="theme-preview-row">
-                    <div
-                        className={`theme-preview-card ${theme === 'dark' ? 'selected' : ''}`}
-                        onClick={() => theme !== 'dark' && toggleTheme()}
-                    >
-                        <div className="theme-preview dark-preview">
-                            <div className="preview-sidebar" />
-                            <div className="preview-content">
-                                <div className="preview-bar" />
-                                <div className="preview-block" />
-                                <div className="preview-block short" />
-                            </div>
+                    <h2>Thông tin cơ bản</h2>
+                    <div className="settings-info-grid">
+                        <div>
+                            <span>Họ và tên</span>
+                            <strong>{displayName}</strong>
                         </div>
-                        <span><ion-icon name="moon-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Tối</span>
-                    </div>
-                    <div
-                        className={`theme-preview-card ${theme === 'light' ? 'selected' : ''}`}
-                        onClick={() => theme !== 'light' && toggleTheme()}
-                    >
-                        <div className="theme-preview light-preview">
-                            <div className="preview-sidebar" />
-                            <div className="preview-content">
-                                <div className="preview-bar" />
-                                <div className="preview-block" />
-                                <div className="preview-block short" />
-                            </div>
+                        <div>
+                            <span>Email đăng ký</span>
+                            <strong>{displayEmail}</strong>
                         </div>
-                        <span><ion-icon name="sunny-outline" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: 4 }}></ion-icon> Sáng</span>
+                        <div>
+                            <span>Số điện thoại</span>
+                            <strong>+84 902 123 456</strong>
+                        </div>
+                        <div>
+                            <span>Vai trò</span>
+                            <strong className="settings-dot-role">{displayRole}</strong>
+                        </div>
                     </div>
-                </div>
+                    <div className="settings-verification">
+                        <img src="/coffee-hero.png" alt="Roastery verification" />
+                        <div>
+                            <h3>Xác thực Roastery</h3>
+                            <p>Chứng chỉ chuyên gia đã được xác minh vào tháng 12, 2025.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <aside className="settings-side-stack">
+                    <section className="settings-security-card">
+                        <div className="settings-side-head">
+                            <h2>Bảo mật</h2>
+                            <span className="material-symbols-outlined">shield</span>
+                        </div>
+                        <button type="button" className="settings-security-row">
+                            <span className="material-symbols-outlined">key</span>
+                            <span>
+                                <strong>Mật khẩu</strong>
+                                <small>Cập nhật 3 tháng trước</small>
+                            </span>
+                            <span className="material-symbols-outlined">chevron_right</span>
+                        </button>
+                        <button type="button" className="settings-security-row">
+                            <span className="material-symbols-outlined">phonelink_lock</span>
+                            <span>
+                                <strong>Xác thực 2 lớp (2FA)</strong>
+                                <small>Đang bật</small>
+                            </span>
+                            <span className="material-symbols-outlined">chevron_right</span>
+                        </button>
+                        <button type="button" className="settings-outline-btn">Đăng xuất tất cả thiết bị</button>
+                    </section>
+
+                    <section className="settings-plan-card">
+                        <span>Gói dịch vụ</span>
+                        <h2>Roastery Enterprise</h2>
+                        <div className="settings-plan-meter">
+                            <div>
+                                <span>Dung lượng hồ sơ rang</span>
+                                <strong>85%</strong>
+                            </div>
+                            <progress value="85" max="100" />
+                        </div>
+                        <button type="button">Nâng cấp gói</button>
+                    </section>
+                </aside>
             </div>
 
-            {/* Account Info */}
-            <div className="settings-card glass-panel">
-                <div className="settings-card-header">
-                    <h2 className="text-glow-active" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span className="icon-container glow" style={{ width: 28, height: 28, fontSize: 16 }}><ion-icon name="person-circle-outline"></ion-icon></span> Tài khoản
-                    </h2>
-                    <p className="settings-card-desc">Thông tin tài khoản của bạn</p>
+            <section className="settings-device-card">
+                <div>
+                    <span className="settings-pill">Thiết bị</span>
+                    <h2>Thiết bị đăng nhập</h2>
                 </div>
-                <div className="settings-info-grid">
-                    <div className="settings-info-item">
-                        <span className="info-label">Tên đăng nhập</span>
-                        <span className="info-value">{user?.username || '—'}</span>
-                    </div>
-                    <div className="settings-info-item">
-                        <span className="info-label">Vai trò</span>
-                        <span className="info-value role-badge-inline">{user?.role || 'MEMBER'}</span>
-                    </div>
-                    <div className="settings-info-item">
-                        <span className="info-label">Email</span>
-                        <span className="info-value">{user?.email || user?.username || '—'}</span>
-                    </div>
+                <div className="settings-device-list">
+                    <article>
+                        <span className="material-symbols-outlined">desktop_windows</span>
+                        <div>
+                            <strong>Windows Workstation</strong>
+                            <small>Đang hoạt động · Việt Nam</small>
+                        </div>
+                    </article>
+                    <article>
+                        <span className="material-symbols-outlined">smartphone</span>
+                        <div>
+                            <strong>Mobile Roastery App</strong>
+                            <small>Đăng nhập gần đây</small>
+                        </div>
+                    </article>
                 </div>
-            </div>
+            </section>
 
-            {/* App Info */}
-            <div className="settings-card glass-panel">
-                <div className="settings-card-header">
-                    <h2 className="text-glow-active" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span className="icon-container glow" style={{ width: 28, height: 28, fontSize: 16 }}><ion-icon name="information-circle-outline"></ion-icon></span> Thông tin ứng dụng
-                    </h2>
+            <section className="settings-device-card settings-theme-card">
+                <div>
+                    <span className="settings-pill">Giao diện</span>
+                    <h2>Chế độ hiển thị</h2>
+                    <p>{theme === 'dark' ? 'Đang dùng giao diện tối' : 'Đang dùng giao diện sáng'}</p>
                 </div>
-                <div className="settings-info-grid">
-                    <div className="settings-info-item">
-                        <span className="info-label">Phiên bản</span>
-                        <span className="info-value">v1.0.0</span>
-                    </div>
-                    <div className="settings-info-item">
-                        <span className="info-label">Nền tảng</span>
-                        <span className="info-value">ORCA Coffee Workshop</span>
-                    </div>
-                </div>
-            </div>
+                <button className={`theme-toggle-btn ${theme}`} onClick={toggleTheme}>
+                    <span className="toggle-icon">
+                        {theme === 'dark'
+                            ? <ion-icon name="moon-outline" style={{ fontSize: '14px' }}></ion-icon>
+                            : <ion-icon name="sunny-outline" style={{ fontSize: '14px' }}></ion-icon>}
+                    </span>
+                    <span className="toggle-knob" />
+                </button>
+            </section>
         </div>
     );
 }

@@ -18,6 +18,8 @@ export const adminService = {
         api.patch<AdminUser>(`/api/admin/users/${id}/role`, { role }).then(r => r.data),
     updateTeamPublication: (id: string, published: boolean) =>
         api.patch<AdminTeam>(`/api/admin/teams/${id}/publication`, { published }).then(r => r.data),
+    updateTeamVerification: (id: string, status: 'APPROVED' | 'REJECTED', rejectReason?: string) =>
+        api.patch<AdminTeam>(`/api/admin/teams/${id}/verification`, { status, rejectReason }).then(r => r.data),
     updateTaskStatus: (id: string, status: AdminTask['status']) =>
         api.patch<AdminTask>(`/api/admin/tasks/${id}/status`, { status }).then(r => r.data),
 };

@@ -6,8 +6,8 @@ import { paymentService, type PaymentMethod, type VirtualQrPaymentResponse } fro
 import './VnpayMockCheckoutPage.css';
 
 const planMap: Record<string, { name: string; amount: number }> = {
-    professional: { name: 'Professional', amount: 129000 },
-    enterprise: { name: 'Enterprise', amount: 249000 },
+    professional: { name: 'Chuyên nghiệp', amount: 129000 },
+    enterprise: { name: 'Doanh nghiệp', amount: 249000 },
 };
 
 const methodConfig: Record<PaymentMethod, {

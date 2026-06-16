@@ -1,38 +1,104 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { teamService } from '../services/groupService';
+import { interGroupOrderService } from '../services/interGroupOrderService';
 import orcaLogo from '../assets/orca-logo.png';
 
 export default function Sidebar() {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const location = useLocation();
     const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [pendingOrderCount, setPendingOrderCount] = useState(0);
+    const displayName = user?.fullName || user?.username || 'Người dùng';
+    const displayPlan = user?.aiPlan && user.aiPlan !== 'free' ? user.aiPlan : 'Plus';
+    const userInitials = displayName.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase();
+
+    useEffect(() => {
+        if (!user || user.role === 'ADMIN') {
+            setPendingOrderCount(0);
+            return;
+        }
+
+        let cancelled = false;
+
+        const fetchPendingOrders = async () => {
+            try {
+                const teams = await teamService.getMyTeams();
+                const ownedTeams = teams.filter(team => team.ownerId === user.id);
+
+                if (ownedTeams.length === 0) {
+                    const myOutboundOrders = await interGroupOrderService.getMyOutboundOrders();
+                    const nextCount = myOutboundOrders.filter(order => order.buyerViewed === false).length;
+                    if (!cancelled) setPendingOrderCount(nextCount);
+                    return;
+                }
+
+                const myOutboundOrders = await interGroupOrderService.getMyOutboundOrders();
+                const teamOutboundOrders = await Promise.all(
+                    ownedTeams.map(team => interGroupOrderService.getOutboundOrders(team.id))
+                );
+                const inboundOrders = await Promise.all(
+                    ownedTeams.map(team => interGroupOrderService.getInboundOrders(team.id))
+                );
+
+                const outboundUnread = [
+                    ...myOutboundOrders,
+                    ...teamOutboundOrders.flat()
+                ].filter(order => order.buyerViewed === false).length;
+
+                const inboundUnread = inboundOrders
+                    .flat()
+                    .filter(order => order.sellerViewed === false).length;
+
+                const nextCount = outboundUnread + inboundUnread;
+
+                if (!cancelled) setPendingOrderCount(nextCount);
+            } catch (error) {
+                if (!cancelled) setPendingOrderCount(0);
+                console.error('Unable to load pending order count', error);
+            }
+        };
+
+        fetchPendingOrders();
+        const intervalId = window.setInterval(fetchPendingOrders, 30000);
+        window.addEventListener('focus', fetchPendingOrders);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', fetchPendingOrders);
+        };
+    }, [user]);
 
     const adminNavItems = [
-        { path: '/admin?section=overview', label: 'Dashboard', icon: 'speedometer-outline' },
+        { path: '/admin?section=overview', label: 'Tổng quan', icon: 'speedometer-outline' },
         { path: '/admin?section=businesses', label: 'Doanh nghiệp', icon: 'business-outline' },
         { path: '/admin?section=users', label: 'Người dùng', icon: 'people-outline' },
         { path: '/admin?section=subscriptions', label: 'Gói dịch vụ', icon: 'receipt-outline' },
-        { path: '/admin?section=billing', label: 'Billing & Cost Control', icon: 'card-outline' },
-        { path: '/admin?section=ai', label: 'AI Usage', icon: 'hardware-chip-outline' },
-        { path: '/admin?section=monitoring', label: 'System Status', icon: 'pulse-outline' },
-        { path: '/admin?section=support', label: 'Support Center', icon: 'help-buoy-outline' },
-        { path: '/admin?section=notifications', label: 'Notification Center', icon: 'notifications-outline' },
-        { path: '/admin?section=audit', label: 'Audit Log', icon: 'shield-checkmark-outline' },
+        { path: '/admin?section=billing', label: 'Thanh toán & chi phí', icon: 'card-outline' },
+        { path: '/admin?section=ai', label: 'Sử dụng AI', icon: 'hardware-chip-outline' },
+        { path: '/admin?section=monitoring', label: 'Trạng thái hệ thống', icon: 'pulse-outline' },
+        { path: '/admin?section=support', label: 'Trung tâm hỗ trợ', icon: 'help-buoy-outline' },
+        { path: '/admin?section=notifications', label: 'Trung tâm thông báo', icon: 'notifications-outline' },
+        { path: '/admin?section=audit', label: 'Nhật ký kiểm toán', icon: 'shield-checkmark-outline' },
     ];
 
     const navItems = user?.role === 'ADMIN' ? adminNavItems : [
-        { path: '/dashboard', label: 'Dashboard', icon: 'grid-outline' },
-        { path: '/groups', label: 'Nhóm xưởng', icon: 'people-outline' },
+        { path: '/dashboard', label: 'Tổng quan', icon: 'grid-outline' },
+        { path: '/groups', label: 'Nhóm xưởng', icon: 'people-outline', afterDivider: true },
         { path: '/marketplace', label: 'Thị trường', icon: 'storefront-outline' },
-        { path: '/orders', label: 'Đơn hàng', icon: 'cube-outline' },
+        { path: '/orders', label: 'Đơn hàng', icon: 'cube-outline', badge: pendingOrderCount },
     ];
 
-    const userMenuItems = [
-        { path: '/upgrade', label: 'Nâng cấp AI', icon: 'sparkles-outline' },
+    const accountMenuItems = [
+        { path: '/upgrade', label: 'Nâng cấp gói', icon: 'sparkles-outline' },
+        { path: '/settings', label: 'Cá nhân hóa', icon: 'color-palette-outline' },
         { path: '/profile', label: 'Hồ sơ', icon: 'person-circle-outline' },
         { path: '/settings', label: 'Cài đặt', icon: 'settings-outline' },
+        { path: '/settings', label: 'Trợ giúp', icon: 'help-buoy-outline', separated: true, hasChevron: true },
     ];
+
     const isNavActive = (path: string) => {
         if (path.startsWith('/admin')) {
             const section = new URLSearchParams(path.split('?')[1] || '').get('section') || 'overview';
@@ -46,7 +112,7 @@ export default function Sidebar() {
         }
         return location.pathname.startsWith(path);
     };
-    const userMenuActive = userMenuItems.some((item) => location.pathname.startsWith(item.path));
+    const userMenuActive = accountMenuItems.some((item) => location.pathname.startsWith(item.path));
 
     return (
         <aside className="sidebar">
@@ -55,14 +121,31 @@ export default function Sidebar() {
             </div>
 
             <nav className="sidebar-nav">
-                <div className="nav-label">MENU</div>
+                <div className="nav-label">DANH MỤC</div>
                 {navItems.map((item) => {
                     const active = isNavActive(item.path);
                     return (
-                        <NavLink key={item.path} to={item.path} className={() => `nav-item ${active ? 'active' : ''}`}>
-                            <span className="nav-icon"><ion-icon name={item.icon} style={{ fontSize: '18px' }}></ion-icon></span>
-                            <span className="nav-text">{item.label}</span>
-                        </NavLink>
+                        <div className="nav-item-wrap" key={item.path}>
+                            <NavLink to={item.path} className={() => `nav-item ${active ? 'active' : ''}`}>
+                                <span className="nav-icon"><ion-icon name={item.icon} style={{ fontSize: '18px' }}></ion-icon></span>
+                                <span className="nav-text">{item.label}</span>
+                                {!!item.badge && item.badge > 0 && (
+                                    <span className="nav-badge" style={{
+                                        marginLeft: 'auto',
+                                        background: '#E53935',
+                                        color: '#fff',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 'bold',
+                                        padding: '2px 6px',
+                                        borderRadius: '10px',
+                                        lineHeight: 1
+                                    }}>
+                                        {item.badge}
+                                    </span>
+                                )}
+                            </NavLink>
+                            {item.afterDivider && <div className="nav-divider" role="separator" />}
+                        </div>
                     );
                 })}
             </nav>
@@ -71,21 +154,39 @@ export default function Sidebar() {
                 <div className="sidebar-user-wrap">
                     {userMenuOpen && (
                         <div className="sidebar-user-menu">
-                            {userMenuItems.map((item) => (
+                            <div className="sidebar-user-menu-head">
+                                <div className="sidebar-avatar sidebar-avatar-initials">{userInitials || 'U'}</div>
+                                <div className="sidebar-user-info">
+                                    <span className="sidebar-username">{displayName}</span>
+                                    <span className="sidebar-user-plan">{displayPlan}</span>
+                                </div>
+                                <ion-icon name="chevron-forward-outline" className="sidebar-menu-head-chevron"></ion-icon>
+                            </div>
+                            {accountMenuItems.map((item) => (
                                 <NavLink
-                                    key={item.path}
+                                    key={`${item.path}-${item.label}`}
                                     to={item.path}
-                                    className={`sidebar-user-menu-item ${location.pathname.startsWith(item.path) ? 'active' : ''}`}
+                                    className={`sidebar-user-menu-item ${item.separated ? 'separated' : ''} ${location.pathname.startsWith(item.path) ? 'active' : ''}`}
                                     onClick={() => setUserMenuOpen(false)}
                                 >
                                     <span className="nav-icon">
-                                        {item.path === '/admin'
-                                            ? <img className="admin-menu-logo" src={orcaLogo} alt="" aria-hidden="true" />
-                                            : <ion-icon name={item.icon} style={{ fontSize: '17px' }}></ion-icon>}
+                                        <ion-icon name={item.icon} style={{ fontSize: '18px' }}></ion-icon>
                                     </span>
                                     <span>{item.label}</span>
+                                    {item.hasChevron && <ion-icon name="chevron-forward-outline" className="sidebar-menu-chevron"></ion-icon>}
                                 </NavLink>
                             ))}
+                            <button
+                                type="button"
+                                className="sidebar-user-menu-item sidebar-user-menu-button"
+                                onClick={() => {
+                                    setUserMenuOpen(false);
+                                    logout();
+                                }}
+                            >
+                                <span className="nav-icon"><ion-icon name="log-out-outline" style={{ fontSize: '18px' }}></ion-icon></span>
+                                <span>Đăng xuất</span>
+                            </button>
                         </div>
                     )}
 
@@ -95,16 +196,12 @@ export default function Sidebar() {
                         onClick={() => setUserMenuOpen((open) => !open)}
                         aria-expanded={userMenuOpen}
                     >
-                        <div className="sidebar-avatar">
-                            <img className="sidebar-avatar-logo" src={orcaLogo} alt="" aria-hidden="true" />
-                        </div>
+                        <div className="sidebar-avatar sidebar-avatar-initials">{userInitials || 'U'}</div>
                         <div className="sidebar-user-info">
-                            <span className="sidebar-username">{user.fullName || user.username || 'User'}</span>
-                            <span className={`role-badge ${user.role === 'ADMIN' ? 'manager' : 'member'}`}>
-                                <ion-icon name={user.role === 'ADMIN' ? 'shield-checkmark-outline' : 'person-outline'} style={{ fontSize: '12px' }}></ion-icon> {user.role === 'ADMIN' ? 'Admin' : 'Member'}
-                            </span>
+                            <span className="sidebar-username">{displayName}</span>
+                            <span className="sidebar-user-plan">{displayPlan}</span>
                         </div>
-                        <ion-icon name={userMenuOpen ? 'chevron-down-outline' : 'chevron-up-outline'} style={{ marginLeft: 'auto', color: 'var(--shell-text-soft)', fontSize: '16px' }}></ion-icon>
+                        <ion-icon name={userMenuOpen ? 'chevron-down-outline' : 'storefront-outline'} style={{ marginLeft: 'auto', color: 'var(--shell-text-soft)', fontSize: '18px' }}></ion-icon>
                     </button>
                 </div>
             )}

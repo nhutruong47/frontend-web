@@ -63,6 +63,19 @@ export interface Team {
     specialty?: string;
     capacity?: string;
     region?: string;
+    factoryType?: string;
+    capacityValue?: number;
+    capacityUnit?: string;
+    factoryImageUrl?: string;
+    factoryImages?: string[];
+    verificationStatus?: 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
+    businessLicense?: string;
+    businessAddress?: string;
+    websiteUrl?: string;
+    facebookUrl?: string;
+    certificates?: string[];
+    certificationDocument?: string;
+    verificationRejectReason?: string;
 
     // Trust
     completedOrders?: number;
@@ -171,6 +184,15 @@ export interface ProductionOrder {
     deadline?: string;
     createdAt: string;
     updatedAt?: string;
+    contactPhoneAlt?: string;
+    deliveryAddress?: string;
+    preferredDeliveryFrom?: string;
+    preferredDeliveryTo?: string;
+    deliveryFailureAction?: string;
+    deliveryNote?: string;
+    cancelRequested?: boolean;
+    buyerViewed?: boolean;
+    sellerViewed?: boolean;
 }
 
 export interface ProductionBatch {
@@ -210,8 +232,10 @@ export interface AiChatLogMsg {
 // === Inter-Group Orders ===
 export interface InterGroupOrder {
     id: string;
-    buyerTeamId: string;
-    buyerTeamName: string;
+    buyerTeamId?: string | null;
+    buyerTeamName?: string | null;
+    buyerUserId?: string | null;
+    buyerUserName?: string | null;
     sellerTeamId: string;
     sellerTeamName: string;
     title: string;
@@ -223,6 +247,17 @@ export interface InterGroupOrder {
     createdAt: string;
     buyerTrustScore?: number;
     cancelledBy?: string;
+    // Delivery profile
+    contactPhone?: string;
+    contactPhoneAlt?: string;
+    deliveryAddress?: string;
+    preferredDeliveryFrom?: string;
+    preferredDeliveryTo?: string;
+    deliveryFailureAction?: string; // RETRY_LATER, LEAVE_AT_DOOR, RETURN_TO_SENDER, CONTACT_ALTERNATIVE
+    deliveryNote?: string;
+    cancelRequested?: boolean;
+    buyerViewed?: boolean;
+    sellerViewed?: boolean;
 }
 
 // === Notifications ===
@@ -285,6 +320,19 @@ export interface AdminTeam {
     specialty: string;
     capacity: string;
     region: string;
+    factoryType?: string;
+    capacityValue?: number;
+    capacityUnit?: string;
+    factoryImageUrl?: string;
+    factoryImages?: string[];
+    verificationStatus?: 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
+    businessLicense?: string;
+    businessAddress?: string;
+    websiteUrl?: string;
+    facebookUrl?: string;
+    certificates?: string[];
+    certificationDocument?: string;
+    verificationRejectReason?: string;
     completedOrders: number;
     cancelledOrders: number;
     totalOrders: number;

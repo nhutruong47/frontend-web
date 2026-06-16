@@ -82,17 +82,17 @@ const parseDateInput = (value: string, endOfDay = false) => {
 const formatInputDate = (date: Date) => date.toISOString().slice(0, 10);
 
 const tabs: Array<{ id: AdminSection; label: string; icon: React.ElementType }> = [
-  { id: 'overview', label: 'Dashboard', icon: Gauge },
+  { id: 'overview', label: 'Tổng quan', icon: Gauge },
   { id: 'businesses', label: 'Doanh nghiệp / Xưởng', icon: Building2 },
-  { id: 'users', label: 'User toàn hệ thống', icon: Users },
+  { id: 'users', label: 'Người dùng toàn hệ thống', icon: Users },
   { id: 'subscriptions', label: 'Gói dịch vụ', icon: ReceiptText },
   { id: 'billing', label: 'Thanh toán', icon: CreditCard },
-  { id: 'ai', label: 'AI Management', icon: Brain },
-  { id: 'monitoring', label: 'System Monitoring', icon: Activity },
-  { id: 'audit', label: 'Audit Log', icon: ShieldCheck },
-  { id: 'workflow', label: 'Workflow', icon: Workflow },
-  { id: 'alerts', label: 'Alert Center', icon: BellRing },
-  { id: 'reports', label: 'Executive Report', icon: FileBarChart }
+  { id: 'ai', label: 'Quản lý AI', icon: Brain },
+  { id: 'monitoring', label: 'Giám sát hệ thống', icon: Activity },
+  { id: 'audit', label: 'Nhật ký kiểm toán', icon: ShieldCheck },
+  { id: 'workflow', label: 'Quy trình', icon: Workflow },
+  { id: 'alerts', label: 'Trung tâm cảnh báo', icon: BellRing },
+  { id: 'reports', label: 'Báo cáo điều hành', icon: FileBarChart }
 ];
 
 type KpiTone = 'coffee' | 'blue' | 'amber' | 'green' | 'violet';
@@ -178,17 +178,17 @@ const buildKpis = (overview: AdminOverview): KpiItem[] => [
 ];
 
 const plans = [
-  { name: 'Starter', price: 499000, period: 'Tháng', users: 5, orders: 100, batches: 300, workshops: 1, ai: 5000, features: ['Order board', 'Batch tracking', 'Basic reports'] },
-  { name: 'Growth', price: 1499000, period: 'Tháng', users: 30, orders: 1000, batches: 5000, workshops: 5, ai: 40000, features: ['QC workflow', 'AI assistant', 'Billing export'] },
-  { name: 'Enterprise', price: 0, period: 'Năm', users: 500, orders: 99999, batches: 99999, workshops: 50, ai: 500000, features: ['SLA', 'Custom workflow', 'Dedicated AI limit'] }
+  { name: 'Cơ bản', price: 499000, period: 'Tháng', users: 5, orders: 100, batches: 300, workshops: 1, ai: 5000, features: ['Bảng đơn hàng', 'Theo dõi lô sản xuất', 'Báo cáo cơ bản'] },
+  { name: 'Tăng trưởng', price: 1499000, period: 'Tháng', users: 30, orders: 1000, batches: 5000, workshops: 5, ai: 40000, features: ['Quy trình QC', 'Trợ lý AI', 'Xuất dữ liệu thanh toán'] },
+  { name: 'Doanh nghiệp', price: 0, period: 'Năm', users: 500, orders: 99999, batches: 99999, workshops: 50, ai: 500000, features: ['Cam kết dịch vụ', 'Quy trình tùy chỉnh', 'Giới hạn AI riêng'] }
 ];
 
 const systemMetrics = [
   { name: 'CPU', value: 68, icon: Cpu, tone: 'warning' },
   { name: 'RAM', value: 74, icon: Server, tone: 'warning' },
-  { name: 'Database', value: 42, icon: Database, tone: 'success' },
-  { name: 'API Requests', value: 81, icon: Activity, tone: 'danger' },
-  { name: 'Error Rate', value: 2.8, icon: XCircle, tone: 'danger' },
+  { name: 'Cơ sở dữ liệu', value: 42, icon: Database, tone: 'success' },
+  { name: 'Yêu cầu API', value: 81, icon: Activity, tone: 'danger' },
+  { name: 'Tỷ lệ lỗi', value: 2.8, icon: XCircle, tone: 'danger' },
   { name: 'Response Time', value: 184, icon: Gauge, tone: 'success' }
 ];
 
@@ -201,7 +201,7 @@ const realtimeData = [
 ];
 
 const auditLogs = [
-  ['An Nguyen', 'Đăng nhập admin', 'Admin Console', '02/06/2026 10:20', '14.169.2.10'],
+  ['An Nguyen', 'Đăng nhập quản trị', 'Bảng quản trị', '02/06/2026 10:20', '14.169.2.10'],
   ['Bao Tran', 'Tạo đơn hàng', 'ORD-2092', '02/06/2026 10:14', '14.169.2.11'],
   ['Chi Le', 'Sửa batch', 'BATCH-842', '02/06/2026 09:58', '42.113.9.42'],
   ['Duy Pham', 'Xóa dữ liệu', 'Workshop draft', '02/06/2026 09:35', '42.113.9.49'],
@@ -218,13 +218,13 @@ const alertRows: Array<{ title: string; source: string; severity: Severity; time
 ];
 
 const featureRows = [
-  'Order management',
-  'Batch tracking',
-  'QC workflow',
-  'AI assistant',
-  'Billing export',
-  'Custom workflow',
-  'Dedicated support'
+  'Quản lý đơn hàng',
+  'Theo dõi lô sản xuất',
+  'Quy trình QC',
+  'Trợ lý AI',
+  'Xuất dữ liệu thanh toán',
+  'Quy trình tùy chỉnh',
+  'Hỗ trợ riêng'
 ];
 
 function KpiCard({ item }: { item: KpiItem }) {
@@ -264,7 +264,24 @@ function ChartPanel({ title, children }: { title: string; children: React.ReactN
 }
 
 function StatusBadge({ value }: { value: string }) {
-  return <span className={`admin-badge admin-badge-${value.toLowerCase().replaceAll(' ', '-')}`}>{value}</span>;
+  const labels: Record<string, string> = {
+    Critical: 'Nghiêm trọng',
+    High: 'Cao',
+    Medium: 'Trung bình',
+    Low: 'Thấp',
+    Active: 'Đang hoạt động',
+    Trial: 'Dùng thử',
+    Locked: 'Đã khóa',
+    APPROVED: 'Đã duyệt',
+    PENDING: 'Chờ duyệt',
+    REJECTED: 'Từ chối',
+    ACCEPTED: 'Đã nhận',
+    COMPLETED: 'Hoàn thành',
+    CANCELED: 'Đã hủy',
+    REJECTED_ORDER: 'Từ chối',
+    free: 'Miễn phí',
+  };
+  return <span className={`admin-badge admin-badge-${value.toLowerCase().replaceAll(' ', '-')}`}>{labels[value] || value}</span>;
 }
 
 export default function AdminPage() {
@@ -286,7 +303,7 @@ export default function AdminPage() {
   const [revenueFrom, setRevenueFrom] = useState('2026-05-01');
   const [revenueTo, setRevenueTo] = useState('2026-06-30');
   const [userPage, setUserPage] = useState(1);
-  const [workflowStages, setWorkflowStages] = useState(['Order', 'Assignment', 'Production', 'QC', 'Packaging', 'Delivery']);
+  const [workflowStages, setWorkflowStages] = useState(['Đơn hàng', 'Phân công', 'Sản xuất', 'QC', 'Đóng gói', 'Giao hàng']);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -364,6 +381,7 @@ export default function AdminPage() {
   }, [adminUsers, query, userPage]);
 
   const businessRows = adminTeams.map(item => ({
+    id: item.id,
     name: item.name,
     code: item.id.slice(0, 8),
     owner: item.ownerName || '-',
@@ -374,13 +392,32 @@ export default function AdminPage() {
     batches: 0,
     plan: '-',
     date: item.createdAt ? formatShortDate(item.createdAt) : '-',
-    status: item.published ? 'Published' : 'Private'
+    status: item.published ? 'Published' : 'Private',
+    verificationStatus: item.verificationStatus || 'NOT_SUBMITTED',
+    businessLicense: item.businessLicense || '',
+    businessAddress: item.businessAddress || '',
+    websiteUrl: item.websiteUrl || '',
+    certificationDocument: item.certificationDocument || '',
+    verificationRejectReason: item.verificationRejectReason || ''
   })).filter(item => {
     const matchesText = `${item.name} ${item.code} ${item.owner}`.toLowerCase().includes(query.toLowerCase());
     const matchesStatus = status === 'All' || item.status === status;
     const matchesPlan = plan === 'All' || item.plan === plan;
     return matchesText && matchesStatus && matchesPlan;
   });
+
+  const updateTeamVerification = async (teamId: string, nextStatus: 'APPROVED' | 'REJECTED') => {
+    const rejectReason = nextStatus === 'REJECTED'
+      ? window.prompt('Lý do từ chối hồ sơ xác minh?', 'Hồ sơ chưa đủ thông tin.')
+      : '';
+    if (nextStatus === 'REJECTED' && rejectReason === null) return;
+    try {
+      const updated = await adminService.updateTeamVerification(teamId, nextStatus, rejectReason || '');
+      setAdminTeams(current => current.map(item => item.id === teamId ? { ...item, ...updated } : item));
+    } catch {
+      window.alert('Không thể cập nhật trạng thái xác minh.');
+    }
+  };
 
   const revenueReport = useMemo(() => {
     const fromDate = parseDateInput(revenueFrom);
@@ -470,8 +507,8 @@ export default function AdminPage() {
     return (
       <div className="admin-access">
         <ShieldCheck size={40} />
-        <h1>Không có quyền truy cập Admin Console</h1>
-        <p>Tài khoản hiện tại cần role Admin để xem dữ liệu toàn nền tảng.</p>
+        <h1>Không có quyền truy cập bảng quản trị</h1>
+        <p>Tài khoản hiện tại cần vai trò quản trị viên để xem dữ liệu toàn nền tảng.</p>
       </div>
     );
   }
@@ -500,8 +537,8 @@ export default function AdminPage() {
     <div className="admin-console">
       <header className="admin-hero">
         <div>
-          <span className="admin-eyebrow">ORCA SaaS Admin</span>
-          <h1>Dashboard Tổng Quan Hệ Thống</h1>
+          <span className="admin-eyebrow">Quản trị ORCA SaaS</span>
+          <h1>Tổng quan hệ thống</h1>
           <p>Trung tâm điều hành cho Coffee Production Management Platform: doanh nghiệp, user, billing, AI, monitoring, audit và báo cáo điều hành.</p>
         </div>
         <div className="admin-hero-actions">
@@ -593,18 +630,38 @@ export default function AdminPage() {
           </div>
           <div className="admin-toolbar">
             <label><Search size={16} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm tên, mã, người đại diện..." /></label>
-            <select value={status} onChange={event => setStatus(event.target.value)}><option>All</option><option>Active</option><option>Trial</option><option>Locked</option></select>
-            <select value={plan} onChange={event => setPlan(event.target.value)}><option>All</option><option>Starter</option><option>Growth</option><option>Enterprise</option></select>
+            <select value={status} onChange={event => setStatus(event.target.value)}><option value="All">Tất cả</option><option value="Active">Đang hoạt động</option><option value="Trial">Dùng thử</option><option value="Locked">Đã khóa</option></select>
+            <select value={plan} onChange={event => setPlan(event.target.value)}><option value="All">Tất cả</option><option value="Starter">Cơ bản</option><option value="Growth">Tăng trưởng</option><option value="Enterprise">Doanh nghiệp</option></select>
             <button type="button" className="admin-button admin-button-soft"><Filter size={16} /> Ngày đăng ký</button>
           </div>
           <div className="admin-table-wrap">
             <table className="admin-table">
-              <thead><tr><th>Tên doanh nghiệp</th><th>Mã</th><th>Đại diện</th><th>Email</th><th>Điện thoại</th><th>NV</th><th>Đơn</th><th>Batch</th><th>Gói</th><th>Ngày ĐK</th><th>Trạng thái</th><th></th></tr></thead>
+              <thead><tr><th>Tên doanh nghiệp</th><th>Mã</th><th>Đại diện</th><th>Email</th><th>Điện thoại</th><th>NV</th><th>Đơn</th><th>Batch</th><th>Gói</th><th>Ngày ĐK</th><th>Trạng thái</th><th>Xác minh</th><th></th></tr></thead>
               <tbody>
                 {businessRows.map(item => (
                   <tr key={item.code}>
                     <td><strong>{item.name}</strong></td><td>{item.code}</td><td>{item.owner}</td><td>{item.email}</td><td>{item.phone}</td><td>{item.employees}</td><td>{item.orders}</td><td>{item.batches}</td><td>{item.plan}</td><td>{item.date}</td><td><StatusBadge value={String(item.status)} /></td>
-                    <td><div className="admin-row-actions"><button>Sửa</button><button><Lock size={14} /> Khóa</button><button>Xóa</button></div></td>
+                    <td>
+                      <div className="admin-verification-cell">
+                        <StatusBadge value={String(item.verificationStatus)} />
+                        <small>GPL: {item.businessLicense || '-'}</small>
+                        <small>ĐC: {item.businessAddress || '-'}</small>
+                        {item.websiteUrl && <small>Web: {item.websiteUrl}</small>}
+                        {item.certificationDocument && <small>Cert: {item.certificationDocument}</small>}
+                        {item.verificationRejectReason && <small>Lý do: {item.verificationRejectReason}</small>}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="admin-row-actions">
+                        <button>Sửa</button>
+                        {item.verificationStatus === 'PENDING' && <>
+                          <button onClick={() => updateTeamVerification(item.id, 'APPROVED')}><CheckCircle2 size={14} /> Duyệt</button>
+                          <button onClick={() => updateTeamVerification(item.id, 'REJECTED')}><XCircle size={14} /> Từ chối</button>
+                        </>}
+                        <button><Lock size={14} /> Khóa</button>
+                        <button>Xóa</button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -616,21 +673,21 @@ export default function AdminPage() {
       {active === 'users' && (
         <section className="admin-card">
           <div className="admin-card-head">
-            <div><h3>Quản lý User toàn hệ thống</h3><p>Tạo user, reset mật khẩu, gán role và chuyển doanh nghiệp.</p></div>
-            <button type="button" className="admin-button admin-button-primary"><Plus size={16} /> Tạo user</button>
+            <div><h3>Quản lý người dùng toàn hệ thống</h3><p>Tạo người dùng, đặt lại mật khẩu, gán vai trò và chuyển doanh nghiệp.</p></div>
+            <button type="button" className="admin-button admin-button-primary"><Plus size={16} /> Tạo người dùng</button>
           </div>
           <div className="admin-toolbar">
-            <label><Search size={16} /><input value={query} onChange={event => { setQuery(event.target.value); setUserPage(1); }} placeholder="Tìm user, email, doanh nghiệp..." /></label>
+            <label><Search size={16} /><input value={query} onChange={event => { setQuery(event.target.value); setUserPage(1); }} placeholder="Tìm người dùng, email, doanh nghiệp..." /></label>
             <button type="button" className="admin-button admin-button-soft"><Filter size={16} /> Role / trạng thái</button>
           </div>
           <div className="admin-table-wrap">
             <table className="admin-table">
-              <thead><tr><th>User</th><th>Email</th><th>SĐT</th><th>Doanh nghiệp</th><th>Vai trò</th><th>Trạng thái</th><th>Lần đăng nhập cuối</th><th></th></tr></thead>
+              <thead><tr><th>Người dùng</th><th>Email</th><th>SĐT</th><th>Doanh nghiệp</th><th>Vai trò</th><th>Trạng thái</th><th>Lần đăng nhập cuối</th><th></th></tr></thead>
               <tbody>
                 {userRows.map((item, index) => (
                   <tr key={`${item.email}-${index}`}>
                     <td><div className="admin-user-cell"><span>{item.name.charAt(0)}</span><strong>{item.name}</strong></div></td><td>{item.email}</td><td>{item.phone}</td><td>{item.company}</td><td>{item.role}</td><td><StatusBadge value={item.status} /></td><td>{item.lastLogin}</td>
-                    <td><div className="admin-row-actions"><button>Sửa</button><button><RotateCcw size={14} /> Reset</button><button>{item.status === 'Locked' ? <Unlock size={14} /> : <Lock size={14} />} {item.status === 'Locked' ? 'Kích hoạt' : 'Khóa'}</button></div></td>
+                    <td><div className="admin-row-actions"><button>Sửa</button><button><RotateCcw size={14} /> Đặt lại</button><button>{item.status === 'Locked' ? <Unlock size={14} /> : <Lock size={14} />} {item.status === 'Locked' ? 'Kích hoạt' : 'Khóa'}</button></div></td>
                   </tr>
                 ))}
               </tbody>
@@ -642,9 +699,9 @@ export default function AdminPage() {
 
       {active === 'subscriptions' && (
         <section className="admin-card">
-          <div className="admin-card-head"><div><h3>Quản lý gói dịch vụ SaaS</h3><p>Starter, Growth, Enterprise cùng giới hạn user, đơn hàng, batch, xưởng và AI credits.</p></div><button className="admin-button admin-button-primary"><Plus size={16} /> Tạo gói</button></div>
+          <div className="admin-card-head"><div><h3>Quản lý gói dịch vụ SaaS</h3><p>Các gói Cơ bản, Tăng trưởng, Doanh nghiệp cùng giới hạn người dùng, đơn hàng, lô sản xuất, xưởng và điểm AI.</p></div><button className="admin-button admin-button-primary"><Plus size={16} /> Tạo gói</button></div>
           <div className="admin-plan-grid">
-            {plans.map(item => <article className="admin-plan" key={item.name}><h4>{item.name}</h4><strong>{item.price ? money(item.price) : 'Liên hệ'}</strong><span>{item.period}</span><div className="admin-plan-limits"><p>{item.users} users</p><p>{number(item.orders)} orders</p><p>{number(item.batches)} batch</p><p>{item.workshops} xưởng</p><p>{number(item.ai)} AI credits</p></div><ul>{item.features.map(feature => <li key={feature}>{feature}</li>)}</ul><div className="admin-row-actions"><button>Sửa</button><button>Xóa</button></div></article>)}
+            {plans.map(item => <article className="admin-plan" key={item.name}><h4>{item.name}</h4><strong>{item.price ? money(item.price) : 'Liên hệ'}</strong><span>{item.period}</span><div className="admin-plan-limits"><p>{item.users} người dùng</p><p>{number(item.orders)} đơn hàng</p><p>{number(item.batches)} lô</p><p>{item.workshops} xưởng</p><p>{number(item.ai)} điểm AI</p></div><ul>{item.features.map(feature => <li key={feature}>{feature}</li>)}</ul><div className="admin-row-actions"><button>Sửa</button><button>Xóa</button></div></article>)}
           </div>
           <div className="admin-feature-table">
             <table className="admin-table"><thead><tr><th>Tính năng</th>{plans.map(item => <th key={item.name}>{item.name}</th>)}</tr></thead><tbody>{featureRows.map(feature => <tr key={feature}><td>{feature}</td>{plans.map((item, index) => <td key={`${item.name}-${feature}`}>{index === 0 && feature.includes('Custom') ? <XCircle size={16} /> : <CheckCircle2 size={16} />}</td>)}</tr>)}</tbody></table>
@@ -693,7 +750,7 @@ export default function AdminPage() {
         <>
           <section className="admin-mini-grid">{aiUsage.map(item => <MiniMetric key={item.label} label={item.label} value={item.value} icon={item.icon} />)}</section>
           <section className="admin-card">
-            <div className="admin-card-head"><div><h3>AI Management</h3><p>Giới hạn AI usage, bật/tắt AI, quản lý credits và lịch sử AI.</p></div><button className="admin-button admin-button-primary"><Settings size={16} /> Cấu hình AI</button></div>
+            <div className="admin-card-head"><div><h3>Quản lý AI</h3><p>Giới hạn sử dụng AI, bật/tắt AI, quản lý điểm và lịch sử AI.</p></div><button className="admin-button admin-button-primary"><Settings size={16} /> Cấu hình AI</button></div>
             <div className="admin-ai-controls"><label><input type="checkbox" defaultChecked /> Bật AI toàn hệ thống</label><label><input type="checkbox" defaultChecked /> Giới hạn theo gói</label><label><input type="checkbox" /> Chặn khi vượt chi phí</label></div>
             <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>User</th><th>Email</th><th>Gói AI</th><th>Hết hạn</th></tr></thead><tbody>{adminUsers.length === 0 ? <tr><td colSpan={4} style={{ textAlign: 'center', padding: 24, color: 'var(--text-secondary)' }}>Chưa có user trong hệ thống.</td></tr> : adminUsers.slice(0, 6).map(item => <tr key={item.id}><td>{item.fullName || item.username}</td><td>{item.email || '-'}</td><td>{item.aiPlan || 'free'}</td><td>{item.aiPlanExpiresAt ? formatShortDate(item.aiPlanExpiresAt) : '-'}</td></tr>)}</tbody></table></div>
           </section>
@@ -704,21 +761,21 @@ export default function AdminPage() {
         <>
           <section className="admin-system-grid">{systemMetrics.map(item => { const Icon = item.icon; return <article className={`admin-system-card admin-system-${item.tone}`} key={item.name}><Icon size={20} /><span>{item.name}</span><strong>{item.value}{item.name === 'Response Time' ? 'ms' : '%'}</strong><div><i style={{ width: `${Math.min(Number(item.value), 100)}%` }} /></div></article>; })}</section>
           <ChartPanel title="Biểu đồ realtime CPU / RAM / API / Error"><ResponsiveContainer width="100%" height="100%"><LineChart data={realtimeData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="time" /><YAxis /><Tooltip /><Line dataKey="cpu" stroke="#d4a574" strokeWidth={2} /><Line dataKey="ram" stroke="#60a5fa" strokeWidth={2} /><Line dataKey="api" stroke="#22c55e" strokeWidth={2} /><Line dataKey="errors" stroke="#ef4444" strokeWidth={2} /></LineChart></ResponsiveContainer></ChartPanel>
-          <section className="admin-card"><h3>Log hệ thống</h3><div className="admin-log-list"><p><StatusBadge value="Critical" /> API latency vượt 800ms tại /api/ai/recommend</p><p><StatusBadge value="Medium" /> Database connection pool đạt 78%</p><p><StatusBadge value="Low" /> Backup daily hoàn tất</p></div></section>
+          <section className="admin-card"><h3>Nhật ký hệ thống</h3><div className="admin-log-list"><p><StatusBadge value="Critical" /> Độ trễ API vượt 800ms tại /api/ai/recommend</p><p><StatusBadge value="Medium" /> Nhóm kết nối cơ sở dữ liệu đạt 78%</p><p><StatusBadge value="Low" /> Sao lưu hằng ngày hoàn tất</p></div></section>
         </>
       )}
 
       {active === 'audit' && (
         <section className="admin-card">
-          <div className="admin-card-head"><div><h3>Audit Log</h3><p>Theo dõi ai đăng nhập, tạo đơn hàng, sửa batch, xóa dữ liệu và đổi quyền.</p></div></div>
+          <div className="admin-card-head"><div><h3>Nhật ký kiểm toán</h3><p>Theo dõi ai đăng nhập, tạo đơn hàng, sửa lô, xóa dữ liệu và đổi quyền.</p></div></div>
           <div className="admin-toolbar"><label><Search size={16} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm user, hành động, IP..." /></label><button className="admin-button admin-button-soft"><Filter size={16} /> Nâng cao</button></div>
-          <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>User</th><th>Hành động</th><th>Đối tượng</th><th>Thời gian</th><th>IP</th></tr></thead><tbody>{auditLogs.filter(item => `${item.user} ${item.action} ${item.ip}`.toLowerCase().includes(query.toLowerCase())).map(item => <tr key={`${item.user}-${item.time}`}><td>{item.user}</td><td>{item.action}</td><td>{item.target}</td><td>{item.time}</td><td>{item.ip}</td></tr>)}</tbody></table></div>
+          <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Người dùng</th><th>Hành động</th><th>Đối tượng</th><th>Thời gian</th><th>IP</th></tr></thead><tbody>{auditLogs.filter(item => `${item.user} ${item.action} ${item.ip}`.toLowerCase().includes(query.toLowerCase())).map(item => <tr key={`${item.user}-${item.time}`}><td>{item.user}</td><td>{item.action}</td><td>{item.target}</td><td>{item.time}</td><td>{item.ip}</td></tr>)}</tbody></table></div>
         </section>
       )}
 
       {active === 'workflow' && (
         <section className="admin-card">
-          <div className="admin-card-head"><div><h3>Workflow Management</h3><p>Kéo thả để sắp xếp workflow: Order | Assignment | Production | QC | Packaging | Delivery.</p></div><button className="admin-button admin-button-primary"><Plus size={16} /> Tạo workflow</button></div>
+          <div className="admin-card-head"><div><h3>Quản lý quy trình</h3><p>Kéo thả để sắp xếp quy trình: Đơn hàng | Phân công | Sản xuất | QC | Đóng gói | Giao hàng.</p></div><button className="admin-button admin-button-primary"><Plus size={16} /> Tạo quy trình</button></div>
           <div className="admin-workflow-board">
             {workflowStages.map((stage, index) => (
               <div key={stage} className="admin-workflow-step" draggable onDragStart={() => setDragIndex(index)} onDragOver={event => event.preventDefault()} onDrop={() => { if (dragIndex !== null) moveStage(dragIndex, index); setDragIndex(null); }}>

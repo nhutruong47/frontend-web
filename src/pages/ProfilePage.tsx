@@ -9,7 +9,7 @@ export default function ProfilePage() {
         { icon: <ion-icon name="person-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'Tên đăng nhập', value: user?.username || '—' },
         { icon: <ion-icon name="document-text-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'Họ tên', value: user?.fullName || '—' },
         { icon: <ion-icon name="mail-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'Email', value: user?.email || '—' },
-        { icon: <ion-icon name="ribbon-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'Vai trò', value: 'Thành viên (Member)' },
+        { icon: <ion-icon name="ribbon-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'Vai trò', value: 'Thành viên' },
     ];
 
     return (
@@ -19,7 +19,7 @@ export default function ProfilePage() {
                     {user?.username.charAt(0).toUpperCase()}
                 </div>
                 <h1 className="profile-name">{user?.fullName || user?.username}</h1>
-                <span className="role-badge large member"><ion-icon name="person-outline" style={{ fontSize: '14px' }}></ion-icon> Member</span>
+                <span className="role-badge large member"><ion-icon name="person-outline" style={{ fontSize: '14px' }}></ion-icon> Thành viên</span>
             </div>
 
             <div className="profile-section glass-panel">

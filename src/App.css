@@ -2976,6 +2976,19 @@ body.theme-light .text-glow-active {
   opacity: 0.9;
 }
 
+.nav-item-wrap {
+  display: contents;
+}
+
+.nav-divider {
+  width: 96px;
+  height: 2px;
+  margin: 12px auto;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--shell-border-strong), transparent);
+  opacity: 0.95;
+}
+
 .nav-item {
   position: relative;
   min-height: 48px;
@@ -3046,48 +3059,57 @@ body.theme-light .text-glow-active {
 .sidebar-user-wrap .sidebar-user {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: 10px;
+  min-height: 64px;
+  padding: 12px 14px;
   margin-top: 0;
   border: 1px solid var(--shell-border);
   background: var(--shell-surface-soft);
   color: var(--shell-text);
   cursor: pointer;
   text-align: left;
-  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+  box-shadow: none;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .sidebar-user-wrap .sidebar-user:hover,
 .sidebar-user-wrap .sidebar-user.active {
   background: var(--shell-surface-hover);
   border-color: var(--shell-border-strong);
+  box-shadow: none;
 }
 
 .sidebar-user-menu {
   position: absolute;
   left: 0;
-  right: 0;
+  right: auto;
   bottom: calc(100% + 10px);
   z-index: 20;
   display: grid;
-  gap: 4px;
-  padding: 8px;
+  gap: 6px;
+  width: min(312px, calc(100vw - 24px));
+  padding: 18px 20px 14px;
   background: var(--shell-surface);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--shell-border);
-  border-radius: 10px;
+  border-radius: 18px;
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
+  color: var(--shell-text);
 }
 
 .sidebar-user-menu-item {
-  min-height: 38px;
+  min-height: 42px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 10px;
+  gap: 12px;
+  padding: 0 6px;
   color: var(--shell-text-soft);
+  border: 0;
   border-radius: 8px;
-  font-size: 13px;
-  font-weight: 760;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 520;
   text-decoration: none;
   transition: background 0.18s ease, color 0.18s ease;
 }
@@ -3098,9 +3120,76 @@ body.theme-light .text-glow-active {
   background: var(--shell-surface-hover);
 }
 
+.sidebar-user-menu-head {
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 14px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--shell-border);
+}
+
+.sidebar-user-menu-head .sidebar-user-info,
+.sidebar-user .sidebar-user-info {
+  min-width: 0;
+}
+
+.sidebar-user-plan {
+  display: block;
+  margin-top: 2px;
+  color: var(--shell-text-soft);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.sidebar-user-menu .nav-icon {
+  width: 22px;
+  min-width: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--shell-text-soft);
+}
+
+.sidebar-user-menu-item.separated {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--shell-border);
+  border-radius: 0;
+}
+
+.sidebar-menu-chevron,
+.sidebar-menu-head-chevron {
+  margin-left: auto;
+  color: var(--shell-text-soft);
+  font-size: 18px;
+}
+
+.sidebar-user-menu-button {
+  width: 100%;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidebar-avatar-initials {
+  background: var(--shell-avatar-bg);
+  color: var(--shell-avatar-text);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+
 .sidebar-avatar,
 .topbar-avatar,
 .profile-avatar-large {
+  background: var(--shell-avatar-bg);
+  color: var(--shell-avatar-text);
+}
+
+.sidebar-avatar.sidebar-avatar-initials {
   background: var(--shell-avatar-bg);
   color: var(--shell-avatar-text);
 }
@@ -3842,4 +3931,427 @@ body.theme-dark .layout [style*="border-bottom: 1px solid #e2e8f0"] {
     grid-template-columns: 1fr;
   }
 
+}
+
+/* ============================================
+   NOTIFICATIONS
+   ============================================ */
+.topbar-notification {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.notification-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  cursor: pointer;
+  position: relative;
+  transition: var(--transition);
+}
+
+.notification-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--danger, #f85149);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg-card);
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: 48px;
+  right: -10px;
+  width: 320px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  overflow: hidden;
+  animation: dropDownEnter 0.2s ease-out;
+}
+
+@keyframes dropDownEnter {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.notification-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.notification-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.notification-list {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.notification-item:hover {
+  background: var(--bg-input);
+}
+
+.notification-item.unread {
+  background: rgba(212, 165, 116, 0.05);
+  border-left: 3px solid var(--accent-primary);
+}
+
+.notification-content h4 {
+  margin: 0 0 4px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.notification-content p {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.notification-time {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* FIX: Ensure topbar is always above page content so notification dropdown is clickable and not covered */
+.topbar {
+  position: relative !important;
+  z-index: 9999 !important;
+}
+
+/* ============================================
+   FACEBOOK STYLE NOTIFICATIONS (Dark Mode adapted)
+   ============================================ */
+.fb-notification-dropdown {
+  position: absolute;
+  top: 48px;
+  right: -10px;
+  width: 360px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  animation: dropDownEnter 0.2s ease-out;
+  color: var(--text-primary);
+  font-family: inherit;
+}
+
+.fb-notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 16px 8px;
+}
+
+.fb-notification-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.fb-notification-options {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 50%;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.fb-notification-options:hover {
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.fb-notification-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 8px;
+}
+
+.fb-notification-tabs button {
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.fb-notification-tabs button:hover {
+  background: var(--bg-input);
+}
+
+.fb-notification-tabs button.active {
+  background: rgba(45, 136, 255, 0.15);
+  color: #3b82f6;
+}
+
+.fb-notification-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+}
+
+.fb-notification-section span {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.fb-notification-section button {
+  background: transparent;
+  border: none;
+  color: #3b82f6;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.fb-notification-section button:hover {
+  background: rgba(45, 136, 255, 0.1);
+}
+
+.fb-notification-list {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 0 8px;
+}
+
+.fb-notification-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  gap: 12px;
+  margin-bottom: 2px;
+}
+
+.fb-notification-item:hover {
+  background: var(--bg-input);
+}
+
+.fb-notification-item.unread {
+  background: rgba(45, 136, 255, 0.05);
+}
+
+.fb-notif-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.fb-notif-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.fb-notif-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg-card);
+}
+
+.fb-notif-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.fb-notif-content p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.fb-notif-content strong {
+  font-weight: 600;
+}
+
+.fb-notif-time {
+  font-size: 13px;
+  color: #3b82f6;
+  margin-top: 4px;
+  display: block;
+}
+
+.fb-notification-item.read .fb-notif-time {
+  color: var(--text-muted);
+}
+
+.fb-notif-unread-dot {
+  width: 10px;
+  height: 10px;
+  background-color: #3b82f6;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.fb-notification-footer {
+  padding: 12px 16px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+
+.fb-notification-footer button {
+  width: 100%;
+  padding: 8px;
+  background: var(--bg-input);
+  border: none;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.fb-notification-footer button:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* FIX: Ensure dropdown has a solid background so elements behind it don't show through */
+.fb-notification-dropdown {
+  background: var(--bg-primary) !important;
+}
+
+/* ============================================
+   FACEBOOK MESSENGER STYLE
+   ============================================ */
+.topbar-messenger {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.online-indicator {
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  width: 14px;
+  height: 14px;
+  background-color: #10b981;
+  border-radius: 50%;
+  border: 2px solid var(--bg-primary);
+}
+
+.msg-item {
+  align-items: center;
+}
+
+.msg-group-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.msg-group-name.unread-text {
+  font-weight: 700;
+}
+
+.msg-preview {
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+  max-width: 100%;
+}
+
+.msg-preview-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.msg-preview-text.unread-text {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.msg-preview-time {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.msg-unread-badge-icon {
+  background-color: #f85149;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  align-self: center;
 }

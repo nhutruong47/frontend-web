@@ -47,6 +47,24 @@ export default function DashboardPage() {
     const completedTasks = useMemo(() => myTasks.filter(task => task.status === 'COMPLETED'), [myTasks]);
     const progress = myTasks.length ? Math.round((completedTasks.length / myTasks.length) * 100) : 0;
     const recentTasks = myTasks.slice(0, 5);
+    const visibleStats = [
+        ...(teams.length > 0 ? [{
+            label: 'Nhóm xưởng',
+            value: teams.length,
+            caption: 'Không gian đang tham gia',
+        }] : []),
+        ...(activeTasks.length > 0 ? [{
+            label: 'Việc đang làm',
+            value: activeTasks.length,
+            caption: 'Cần theo dõi hôm nay',
+        }] : []),
+        ...(myTasks.length > 0 ? [{
+            label: 'Tiến độ',
+            value: `${progress}%`,
+            caption: `${completedTasks.length}/${myTasks.length} công việc hoàn thành`,
+        }] : []),
+    ];
+
     const openTeamWorkspace = (teamId: string | number) => {
         navigate(`/groups/${teamId}`);
     };
@@ -64,7 +82,7 @@ export default function DashboardPage() {
         <div className="dashboard-page">
             <section className="dashboard-hero">
                 <div className="dashboard-hero-copy">
-                    <span>Dashboard</span>
+                    <span>Tổng quan</span>
                     <h1>Xin chào, {user?.fullName || user?.username || 'ORCA'}.</h1>
                     <p>Theo dõi nhanh xưởng, công việc và tiến độ hôm nay. Mình giữ lại những thông tin cần nhìn nhất để màn hình nhẹ hơn.</p>
                     <div className="dashboard-hero-actions">
@@ -77,23 +95,17 @@ export default function DashboardPage() {
                 </div>
             </section>
 
-            <section className="dashboard-simple-stats" aria-label="Tổng quan nhanh">
-                <article>
-                    <span>Nhóm xưởng</span>
-                    <strong>{teams.length}</strong>
-                    <p>Không gian đang tham gia</p>
-                </article>
-                <article>
-                    <span>Việc đang làm</span>
-                    <strong>{activeTasks.length}</strong>
-                    <p>Cần theo dõi hôm nay</p>
-                </article>
-                <article>
-                    <span>Tiến độ</span>
-                    <strong>{progress}%</strong>
-                    <p>{completedTasks.length}/{myTasks.length} công việc hoàn thành</p>
-                </article>
-            </section>
+            {visibleStats.length > 0 && (
+                <section className="dashboard-simple-stats" aria-label="Tổng quan nhanh">
+                    {visibleStats.map(stat => (
+                        <article key={stat.label}>
+                            <span>{stat.label}</span>
+                            <strong>{stat.value}</strong>
+                            <p>{stat.caption}</p>
+                        </article>
+                    ))}
+                </section>
+            )}
 
             <section className="dashboard-section">
                 <div className="dashboard-section-head">
