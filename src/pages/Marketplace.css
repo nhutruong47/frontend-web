@@ -3169,7 +3169,7 @@ body.theme-dark .mp-manufacturing-market .mp-market-hero {
 }
 
 .mp-publish-sheet {
-    width: min(540px, 100vw);
+    width: min(800px, 100vw);
     max-height: 90vh;
     border-radius: 16px;
     display: flex;
