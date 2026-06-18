@@ -84,7 +84,7 @@ export default function ProductionPlanPage() {
             setPlans(allPlans || []);
             if (allPlans?.length > 0) {
                 setSelectedPlan(allPlans[0]);
-                await loadPlanTargets(allPlans[0].id);
+                await loadPlanTargets(allPlans[0].id!);
             } else {
                 setSelectedPlan(null);
                 setDailyTargets([]);
@@ -112,7 +112,7 @@ export default function ProductionPlanPage() {
         if (!selectedPlan) return;
         setApproving(true);
         try {
-            const approved = await productionService.approvePlan(selectedPlan.id, userId);
+            const approved = await productionService.approvePlan(selectedPlan.id!, userId);
             setSelectedPlan(approved);
             setPlans(prev => prev.map(p => p.id === approved.id ? approved : p));
             alert('Da duyet ke hoach! Don hang bat dau san xuat.');
@@ -272,7 +272,7 @@ export default function ProductionPlanPage() {
                             ) : (
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
                                     {plans.map(plan => (
-                                        <div key={plan.id} onClick={() => { setSelectedPlan(plan); loadPlanTargets(plan.id); }}
+                                        <div key={plan.id} onClick={() => { setSelectedPlan(plan); loadPlanTargets(plan.id!); }}
                                             style={{
                                                 padding: 16, background: 'var(--bg-card)', border: `2px solid ${selectedPlan?.id === plan.id ? '#8b5cf6' : 'var(--border)'}`,
                                                 borderRadius: 14, cursor: 'pointer'
@@ -374,7 +374,7 @@ export default function ProductionPlanPage() {
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                                                     <div>
                                                         <span style={{ fontSize: 14, fontWeight: 700 }}>
-                                                            {new Date(target.targetDate).toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                                            {new Date(target.targetDate!).toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                                                         </span>
                                                         {isToday && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, background: '#8b5cf6', color: '#fff', padding: '2px 8px', borderRadius: 4 }}>Hom nay</span>}
                                                         {target.isHoliday && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, background: 'var(--bg-input)', color: 'var(--text-muted)', padding: '2px 8px', borderRadius: 4 }}>Ngay nghi</span>}

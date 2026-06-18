@@ -221,8 +221,7 @@ export default function ProductionOrderPage() {
                 return;
             }
             if (editingOrderId) {
-                await productionService.updateOrder(editingOrderId, payload); kg vào ${src} thành công!`);
-                }
+                await productionService.updateOrder(editingOrderId, payload);
             } else {
                 await productionService.createOrder(teamId, payload);
             }

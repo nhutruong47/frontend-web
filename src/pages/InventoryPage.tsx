@@ -1,17 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { teamService } from '../services/groupService';
-
 export default function InventoryPage() {
-    const { id } = useParams();
-    const [inventoryItems, setInventoryItems] = useState<any[]>([]);
 
     // Placeholder
     return (
         <div className="dashboard-page">
             <header className="page-header">
                 <div className="page-title-wrap">
-                    <ion-icon name="layers-outline" class="page-icon"></ion-icon>
+                    <ion-icon name="layers-outline" className="page-icon"></ion-icon>
                     <h1 className="page-title">Kho nguyên liệu (Chính)</h1>
                 </div>
             </header>

@@ -920,7 +920,7 @@ export default function MarketplacePage() {
     const startEditReview = (review: Review) => {
         setEditingReviewId(review.id);
         setEditReviewRating(review.rating);
-        setEditReviewStatus(review.deliveryResult);
+        setEditReviewStatus((review.deliveryResult as "ON_TIME" | "LATE" | "NOT_DELIVERED") || 'ON_TIME');
         setEditReviewComment(review.comment || '');
     };
 
@@ -1025,7 +1025,7 @@ export default function MarketplacePage() {
                     </div>
                     <div style={{flex: 1, minWidth: 240}}>
                         {[5, 4, 3, 2, 1].map(star => {
-                            const count = Number(starCounts[String(star)] || starCounts[star] || 0);
+                            const count = Number(starCounts[star as keyof typeof starCounts] || 0);
                             const pct = reviewCount > 0 ? Math.round((count / reviewCount) * 100) : 0;
                             return (
                                 <div key={star} style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px'}}>

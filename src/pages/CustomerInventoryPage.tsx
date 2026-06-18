@@ -1,15 +1,11 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
-
 export default function CustomerInventoryPage() {
-    const { id } = useParams();
 
     // Placeholder
     return (
         <div className="dashboard-page">
             <header className="page-header">
                 <div className="page-title-wrap">
-                    <ion-icon name="archive-outline" class="page-icon"></ion-icon>
+                    <ion-icon name="archive-outline" className="page-icon"></ion-icon>
                     <h1 className="page-title">Nguyên liệu khách gửi</h1>
                 </div>
             </header>

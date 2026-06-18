@@ -178,6 +178,26 @@ export interface ProductionOrder {
     title: string;
     description?: string;
     customerName?: string;
+    productType?: string;
+    processType?: string;
+    roastLevel?: string;
+    packageSize?: string;
+    totalPackages?: number;
+    expectedYield?: number;
+    expectedLoss?: number;
+    orderDate?: string;
+    confirmDate?: string;
+    productionStartDate?: string;
+    customerDeliveryDate?: string;
+    safetyBufferDays?: number;
+    recipientName?: string;
+    recipientPhone?: string;
+    shippingNote?: string;
+    completedQuantity?: number;
+    progressPercent?: number;
+    internalDeadline?: string;
+    inputRequired?: number;
+    remainingQuantity?: number;
     outputTarget?: number;
     unit?: string;
     status: string;
@@ -258,6 +278,80 @@ export interface InterGroupOrder {
     cancelRequested?: boolean;
     buyerViewed?: boolean;
     sellerViewed?: boolean;
+    deliveryStatus?: string;
+    deliveryConfirmed?: boolean;
+}
+
+// === Reviews ===
+export interface Review {
+    id: string;
+    teamId: string;
+    userId: string;
+    userName: string;
+    rating: number;
+    comment: string;
+    createdAt: string;
+    qualityScore?: number;
+    timeScore?: number;
+    communicationScore?: number;
+    supportScore?: number;
+    replyText?: string;
+    deliveryResult?: string;
+    buyerTeamId?: string;
+    buyerTeamName?: string;
+    buyerUserId?: string;
+    buyerUserName?: string;
+}
+
+export interface ReviewSummary {
+    avgRating: number;
+    reviewCount: number;
+    onTimeRate: number;
+    completedOrders: number;
+    totalOrders: number;
+    onTimeOrders: number;
+    lateOrders: number;
+    starCounts: Record<number, number>;
+}
+
+// === Production Plans ===
+export interface DailyTarget {
+    id?: string;
+    date: string;
+    targetDate?: string;
+    targetQuantity: number;
+    actualQuantity: number;
+    status: string;
+    completionRate?: number;
+    isHoliday?: boolean;
+    targetRoastKg?: number;
+    actualRoastKg?: number;
+    targetQcKg?: number;
+    actualQcKg?: number;
+    targetPackagedKg?: number;
+    actualPackagedKg?: number;
+    notes?: string;
+    issues?: string;
+}
+
+export interface ProductionPlan {
+    id?: string;
+    planCode?: string;
+    teamId: string;
+    orderId: string;
+    dailyTargets: DailyTarget[];
+    startDate: string;
+    endDate: string;
+    status: string;
+    dailyTargetKg?: number;
+    totalWorkingDays?: number;
+    totalRoastKg?: number;
+    totalQcKg?: number;
+    totalPackagedKg?: number;
+    totalPackages?: number;
+    totalInputKg?: number;
+    riskFactors?: string[];
+    aiRecommendations?: string[];
 }
 
 // === Notifications ===
