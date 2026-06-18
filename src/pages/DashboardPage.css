@@ -185,6 +185,28 @@
     var(--shell-surface-soft);
 }
 
+.dashboard-ops-card.overloaded {
+  border-color: rgba(239, 68, 68, 0.3);
+  background:
+    linear-gradient(180deg, rgba(239, 68, 68, 0.08), transparent),
+    var(--shell-surface-soft);
+}
+
+.dashboard-ops-card.overloaded .dashboard-ops-head {
+  color: #ef4444;
+}
+
+.dashboard-ops-card.overachieving {
+  border-color: rgba(34, 197, 94, 0.3);
+  background:
+    linear-gradient(180deg, rgba(34, 197, 94, 0.08), transparent),
+    var(--shell-surface-soft);
+}
+
+.dashboard-ops-card.overachieving .dashboard-ops-head {
+  color: #22c55e;
+}
+
 .dashboard-ops-head {
   display: flex;
   align-items: center;

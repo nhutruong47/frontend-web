@@ -49,6 +49,7 @@ import {
   XAxis,
   YAxis
 } from 'recharts';
+
 import { useAuth } from '../context/AuthContext';
 import { adminService } from '../services/adminService';
 import type { AdminOrder, AdminOverview, AdminPayment, AdminTask, AdminTeam, AdminUser } from '../types/types';
@@ -385,6 +386,14 @@ export default function AdminPage() {
     return matchesText && matchesStatus && matchesPlan;
   });
 
+  const handleNotImplemented = () => {
+    const el = document.createElement('div');
+    el.textContent = '🚧 Chức năng đang được phát triển';
+    Object.assign(el.style, { position:'fixed',top:'20px',left:'50%',transform:'translateX(-50%)',background:'#333',color:'#fff',padding:'12px 24px',borderRadius:'10px',zIndex:'9999',fontSize:'14px',fontWeight:'500',boxShadow:'0 4px 12px rgba(0,0,0,0.3)',transition:'opacity 0.3s' });
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2000);
+  };
+
   const updateTeamVerification = async (teamId: string, nextStatus: 'APPROVED' | 'REJECTED') => {
     const rejectReason = nextStatus === 'REJECTED'
       ? window.prompt('Lý do từ chối hồ sơ xác minh?', 'Hồ sơ chưa đủ thông tin.')
@@ -583,7 +592,7 @@ export default function AdminPage() {
         <section className="admin-card">
           <div className="admin-card-head">
             <div><h3>Quản lý doanh nghiệp / xưởng</h3><p>Xem, thêm, chỉnh sửa, khóa hoặc xóa doanh nghiệp.</p></div>
-            <button type="button" className="admin-button admin-button-primary"><Plus size={16} /> Thêm doanh nghiệp</button>
+            <button type="button" className="admin-button admin-button-primary" onClick={handleNotImplemented}><Plus size={16} /> Thêm doanh nghiệp</button>
           </div>
           <div className="admin-toolbar">
             <label><Search size={16} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm tên, mã, người đại diện..." /></label>
@@ -610,13 +619,13 @@ export default function AdminPage() {
                     </td>
                     <td>
                       <div className="admin-row-actions">
-                        <button>Sửa</button>
+                        <button onClick={handleNotImplemented} className="btn-edit">Sửa</button>
                         {item.verificationStatus === 'PENDING' && <>
-                          <button onClick={() => updateTeamVerification(item.id, 'APPROVED')}><CheckCircle2 size={14} /> Duyệt</button>
-                          <button onClick={() => updateTeamVerification(item.id, 'REJECTED')}><XCircle size={14} /> Từ chối</button>
+                          <button onClick={() => updateTeamVerification(item.id, 'APPROVED')} className="btn-approve"><CheckCircle2 size={14} /> Duyệt</button>
+                          <button onClick={() => updateTeamVerification(item.id, 'REJECTED')} className="btn-reject"><XCircle size={14} /> Từ chối</button>
                         </>}
-                        <button><Lock size={14} /> Khóa</button>
-                        <button>Xóa</button>
+                        <button onClick={handleNotImplemented} className="btn-lock"><Lock size={14} /> Khóa</button>
+                        <button onClick={handleNotImplemented} className="btn-delete">Xóa</button>
                       </div>
                     </td>
                   </tr>
@@ -631,7 +640,7 @@ export default function AdminPage() {
         <section className="admin-card">
           <div className="admin-card-head">
             <div><h3>Quản lý người dùng toàn hệ thống</h3><p>Tạo người dùng, đặt lại mật khẩu, gán vai trò và chuyển doanh nghiệp.</p></div>
-            <button type="button" className="admin-button admin-button-primary"><Plus size={16} /> Tạo người dùng</button>
+            <button type="button" className="admin-button admin-button-primary" onClick={handleNotImplemented}><Plus size={16} /> Tạo người dùng</button>
           </div>
           <div className="admin-toolbar">
             <label><Search size={16} /><input value={query} onChange={event => { setQuery(event.target.value); setUserPage(1); }} placeholder="Tìm người dùng, email, doanh nghiệp..." /></label>
@@ -644,7 +653,7 @@ export default function AdminPage() {
                 {userRows.map((item, index) => (
                   <tr key={`${item.email}-${index}`}>
                     <td><div className="admin-user-cell"><span>{item.name.charAt(0)}</span><strong>{item.name}</strong></div></td><td>{item.email}</td><td>{item.phone}</td><td>{item.company}</td><td>{item.role}</td><td><StatusBadge value={item.status} /></td><td>{item.lastLogin}</td>
-                    <td><div className="admin-row-actions"><button>Sửa</button><button><RotateCcw size={14} /> Đặt lại</button><button>{item.status === 'Locked' ? <Unlock size={14} /> : <Lock size={14} />} {item.status === 'Locked' ? 'Kích hoạt' : 'Khóa'}</button></div></td>
+                    <td><div className="admin-row-actions"><button onClick={handleNotImplemented} className="btn-edit">Sửa</button><button onClick={handleNotImplemented} className="btn-reset"><RotateCcw size={14} /> Đặt lại</button><button onClick={handleNotImplemented} className="btn-lock">{item.status === 'Locked' ? <Unlock size={14} /> : <Lock size={14} />} {item.status === 'Locked' ? 'Kích hoạt' : 'Khóa'}</button></div></td>
                   </tr>
                 ))}
               </tbody>
@@ -656,9 +665,9 @@ export default function AdminPage() {
 
       {active === 'subscriptions' && (
         <section className="admin-card">
-          <div className="admin-card-head"><div><h3>Quản lý gói dịch vụ SaaS</h3><p>Các gói Cơ bản, Tăng trưởng, Doanh nghiệp cùng giới hạn người dùng, đơn hàng, lô sản xuất, xưởng và điểm AI.</p></div><button className="admin-button admin-button-primary"><Plus size={16} /> Tạo gói</button></div>
+          <div className="admin-card-head"><div><h3>Quản lý gói dịch vụ SaaS</h3><p>Các gói Cơ bản, Tăng trưởng, Doanh nghiệp cùng giới hạn người dùng, đơn hàng, lô sản xuất, xưởng và điểm AI.</p></div><button className="admin-button admin-button-primary" onClick={handleNotImplemented}><Plus size={16} /> Tạo gói</button></div>
           <div className="admin-plan-grid">
-            {plans.map(item => <article className="admin-plan" key={item.name}><h4>{item.name}</h4><strong>{item.price ? money(item.price) : 'Liên hệ'}</strong><span>{item.period}</span><div className="admin-plan-limits"><p>{item.users} người dùng</p><p>{number(item.orders)} đơn hàng</p><p>{number(item.batches)} lô</p><p>{item.workshops} xưởng</p><p>{number(item.ai)} điểm AI</p></div><ul>{item.features.map(feature => <li key={feature}>{feature}</li>)}</ul><div className="admin-row-actions"><button>Sửa</button><button>Xóa</button></div></article>)}
+            {plans.map(item => <article className="admin-plan" key={item.name}><h4>{item.name}</h4><strong>{item.price ? money(item.price) : 'Liên hệ'}</strong><span>{item.period}</span><div className="admin-plan-limits"><p>{item.users} người dùng</p><p>{number(item.orders)} đơn hàng</p><p>{number(item.batches)} lô</p><p>{item.workshops} xưởng</p><p>{number(item.ai)} điểm AI</p></div><ul>{item.features.map(feature => <li key={feature}>{feature}</li>)}</ul><div className="admin-row-actions"><button onClick={handleNotImplemented} className="btn-edit">Sửa</button><button onClick={handleNotImplemented} className="btn-delete">Xóa</button></div></article>)}
           </div>
           <div className="admin-feature-table">
             <table className="admin-table"><thead><tr><th>Tính năng</th>{plans.map(item => <th key={item.name}>{item.name}</th>)}</tr></thead><tbody>{featureRows.map(feature => <tr key={feature}><td>{feature}</td>{plans.map((item, index) => <td key={`${item.name}-${feature}`}>{index === 0 && feature.includes('Custom') ? <XCircle size={16} /> : <CheckCircle2 size={16} />}</td>)}</tr>)}</tbody></table>
@@ -707,7 +716,7 @@ export default function AdminPage() {
         <>
           <section className="admin-mini-grid">{aiUsage.map(item => <MiniMetric key={item.label} label={item.label} value={item.value} icon={item.icon} />)}</section>
           <section className="admin-card">
-            <div className="admin-card-head"><div><h3>Quản lý AI</h3><p>Giới hạn sử dụng AI, bật/tắt AI, quản lý điểm và lịch sử AI.</p></div><button className="admin-button admin-button-primary"><Settings size={16} /> Cấu hình AI</button></div>
+            <div className="admin-card-head"><div><h3>Quản lý AI</h3><p>Giới hạn sử dụng AI, bật/tắt AI, quản lý điểm và lịch sử AI.</p></div><button className="admin-button admin-button-primary" onClick={handleNotImplemented}><Settings size={16} /> Cấu hình AI</button></div>
             <div className="admin-ai-controls"><label><input type="checkbox" defaultChecked /> Bật AI toàn hệ thống</label><label><input type="checkbox" defaultChecked /> Giới hạn theo gói</label><label><input type="checkbox" /> Chặn khi vượt chi phí</label></div>
             <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>User</th><th>Email</th><th>Gói AI</th><th>Hết hạn</th></tr></thead><tbody>{adminUsers.length === 0 ? <tr><td colSpan={4} style={{ textAlign: 'center', padding: 24, color: 'var(--text-secondary)' }}>Chưa có user trong hệ thống.</td></tr> : adminUsers.slice(0, 6).map(item => <tr key={item.id}><td>{item.fullName || item.username}</td><td>{item.email || '-'}</td><td>{item.aiPlan || 'free'}</td><td>{item.aiPlanExpiresAt ? formatShortDate(item.aiPlanExpiresAt) : '-'}</td></tr>)}</tbody></table></div>
           </section>

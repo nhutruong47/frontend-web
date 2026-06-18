@@ -154,6 +154,12 @@ export default function DashboardPage() {
         navigate(`/groups/${teamId}`);
     };
 
+    const currentHour = new Date().getHours();
+    const isOverloaded = activeTasks.length > 0 && currentHour >= 17;
+    const totalTarget = myTasks.reduce((sum, task) => sum + (task.outputTarget || 0), 0);
+    const totalActual = myTasks.reduce((sum, task) => sum + (task.actualOutput || 0), 0);
+    const isOverachieving = totalTarget > 0 && totalActual > totalTarget;
+
     if (loading) {
         return (
             <div className="dashboard-page dashboard-loading">
@@ -182,17 +188,17 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                <div className="dashboard-ops-card" aria-label="Trạng thái vận hành">
+                <div className={`dashboard-ops-card ${isOverachieving ? 'overachieving' : isOverloaded ? 'overloaded' : ''}`} aria-label="Trạng thái vận hành">
                     <div className="dashboard-ops-head">
                         <Activity size={18} />
                         <span>Nhịp vận hành</span>
                     </div>
-                    <strong>{activeTasks.length > 0 ? 'Đang có việc cần bám' : 'Không có việc quá tải'}</strong>
-                    <p>{activeTasks.length > 0 ? `${activeTasks.length} task chưa hoàn thành.` : 'Bạn có thể tạo thêm kế hoạch hoặc kiểm tra nhóm xưởng.'}</p>
+                    <strong>{isOverachieving ? 'Phát triển vượt mong đợi' : isOverloaded ? 'Quá tải công việc' : activeTasks.length > 0 ? 'Đang có việc cần bám' : 'Không có việc quá tải'}</strong>
+                    <p>{isOverachieving ? `Sản lượng đạt ${totalActual}/${totalTarget}, vượt mức kế hoạch đề ra.` : isOverloaded ? `Đã hết ngày nhưng còn ${activeTasks.length} task chưa xong.` : activeTasks.length > 0 ? `${activeTasks.length} task chưa hoàn thành.` : 'Bạn có thể tạo thêm kế hoạch hoặc kiểm tra nhóm xưởng.'}</p>
                     <div className="dashboard-progress-track">
-                        <span style={{ width: `${progress}%` }} />
+                        <span style={{ width: `${progress}%`, background: isOverachieving ? 'var(--success)' : isOverloaded ? 'var(--danger)' : undefined }} />
                     </div>
-                    <small>{progress}% hoàn thành</small>
+                    <small style={{ color: isOverachieving ? 'var(--success)' : isOverloaded ? 'var(--danger)' : undefined }}>{progress}% hoàn thành</small>
                 </div>
             </section>
 
