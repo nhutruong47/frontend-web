@@ -1,5 +1,5 @@
 import api from './api';
-import type { InterGroupOrder } from '../types/types';
+import type { InterGroupOrder, Review, ReviewSummary } from '../types/types';
 
 export const interGroupOrderService = {
     getOutboundOrders: (buyerTeamId: string) =>
@@ -32,6 +32,32 @@ export const interGroupOrderService = {
     completeOrder: (orderId: string) =>
         api.post<InterGroupOrder>(`/api/inter-orders/${orderId}/complete`).then(r => r.data),
 
+    /** Người mua xác nhận đã nhận hàng + đánh giá sao */
+    buyerConfirmDelivery: (orderId: string, payload: {
+        deliveryStatus: 'ON_TIME' | 'LATE' | 'NOT_DELIVERED';
+        rating: number;
+        comment: string;
+    }) =>
+        api.post<InterGroupOrder>(`/api/inter-orders/${orderId}/buyer-confirm`, payload).then(r => r.data),
+
     markViewed: (orderIds: string[], role: 'BUYER' | 'SELLER') =>
         api.post('/api/inter-orders/mark-viewed', { orderIds, role }).then(r => r.data),
+};
+
+export const reviewService = {
+    getByTeam: (teamId: string) =>
+        api.get<Review[]>(`/api/reviews/team/${teamId}`).then(r => r.data),
+
+    getSummary: (teamId: string) =>
+        api.get<ReviewSummary>(`/api/reviews/team/${teamId}/summary`).then(r => r.data),
+
+    update: (reviewId: string, payload: {
+        rating: number;
+        comment: string;
+        deliveryResult: 'ON_TIME' | 'LATE' | 'NOT_DELIVERED';
+    }) =>
+        api.put<Review>(`/api/reviews/${reviewId}`, payload).then(r => r.data),
+
+    remove: (reviewId: string) =>
+        api.delete(`/api/reviews/${reviewId}`).then(r => r.data),
 };

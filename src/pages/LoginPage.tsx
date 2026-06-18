@@ -54,6 +54,8 @@ const COFFEE_BRAND_LOGOS = [
 export default function LoginPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [activeBrand, setActiveBrand] = useState(0);
@@ -63,10 +65,23 @@ export default function LoginPage() {
     const [searchParams] = useSearchParams();
     const locationState = location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null;
     const fromLocation = locationState?.from;
+
     const stateReturnUrl = fromLocation
         ? `${fromLocation.pathname || ''}${fromLocation.search || ''}${fromLocation.hash || ''}`
         : '';
     const returnUrl = searchParams.get('returnUrl') || stateReturnUrl || '/dashboard';
+
+    useEffect(() => {
+        const rememberedUser = localStorage.getItem('orca_remember_username');
+        const rememberedPass = localStorage.getItem('orca_remember_password');
+        if (rememberedUser) {
+            setUsername(rememberedUser);
+            setRememberMe(true);
+        }
+        if (rememberedPass) {
+            setPassword(rememberedPass);
+        }
+    }, []);
 
     // Auto-rotate brands
     useEffect(() => {
@@ -88,6 +103,13 @@ export default function LoginPage() {
         setIsLoading(true);
         try {
             await login({ username, password });
+            if (rememberMe) {
+                localStorage.setItem('orca_remember_username', username.trim());
+                localStorage.setItem('orca_remember_password', password.trim());
+            } else {
+                localStorage.removeItem('orca_remember_username');
+                localStorage.removeItem('orca_remember_password');
+            }
             navigate(returnUrl, { replace: true });
         } catch (err: unknown) {
             if (err && typeof err === 'object' && 'response' in err) {
@@ -217,14 +239,33 @@ export default function LoginPage() {
                                 </svg>
                                 <input
                                     id="login-password"
-                                    type="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    className="password-input"
                                     placeholder="Nhập mật khẩu"
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
                                     autoComplete="current-password"
                                 />
+                                <button
+                                    type="button"
+                                    className="password-toggle-btn login-password-toggle"
+                                    onClick={() => setShowPassword(prev => !prev)}
+                                    aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                                    title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                                >
+                                    <ion-icon name={showPassword ? 'eye-off-outline' : 'eye-outline'}></ion-icon>
+                                </button>
                             </div>
                         </div>
+
+                        <label className="remember-row login-remember-row">
+                            <input
+                                type="checkbox"
+                                checked={rememberMe}
+                                onChange={e => setRememberMe(e.target.checked)}
+                            />
+                            <span>Ghi nhớ tài khoản</span>
+                        </label>
 
                         {error && (
                             <div className="login-error">

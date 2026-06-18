@@ -13,11 +13,11 @@ import {
   Database,
   DollarSign,
   Download,
-  FileBarChart,
+  
   Filter,
   Gauge,
   GitBranch,
-  GripVertical,
+  
   Lock,
   MoreHorizontal,
   Plus,
@@ -30,7 +30,7 @@ import {
   ShoppingCart,
   Unlock,
   Users,
-  Workflow,
+  
   XCircle
 } from 'lucide-react';
 import {
@@ -61,13 +61,10 @@ type AdminSection =
   | 'subscriptions'
   | 'billing'
   | 'ai'
-  | 'monitoring'
-  | 'audit'
-  | 'workflow'
-  | 'alerts'
-  | 'reports';
+  | 'support'
+  | 'system';
 
-type Severity = 'Critical' | 'High' | 'Medium' | 'Low';
+
 
 const money = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
@@ -83,16 +80,13 @@ const formatInputDate = (date: Date) => date.toISOString().slice(0, 10);
 
 const tabs: Array<{ id: AdminSection; label: string; icon: React.ElementType }> = [
   { id: 'overview', label: 'Tổng quan', icon: Gauge },
-  { id: 'businesses', label: 'Doanh nghiệp / Xưởng', icon: Building2 },
-  { id: 'users', label: 'Người dùng toàn hệ thống', icon: Users },
+  { id: 'businesses', label: 'Doanh nghiệp', icon: Building2 },
+  { id: 'users', label: 'Người dùng', icon: Users },
   { id: 'subscriptions', label: 'Gói dịch vụ', icon: ReceiptText },
   { id: 'billing', label: 'Thanh toán', icon: CreditCard },
-  { id: 'ai', label: 'Quản lý AI', icon: Brain },
-  { id: 'monitoring', label: 'Giám sát hệ thống', icon: Activity },
-  { id: 'audit', label: 'Nhật ký kiểm toán', icon: ShieldCheck },
-  { id: 'workflow', label: 'Quy trình', icon: Workflow },
-  { id: 'alerts', label: 'Trung tâm cảnh báo', icon: BellRing },
-  { id: 'reports', label: 'Báo cáo điều hành', icon: FileBarChart }
+  { id: 'ai', label: 'Sử dụng AI', icon: Brain },
+  { id: 'support', label: 'Hỗ trợ', icon: BellRing },
+  { id: 'system', label: 'Hệ thống', icon: Server }
 ];
 
 type KpiTone = 'coffee' | 'blue' | 'amber' | 'green' | 'violet';
@@ -200,22 +194,7 @@ const realtimeData = [
   { time: '10:20', cpu: 74, ram: 76, api: 510, errors: 2.8 }
 ];
 
-const auditLogs = [
-  ['An Nguyen', 'Đăng nhập quản trị', 'Bảng quản trị', '02/06/2026 10:20', '14.169.2.10'],
-  ['Bao Tran', 'Tạo đơn hàng', 'ORD-2092', '02/06/2026 10:14', '14.169.2.11'],
-  ['Chi Le', 'Sửa batch', 'BATCH-842', '02/06/2026 09:58', '42.113.9.42'],
-  ['Duy Pham', 'Xóa dữ liệu', 'Workshop draft', '02/06/2026 09:35', '42.113.9.49'],
-  ['Admin', 'Đổi quyền', 'Manager -> Staff', '02/06/2026 09:02', '10.0.0.1']
-].map(([user, action, target, time, ip]) => ({ user, action, target, time, ip }));
 
-const alertRows: Array<{ title: string; source: string; severity: Severity; time: string }> = [
-  { title: 'Đơn hàng OR-2041 trễ hạn 14 giờ', source: 'Order SLA', severity: 'Critical', time: '2 phút trước' },
-  { title: 'Batch B-842 lỗi QC lần 2', source: 'QC Engine', severity: 'High', time: '8 phút trước' },
-  { title: 'Subscription Ancient Grain hết hạn trong 3 ngày', source: 'Billing', severity: 'Medium', time: '21 phút trước' },
-  { title: 'Xưởng Đà Lạt vượt 88% công suất', source: 'Capacity', severity: 'High', time: '38 phút trước' },
-  { title: 'User staff17 bị khóa do đăng nhập sai', source: 'Security', severity: 'Low', time: '1 giờ trước' },
-  { title: 'API /ai/recommend response time cao', source: 'System', severity: 'Critical', time: '1 giờ trước' }
-];
 
 const featureRows = [
   'Quản lý đơn hàng',
@@ -303,8 +282,8 @@ export default function AdminPage() {
   const [revenueFrom, setRevenueFrom] = useState('2026-05-01');
   const [revenueTo, setRevenueTo] = useState('2026-06-30');
   const [userPage, setUserPage] = useState(1);
-  const [workflowStages, setWorkflowStages] = useState(['Đơn hàng', 'Phân công', 'Sản xuất', 'QC', 'Đóng gói', 'Giao hàng']);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  
+  
 
   useEffect(() => {
     if (user?.role !== 'ADMIN') {
@@ -493,15 +472,7 @@ export default function AdminPage() {
     URL.revokeObjectURL(url);
   };
 
-  const moveStage = (from: number, to: number) => {
-    if (from === to) return;
-    setWorkflowStages(current => {
-      const next = [...current];
-      const [item] = next.splice(from, 1);
-      next.splice(to, 0, item);
-      return next;
-    });
-  };
+  
 
   if (user?.role !== 'ADMIN') {
     return (
@@ -604,21 +575,7 @@ export default function AdminPage() {
               </ResponsiveContainer>
             </ChartPanel>
           </section>
-          <section className="admin-card">
-            <div className="admin-card-head">
-              <h3>Danh sách cảnh báo hệ thống</h3>
-              <button type="button" className="admin-button admin-button-soft">Xem tất cả</button>
-            </div>
-            <div className="admin-alert-list">
-              {alertRows.slice(0, 5).map(item => (
-                <div key={item.title} className={`admin-alert admin-alert-${item.severity.toLowerCase()}`}>
-                  <AlertTriangle size={18} />
-                  <div><strong>{item.title}</strong><span>{item.source} · {item.time}</span></div>
-                  <StatusBadge value={item.severity} />
-                </div>
-              ))}
-            </div>
-          </section>
+          
         </>
       )}
 
@@ -757,7 +714,25 @@ export default function AdminPage() {
         </>
       )}
 
-      {active === 'monitoring' && (
+      
+      {active === 'support' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+          <section className="admin-card">
+            <h3>Ticket hỗ trợ</h3>
+            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>Chưa có ticket nào</div>
+          </section>
+          <section className="admin-card">
+            <h3>Khiếu nại</h3>
+            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>Không có khiếu nại</div>
+          </section>
+          <section className="admin-card">
+            <h3>Yêu cầu xác minh</h3>
+            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>Không có yêu cầu nào</div>
+          </section>
+        </div>
+      )}
+      
+      {active === 'system' && (
         <>
           <section className="admin-system-grid">{systemMetrics.map(item => { const Icon = item.icon; return <article className={`admin-system-card admin-system-${item.tone}`} key={item.name}><Icon size={20} /><span>{item.name}</span><strong>{item.value}{item.name === 'Response Time' ? 'ms' : '%'}</strong><div><i style={{ width: `${Math.min(Number(item.value), 100)}%` }} /></div></article>; })}</section>
           <ChartPanel title="Biểu đồ realtime CPU / RAM / API / Error"><ResponsiveContainer width="100%" height="100%"><LineChart data={realtimeData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="time" /><YAxis /><Tooltip /><Line dataKey="cpu" stroke="#d4a574" strokeWidth={2} /><Line dataKey="ram" stroke="#60a5fa" strokeWidth={2} /><Line dataKey="api" stroke="#22c55e" strokeWidth={2} /><Line dataKey="errors" stroke="#ef4444" strokeWidth={2} /></LineChart></ResponsiveContainer></ChartPanel>
@@ -765,42 +740,13 @@ export default function AdminPage() {
         </>
       )}
 
-      {active === 'audit' && (
-        <section className="admin-card">
-          <div className="admin-card-head"><div><h3>Nhật ký kiểm toán</h3><p>Theo dõi ai đăng nhập, tạo đơn hàng, sửa lô, xóa dữ liệu và đổi quyền.</p></div></div>
-          <div className="admin-toolbar"><label><Search size={16} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm user, hành động, IP..." /></label><button className="admin-button admin-button-soft"><Filter size={16} /> Nâng cao</button></div>
-          <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Người dùng</th><th>Hành động</th><th>Đối tượng</th><th>Thời gian</th><th>IP</th></tr></thead><tbody>{auditLogs.filter(item => `${item.user} ${item.action} ${item.ip}`.toLowerCase().includes(query.toLowerCase())).map(item => <tr key={`${item.user}-${item.time}`}><td>{item.user}</td><td>{item.action}</td><td>{item.target}</td><td>{item.time}</td><td>{item.ip}</td></tr>)}</tbody></table></div>
-        </section>
-      )}
+      
 
-      {active === 'workflow' && (
-        <section className="admin-card">
-          <div className="admin-card-head"><div><h3>Quản lý quy trình</h3><p>Kéo thả để sắp xếp quy trình: Đơn hàng | Phân công | Sản xuất | QC | Đóng gói | Giao hàng.</p></div><button className="admin-button admin-button-primary"><Plus size={16} /> Tạo quy trình</button></div>
-          <div className="admin-workflow-board">
-            {workflowStages.map((stage, index) => (
-              <div key={stage} className="admin-workflow-step" draggable onDragStart={() => setDragIndex(index)} onDragOver={event => event.preventDefault()} onDrop={() => { if (dragIndex !== null) moveStage(dragIndex, index); setDragIndex(null); }}>
-                <GripVertical size={18} /><span>{index + 1}</span><strong>{stage}</strong><button>Sửa</button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      
 
-      {active === 'alerts' && (
-        <section className="admin-card">
-          <div className="admin-card-head"><div><h3>Trung tâm cảnh báo</h3><p>Cảnh báo realtime theo Critical, High, Medium, Low.</p></div><button className="admin-button admin-button-primary"><BellRing size={16} /> Tạo rule</button></div>
-          <div className="admin-alert-list">{alertRows.map(item => <div key={item.title} className={`admin-alert admin-alert-${item.severity.toLowerCase()}`}><AlertTriangle size={18} /><div><strong>{item.title}</strong><span>{item.source} · {item.time}</span></div><StatusBadge value={item.severity} /></div>)}</div>
-        </section>
-      )}
+      
 
-      {active === 'reports' && (
-        <>
-          <section className="admin-card">
-            <div className="admin-card-head"><div><h3>Báo cáo điều hành</h3><p>Doanh thu, tăng trưởng, doanh nghiệp mới, user mới, batch, hiệu suất xưởng, nhân viên và QC pass rate.</p></div><div className="admin-row-actions"><button><Download size={14} /> PDF</button><button><Download size={14} /> Excel</button><button><CalendarDays size={14} /> Chọn khoảng thời gian</button></div></div>
-          </section>
-          <section className="admin-kpi-grid">{kpis.slice(0, 8).map(item => <KpiCard key={`report-${item.label}`} item={{ ...item, icon: FileBarChart }} />)}</section>
-        </>
-      )}
+      
     </div>
   );
 }

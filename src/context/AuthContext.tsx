@@ -4,6 +4,7 @@ import type { UserInfo, LoginRequest, RegisterRequest } from '../types/types';
 
 interface AuthContextType {
     user: UserInfo | null;
+    userId: string;
     token: string | null;
     isAuthenticated: boolean;
     isLoading: boolean;
@@ -35,7 +36,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(userInfo);
                 setToken(savedToken);
             } catch {
-                // Token expired or invalid
                 sessionStorage.removeItem('token');
                 sessionStorage.removeItem('user');
                 setToken(null);
@@ -53,7 +53,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.setItem('token', response.token);
         setToken(response.token);
 
-        // Fetch full user info
         const userInfo = await authService.getMe();
         setUser(userInfo);
         sessionStorage.setItem('user', JSON.stringify(userInfo));
@@ -64,7 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.setItem('token', response.token);
         setToken(response.token);
 
-        // Fetch full user info
         const userInfo = await authService.getMe();
         setUser(userInfo);
         sessionStorage.setItem('user', JSON.stringify(userInfo));
@@ -77,8 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
     }, []);
 
+    const userId = user?.id ?? '';
+
     return (
-        <AuthContext.Provider value={{ user, token, isAuthenticated, isLoading, login, register, logout }}>
+        <AuthContext.Provider value={{ user, userId, token, isAuthenticated, isLoading, login, register, logout }}>
             {children}
         </AuthContext.Provider>
     );

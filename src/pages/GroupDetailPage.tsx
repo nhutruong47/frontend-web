@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { teamService, goalService, taskService, getTrialStatus, chatService, inventoryService } from '../services/groupService';
-import type { Team, Goal, Task, ChatMsg, SalaryReport, AiChatLogMsg, InventoryItem } from '../types/types';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import { teamService, goalService, taskService, getTrialStatus, chatService } from '../services/groupService';
+import type { Team, Goal, Task, ChatMsg, SalaryReport, AiChatLogMsg } from '../types/types';
+
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import ReactMarkdown from 'react-markdown';
@@ -33,7 +33,15 @@ Object.assign(STATUS_COLORS, {
     CANCELLED: { bg: '#f1f5f9', color: '#64748b', label: 'Da huy' },
 });
 const MEMBER_COLORS = ['#d4a574', '#f59e0b', '#10b981', '#ec4899', '#f43f5e', '#06b6d4', '#8b5cf6', '#3b82f6'];
-const DONUT_COLORS = ['#10b981', '#f59e0b', '#94a3b8'];
+
+
+
+const inventoryService = {
+  getByTeam: async (..._args: any[]) => [],
+  create: async (..._args: any[]) => {},
+  updateQuantity: async (..._args: any[]) => {},
+  delete: async (..._args: any[]) => {}
+};
 
 export default function GroupDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -87,7 +95,7 @@ export default function GroupDetailPage() {
     const [editingLabels, setEditingLabels] = useState<string>('');
 
     // Inventory
-    const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+    const [inventoryItems, setanys] = useState<any[]>([]);
     const [showAddInventory, setShowAddInventory] = useState(false);
     const [invName, setInvName] = useState('');
     const [invQty, setInvQty] = useState('');
@@ -152,7 +160,7 @@ export default function GroupDetailPage() {
                 .then(taskArrays => setAllTasks(taskArrays.flat()))
                 .catch(() => { });
         }).catch(() => { });
-        inventoryService.getByTeam(id).then(setInventoryItems).catch(() => { });
+        // inventoryService.getByTeam(id).then(setanys).catch(() => { });
         getTrialStatus().then(s => { setTrialActive(s.aiTrialActive); setTrialDays(s.daysRemaining); }).catch(() => { });
     }, [id]);
 
@@ -502,7 +510,7 @@ export default function GroupDetailPage() {
                 lowStockThreshold: Number(invThreshold) || 10
             });
             const items = await inventoryService.getByTeam(id);
-            setInventoryItems(items);
+            setanys(items);
             setInvName(''); setInvQty(''); setInvUnit(''); setInvThreshold(''); setShowAddInventory(false);
         } catch (e: any) { alert(e?.response?.data?.error || 'Lỗi thêm hàng'); } finally { setLoading(false); }
     };
@@ -513,7 +521,7 @@ export default function GroupDetailPage() {
         try {
             await inventoryService.updateQuantity(invId, Number(updateInvQty));
             const items = await inventoryService.getByTeam(id);
-            setInventoryItems(items);
+            setanys(items);
             setUpdatingInvId(null); setUpdateInvQty('');
         } catch (e: any) { alert(e?.response?.data?.error || 'Lỗi cập nhật số lượng'); } finally { setLoading(false); }
     };
@@ -523,7 +531,7 @@ export default function GroupDetailPage() {
         try {
             await inventoryService.delete(invId);
             const items = await inventoryService.getByTeam(id!);
-            setInventoryItems(items);
+            setanys(items);
         } catch (e: any) { alert(e?.response?.data?.error || 'Lỗi xóa hàng'); }
     };
 
@@ -541,7 +549,7 @@ export default function GroupDetailPage() {
     const inProgressTasks = allTasks.filter(t => t.status === 'IN_PROGRESS').length;
     const completedTasks = allTasks.filter(t => t.status === 'COMPLETED').length;
     const pendingTasks = allTasks.filter(t => t.status === 'PENDING').length;
-    const completionPct = totalTasks ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    
 
     // Member stats
     const memberStats = (team.members || []).map((m, idx) => {
@@ -552,27 +560,9 @@ export default function GroupDetailPage() {
         return { ...m, completed, total, pct, color: MEMBER_COLORS[idx % MEMBER_COLORS.length] };
     });
 
-    // Mock line chart data (weekly performance)
-    const lineData = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(); d.setDate(d.getDate() - (6 - i));
-        const day = d.toLocaleDateString('vi', { weekday: 'short' });
-        const point: Record<string, string | number> = { day };
-        memberStats.forEach(m => {
-            point[m.fullName || m.username] = Math.round(Math.min(100, Math.max(0, m.pct + (Math.sin(i * 1.5 + m.userId.charCodeAt(0)) * 20))));
-        });
-        return point;
-    });
+    
 
-    // Donut data
-    const donutData = [
-        { name: 'Hoàn thành', value: completedTasks },
-        { name: 'Đang làm', value: inProgressTasks },
-        { name: 'Chưa bắt đầu', value: pendingTasks },
-    ].filter(d => d.value > 0);
-    if (donutData.length === 0) donutData.push({ name: 'Trống', value: 1 });
-
-    // Bar data
-    const barData = memberStats.map(m => ({ name: (m.fullName || m.username).split(' ').pop(), tasks: m.total, completed: m.completed }));
+    
     // Show the actual team roster for everyone. The previous filter hid all other
     // members for non-admin users, which made the group appear to have only one member.
     const visibleMemberStats = memberStats;
@@ -643,7 +633,7 @@ export default function GroupDetailPage() {
                         </button>
                     )}
 
-                    <button onClick={() => setShowChat(!showChat)} style={{ position: 'relative', background: unreadTotal > 0 ? '#fff7ed' : 'var(--bg-input)', border: unreadTotal > 0 ? '1px solid #fed7aa' : '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-primary)' }}><ion-icon name={unreadTotal > 0 ? 'chatbubbles' : 'chatbubbles-outline'}></ion-icon> Chat {renderUnreadBadge(unreadTotal)}</button>
+                    <button onClick={() => setShowChat(!showChat)} style={{ position: 'relative', background: unreadTotal > 0 ? '#fff7ed' : 'var(--bg-input)', border: unreadTotal > 0 ? '1px solid #fed7aa' : '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-primary)' }}><ion-icon name={unreadTotal > 0 ? 'chatbubbles' : 'chatbubbles-outline'}></ion-icon> Nhắn tin {renderUnreadBadge(unreadTotal)}</button>
                     {isAdmin && <button onClick={() => setShowMemberRoles(!showMemberRoles)} style={{ background: showMemberRoles ? '#fff7ed' : 'var(--bg-input)', border: showMemberRoles ? '1px solid #fed7aa' : '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: showMemberRoles ? '#d97706' : 'var(--text-secondary)' }}><ion-icon name="id-card-outline"></ion-icon> Phân vai trò</button>}
                     
                     {isAdmin && <button onClick={() => setShowAddMember(true)} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }}><ion-icon name="people-outline"></ion-icon> Mời</button>}
@@ -674,74 +664,6 @@ export default function GroupDetailPage() {
             )}
 
             {/* ===== EMPTY STATE / ANALYTICS ===== */}
-            {isManager && totalTasks > 0 && (
-            <>
-            {/* ===== LINE CHART ===== */}
-            {isManager && (
-                <div style={{ background: '#fff', borderRadius: 14, padding: '20px 24px', border: '1px solid #e2e8f0', marginBottom: 18 }}>
-                    <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: '#1e293b' }}>Hiệu suất nhân viên trong tuần</h3>
-                <ResponsiveContainer width="100%" height={220}>
-                    <LineChart data={lineData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                        <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#94a3b8' }} />
-                        <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} domain={[0, 100]} tickFormatter={v => `${v}%`} />
-                        <Tooltip formatter={(v: any) => `${v}%`} />
-                        <Legend />
-                        {memberStats.map(m => (
-                            <Line key={m.userId} type="monotone" dataKey={m.fullName || m.username} stroke={m.color} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                        ))}
-                    </LineChart>
-                </ResponsiveContainer>
-            </div>
-            )}
-
-            {/* ===== TWO COL: DONUT + BAR ===== */}
-            <div style={{ display: 'grid', gridTemplateColumns: isManager ? 'repeat(auto-fit, minmax(320px, 1fr))' : '1fr', gap: 16, marginBottom: 18 }}>
-                {/* Donut */}
-                <div style={{ background: '#fff', borderRadius: 14, padding: '20px 24px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#1e293b' }}>Tiến độ nhóm</h3>
-                        <span style={{ fontSize: 22, fontWeight: 800, color: '#16a34a' }}>{completionPct}%</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-                        <ResponsiveContainer width={140} height={140}>
-                            <PieChart>
-                                <Pie data={donutData} innerRadius={40} outerRadius={65} dataKey="value" paddingAngle={2} startAngle={90} endAngle={-270}>
-                                    {donutData.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
-                                </Pie>
-                            </PieChart>
-                        </ResponsiveContainer>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {donutData.map((d, i) => (
-                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                                    <div style={{ width: 10, height: 10, borderRadius: 3, background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
-                                    <span style={{ color: '#475569' }}>{d.name}: <b>{d.value}</b></span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Bar */}
-                {isManager && (
-                <div style={{ background: '#fff', borderRadius: 14, padding: '20px 24px', border: '1px solid #e2e8f0' }}>
-                    <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: '#1e293b' }}>So sánh thành viên</h3>
-                    <ResponsiveContainer width="100%" height={140}>
-                        <BarChart data={barData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                            <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                            <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                            <Tooltip />
-                            <Bar dataKey="completed" fill="#d4a574" radius={[4, 4, 0, 0]} name="Hoàn thành" />
-                            <Bar dataKey="tasks" fill="#e2e8f0" radius={[4, 4, 0, 0]} name="Tổng" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-                )}
-            </div>
-            </>
-            )}
-
             {/* ===== MEMBER CARDS ===== */}
             {showMemberRoles && visibleMemberStats.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 260px))', gap: 14, marginBottom: 18 }}>
@@ -836,6 +758,9 @@ export default function GroupDetailPage() {
                                 <tr><td colSpan={7} style={{ textAlign: 'center', padding: 28, color: '#94a3b8', fontSize: 13 }}>Chua co task trong database</td></tr>
                             ) : latestGoalTasks.map((task, index) => {
                                 const status = STATUS_COLORS[task.status] || STATUS_COLORS.PENDING;
+                                const actual = Number(task.actualOutput ?? 0);
+                                const target = Number(task.outputTarget ?? 0);
+                                const progressPct = target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : (task.completionPercentage || 0);
                                 return (
                                     <tr key={task.id} style={{ borderBottom: '1px solid #edf2f7' }}>
                                         <td style={{ padding: '10px 12px', color: '#475569', fontSize: 13 }}>{index + 1}</td>
@@ -851,9 +776,9 @@ export default function GroupDetailPage() {
                                         <td style={{ padding: '10px 12px', minWidth: 120 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                                 <div style={{ flex: 1, height: 6, background: '#f1f5f9', borderRadius: 999, overflow: 'hidden' }}>
-                                                    <div style={{ height: '100%', width: `${task.completionPercentage || 0}%`, background: status.color, borderRadius: 999 }} />
+                                                    <div style={{ height: '100%', width: `${progressPct}%`, background: status.color, borderRadius: 999 }} />
                                                 </div>
-                                                <span style={{ color: status.color, fontSize: 12, fontWeight: 800, minWidth: 34 }}>{task.completionPercentage || 0}%</span>
+                                                <span style={{ color: status.color, fontSize: 12, fontWeight: 800, minWidth: 34 }}>{progressPct}%</span>
                                             </div>
                                         </td>
                                     </tr>
@@ -2004,15 +1929,16 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                 display: 'grid',
                                 gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr 1.3fr',
                                 gap: 12, padding: '18px 16px',
-                                background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+                                background: '#f8fafc',
+                                borderTop: '2px solid #e2e8f0',
                                 borderRadius: '0 0 16px 16px',
                                 alignItems: 'center'
                             }}>
-                                <div style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>Tổng cộng</div>
-                                <div style={{ textAlign: 'center', color: '#fff' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalTasks}</span></div>
-                                <div style={{ textAlign: 'center', color: '#fff' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalCompleted}</span></div>
-                                <div style={{ textAlign: 'center', color: '#fff' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalWorkload.toFixed(1)}h</span></div>
-                                <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>—</div>
+                                <div style={{ fontSize: 15, fontWeight: 800, color: '#1e293b' }}>Tổng cộng</div>
+                                <div style={{ textAlign: 'center', color: '#1e293b' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalTasks}</span></div>
+                                <div style={{ textAlign: 'center', color: '#1e293b' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalCompleted}</span></div>
+                                <div style={{ textAlign: 'center', color: '#1e293b' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalWorkload.toFixed(1)}h</span></div>
+                                <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>—</div>
                                 <div style={{ textAlign: 'center' }}>
                                     <div style={{
                                         padding: '10px 16px', borderRadius: 12,

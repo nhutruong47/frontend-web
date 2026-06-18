@@ -6,9 +6,19 @@ import type { Team, InterGroupOrder } from '../types/types';
 
 const PERSONAL_BUYER = '__personal__';
 
+const DEFAULT_MANUAL_ORDER_FORM = {
+    title: '',
+    description: '',
+    quantity: 1,
+    deadline: new Date().toISOString().split('T')[0],
+    customerName: '',
+    contactPhone: '',
+    deliveryAddress: '',
+    deliveryNote: '',
+};
 export default function OrderManagementPage() {
     const { user } = useAuth();
-    const [myTeams, setMyTeams] = useState<Team[]>([]);
+    const [, setMyTeams] = useState<Team[]>([]);
     const [selectedTeam, setSelectedTeam] = useState<string>(PERSONAL_BUYER);
     const [activeTab, setActiveTab] = useState<'outbound' | 'inbound'>('outbound');
 
@@ -17,6 +27,18 @@ export default function OrderManagementPage() {
     const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
     const [unreadOutboundCount, setUnreadOutboundCount] = useState(0);
     const [unreadInboundCount, setUnreadInboundCount] = useState(0);
+
+    // Confirm delivery modal
+    const [confirmModalOrder, setConfirmModalOrder] = useState<InterGroupOrder | null>(null);
+    const [confirmStatus, setConfirmStatus] = useState<'ON_TIME' | 'LATE' | 'NOT_DELIVERED'>('ON_TIME');
+    const [confirmRating, setConfirmRating] = useState(5);
+    const [confirmComment, setConfirmComment] = useState('');
+    const [confirmLoading, setConfirmLoading] = useState(false);
+
+    const [showManualOrderForm, setShowManualOrderForm] = useState(false);
+    const [manualCreateLoading, setManualCreateLoading] = useState(false);
+    const [manualCreateError, setManualCreateError] = useState('');
+    const [manualOrderForm, setManualOrderForm] = useState(DEFAULT_MANUAL_ORDER_FORM);
 
     useEffect(() => {
         const fetchTeams = async () => {
@@ -28,7 +50,7 @@ export default function OrderManagementPage() {
                 if (ownedTeams.length > 0) {
                     setSelectedTeam(ownedTeams[0].id);
                 } else {
-                    setSelectedTeam(PERSONAL_BUYER);
+                    setSelectedTeam('');
                 }
             } catch (err) {
                 console.error(err);
@@ -38,7 +60,7 @@ export default function OrderManagementPage() {
     }, [user]);
 
     useEffect(() => {
-        if (activeTab === 'inbound' && selectedTeam === PERSONAL_BUYER) {
+        if (activeTab === 'inbound' && (selectedTeam === PERSONAL_BUYER || selectedTeam === '')) {
             setOrders([]);
             setLoading(false);
             return;
@@ -48,7 +70,7 @@ export default function OrderManagementPage() {
             setLoading(true);
             try {
                 if (activeTab === 'outbound') {
-                    const data = selectedTeam === PERSONAL_BUYER
+                    const data = (selectedTeam === PERSONAL_BUYER || selectedTeam === '')
                         ? await interGroupOrderService.getMyOutboundOrders()
                         : await interGroupOrderService.getOutboundOrders(selectedTeam);
                     
@@ -81,12 +103,12 @@ export default function OrderManagementPage() {
         const fetchUnreadCounts = async () => {
             if (!user) return;
             try {
-                const outb = selectedTeam === PERSONAL_BUYER
+                const outb = (selectedTeam === PERSONAL_BUYER || selectedTeam === '')
                     ? await interGroupOrderService.getMyOutboundOrders()
                     : await interGroupOrderService.getOutboundOrders(selectedTeam);
                 setUnreadOutboundCount(outb.filter(o => o.buyerViewed === false).length);
 
-                if (selectedTeam !== PERSONAL_BUYER) {
+                if (selectedTeam !== PERSONAL_BUYER && selectedTeam !== '') {
                     const inb = await interGroupOrderService.getInboundOrders(selectedTeam);
                     setUnreadInboundCount(inb.filter(o => o.sellerViewed === false).length);
                 } else {
@@ -132,13 +154,35 @@ export default function OrderManagementPage() {
     };
 
     const handleComplete = async (orderId: string) => {
-        if (!confirm('Đánh dấu đơn này đã hoàn thành?')) return;
+        if (!confirm('Xưởng đã giao hàng xong? Đơn sẽ chuyển sang trạng thái "Đã giao — Chờ xác nhận".')) return;
         try {
             await interGroupOrderService.completeOrder(orderId);
-            setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'COMPLETED' } : o));
+            setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'DELIVERED' } : o));
         } catch (err) {
             alert('Có lỗi xảy ra.');
             console.error(err);
+        }
+    };
+
+    const handleConfirmDelivery = async () => {
+        if (!confirmModalOrder) return;
+        setConfirmLoading(true);
+        try {
+            const updated = await interGroupOrderService.buyerConfirmDelivery(confirmModalOrder.id, {
+                deliveryStatus: confirmStatus,
+                rating: confirmRating,
+                comment: confirmComment,
+            });
+            setOrders(orders.map(o => o.id === confirmModalOrder.id ? { ...o, ...updated } : o));
+            setConfirmModalOrder(null);
+            setConfirmComment('');
+            setConfirmRating(5);
+            setConfirmStatus('ON_TIME');
+            alert('Xác nhận giao hàng thành công! Cảm ơn bạn đã đánh giá.');
+        } catch (err: any) {
+            alert(err?.response?.data?.error || 'Có lỗi xảy ra khi xác nhận.');
+        } finally {
+            setConfirmLoading(false);
         }
     };
 
@@ -164,15 +208,67 @@ export default function OrderManagementPage() {
         }
     };
 
+    const handleManualOrderChange = (field: keyof typeof DEFAULT_MANUAL_ORDER_FORM, value: string | number) => {
+        setManualOrderForm(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleCreateManualInboundOrder = async (event: React.FormEvent) => {
+        event.preventDefault();
+        if (!selectedTeam || selectedTeam === PERSONAL_BUYER) {
+            setManualCreateError('Vui lòng chọn xưởng nhận đơn trước khi tạo.');
+            return;
+        }
+        if (!manualOrderForm.title.trim()) {
+            setManualCreateError('Vui lòng nhập tên đơn hàng.');
+            return;
+        }
+        if (!manualOrderForm.customerName.trim()) {
+            setManualCreateError('Vui lòng nhập tên khách/xưởng đặt.');
+            return;
+        }
+
+        setManualCreateLoading(true);
+        setManualCreateError('');
+        try {
+            const descriptionParts = [
+                manualOrderForm.description.trim(),
+                manualOrderForm.customerName.trim() ? `Khách/xưởng đặt: ${manualOrderForm.customerName.trim()}` : '',
+                manualOrderForm.deliveryNote.trim() ? `Ghi chú: ${manualOrderForm.deliveryNote.trim()}` : '',
+            ].filter(Boolean);
+
+            const created = await interGroupOrderService.placeOrder({
+                sellerTeamId: selectedTeam,
+                title: manualOrderForm.title.trim(),
+                description: descriptionParts.join('\n'),
+                quantity: Number(manualOrderForm.quantity) || 1,
+                deadline: manualOrderForm.deadline,
+                contactPhone: manualOrderForm.contactPhone.trim() || undefined,
+                deliveryAddress: manualOrderForm.deliveryAddress.trim() || undefined,
+                deliveryNote: manualOrderForm.deliveryNote.trim() || undefined,
+            });
+
+            setOrders(prev => [created, ...prev]);
+            setActiveTab('inbound');
+            setShowManualOrderForm(false);
+            setManualOrderForm(DEFAULT_MANUAL_ORDER_FORM);
+        } catch (err: any) {
+            setManualCreateError(err?.response?.data?.message || err?.response?.data?.error || 'Không thể tạo đơn thủ công.');
+            console.error(err);
+        } finally {
+            setManualCreateLoading(false);
+        }
+    };
+
     const getStatusBadge = (order: InterGroupOrder) => {
         if (order.cancelRequested) return <span className="status-badge status-rejected"><ion-icon name="alert-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Yêu cầu hủy</span>;
         switch (order.status) {
             case 'PENDING': return <span className="status-badge status-pending"><ion-icon name="time-outline" style={{ fontSize: '13px' }}></ion-icon> Chờ xử lý</span>;
             case 'ACCEPTED': return <span className="status-badge status-accepted"><ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Đã nhận làm</span>;
             case 'REJECTED': return <span className="status-badge status-rejected"><ion-icon name="close-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Bị từ chối</span>;
+            case 'DELIVERED': return <span className="status-badge" style={{ background: '#fef3c7', color: '#92400e' }}><ion-icon name="car-outline" style={{ fontSize: '13px' }}></ion-icon> Đã giao — {order.deliveryConfirmed ? 'Đã xác nhận' : 'Chờ xác nhận'}</span>;
             case 'COMPLETED': return <span className="status-badge status-completed"><ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Hoàn thành</span>;
             case 'CANCELED': return <span className="status-badge status-canceled"><ion-icon name="ban-outline" style={{ fontSize: '13px' }}></ion-icon> Đã hủy</span>;
-            default: return <span className="status-badge">{status}</span>;
+            default: return <span className="status-badge">{order.status}</span>;
         }
     };
 
@@ -198,6 +294,8 @@ export default function OrderManagementPage() {
         return `Đến ${fmt(to!)}`;
     };
 
+
+
     return (
         <div className="page-container">
             <header className="page-header glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 32px', marginBottom: 24 }}>
@@ -206,20 +304,6 @@ export default function OrderManagementPage() {
                         <span className="icon-container glow" style={{ width: 32, height: 32, fontSize: 20 }}><ion-icon name="cube-outline"></ion-icon></span> Quản lý đơn hàng
                     </h1>
                     <p className="page-subtitle">Theo dõi đơn đi đặt tại xưởng khác và đơn nhận gia công.</p>
-                </div>
-                <div>
-                    <label style={{ marginRight: '10px', color: 'var(--text-secondary)' }}>Bên đặt / xưởng quản lý:</label>
-                    <select
-                        className="form-input"
-                        style={{ display: 'inline-block', width: 'auto', padding: '8px 16px', cursor: 'pointer' }}
-                        value={selectedTeam}
-                        onChange={e => setSelectedTeam(e.target.value)}
-                    >
-                        <option value={PERSONAL_BUYER}>Tài khoản cá nhân</option>
-                        {myTeams.map(t => (
-                            <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                    </select>
                 </div>
             </header>
 
@@ -237,9 +321,7 @@ export default function OrderManagementPage() {
                         className={`tab-btn ${activeTab === 'inbound' ? 'active' : ''}`}
                         onClick={() => {
                             setActiveTab('inbound');
-                            if (selectedTeam === PERSONAL_BUYER && myTeams[0]) setSelectedTeam(myTeams[0].id);
                         }}
-                        disabled={myTeams.length === 0}
                         style={{ display: 'flex', alignItems: 'center', gap: 4 }}
                     >
                         <ion-icon name="arrow-down-outline" style={{ fontSize: '15px' }}></ion-icon> Đơn xưởng khác đặt (Bán/Gia công)
@@ -268,6 +350,153 @@ export default function OrderManagementPage() {
                     <div>
                         <strong>Bạn có {pendingInboundCount} đơn đặt hàng mới cần phản hồi.</strong>
                         <p style={{ margin: '4px 0 0', color: '#7a563c' }}>Kiểm tra thông tin đơn, sau đó chấp nhận hoặc từ chối ngay trong bảng bên dưới.</p>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'inbound' && (
+                <div className="glass-panel" style={{ padding: '16px 20px', marginBottom: 20, border: '1px solid rgba(217, 156, 95, 0.28)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                        <div>
+                            <h2 style={{ margin: 0, fontSize: 20, color: 'var(--text-primary)' }}>Đơn xưởng khác đặt</h2>
+                            <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 13 }}>
+                                Quản lý đơn bán/gia công cho xưởng đang chọn.
+                            </p>
+                        </div>
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => {
+                                setShowManualOrderForm(true);
+                                setManualCreateError('');
+                            }}
+                        >
+                            <ion-icon name="add-circle-outline" style={{ fontSize: 16 }}></ion-icon>
+                            Tạo đơn hàng thủ công
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {showManualOrderForm && (
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
+                    backdropFilter: 'blur(8px)', zIndex: 10000,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+                }}>
+                    <div style={{
+                        background: 'var(--bg-card)', borderRadius: 24, padding: '40px',
+                        maxWidth: 1000, width: '100%', boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
+                        maxHeight: '90vh', overflowY: 'auto', position: 'relative'
+                    }}>
+                        <button
+                            type="button"
+                            onClick={() => setShowManualOrderForm(false)}
+                            style={{ position: 'absolute', top: 24, right: 32, background: 'transparent', border: 'none', fontSize: 32, color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '50%', transition: 'all 0.2s' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                            &times;
+                        </button>
+                        
+                        <div style={{ marginBottom: 32 }}>
+                            <h2 style={{ margin: 0, fontSize: 28, color: 'var(--text-primary)', fontWeight: 800 }}>Đơn xưởng khác đặt</h2>
+                            <p style={{ margin: '8px 0 0', color: 'var(--text-secondary)', fontSize: 16 }}>
+                                Tạo nhanh đơn bán/gia công thủ công cho xưởng đang chọn.
+                            </p>
+                        </div>
+                        
+                        <form onSubmit={handleCreateManualInboundOrder} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px 32px' }}>
+                            <div style={{ gridColumn: '1/-1' }}>
+                                <label style={{ display: 'block', fontSize: 16, color: 'var(--text-primary)', marginBottom: 10, fontWeight: 600 }}>Tên đơn hàng *</label>
+                                <input
+                                    value={manualOrderForm.title}
+                                    onChange={event => handleManualOrderChange('title', event.target.value)}
+                                    placeholder="VD: Đơn gia công rang 20kg Robusta"
+                                    style={{ width: '100%', padding: '16px 20px', borderRadius: 12, border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 16, outline: 'none' }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 16, color: 'var(--text-primary)', marginBottom: 10, fontWeight: 600 }}>Khách / xưởng đặt *</label>
+                                <input
+                                    value={manualOrderForm.customerName}
+                                    onChange={event => handleManualOrderChange('customerName', event.target.value)}
+                                    placeholder="Tên khách hoặc xưởng đặt"
+                                    style={{ width: '100%', padding: '16px 20px', borderRadius: 12, border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 16, outline: 'none' }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 16, color: 'var(--text-primary)', marginBottom: 10, fontWeight: 600 }}>Số điện thoại</label>
+                                <input
+                                    value={manualOrderForm.contactPhone}
+                                    onChange={event => handleManualOrderChange('contactPhone', event.target.value)}
+                                    placeholder="SĐT liên hệ"
+                                    style={{ width: '100%', padding: '16px 20px', borderRadius: 12, border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 16, outline: 'none' }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 16, color: 'var(--text-primary)', marginBottom: 10, fontWeight: 600 }}>Số lượng</label>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    value={manualOrderForm.quantity}
+                                    onChange={event => handleManualOrderChange('quantity', Number(event.target.value))}
+                                    style={{ width: '100%', padding: '16px 20px', borderRadius: 12, border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 16, outline: 'none' }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 16, color: 'var(--text-primary)', marginBottom: 10, fontWeight: 600 }}>Hạn chót</label>
+                                <input
+                                    type="date"
+                                    value={manualOrderForm.deadline}
+                                    onChange={event => handleManualOrderChange('deadline', event.target.value)}
+                                    style={{ width: '100%', padding: '16px 20px', borderRadius: 12, border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 16, outline: 'none' }}
+                                />
+                            </div>
+                            <div style={{ gridColumn: '1/-1' }}>
+                                <label style={{ display: 'block', fontSize: 16, color: 'var(--text-primary)', marginBottom: 10, fontWeight: 600 }}>Mô tả đơn</label>
+                                <textarea
+                                    value={manualOrderForm.description}
+                                    onChange={event => handleManualOrderChange('description', event.target.value)}
+                                    placeholder="Mặt hàng, quy cách, yêu cầu gia công/bán hàng..."
+                                    style={{ width: '100%', padding: '16px 20px', borderRadius: 12, border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 16, outline: 'none', minHeight: 120, resize: 'vertical' }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 16, color: 'var(--text-primary)', marginBottom: 10, fontWeight: 600 }}>Địa chỉ giao hàng</label>
+                                <input
+                                    value={manualOrderForm.deliveryAddress}
+                                    onChange={event => handleManualOrderChange('deliveryAddress', event.target.value)}
+                                    placeholder="Địa chỉ nhận/giao"
+                                    style={{ width: '100%', padding: '16px 20px', borderRadius: 12, border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 16, outline: 'none' }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 16, color: 'var(--text-primary)', marginBottom: 10, fontWeight: 600 }}>Ghi chú</label>
+                                <input
+                                    value={manualOrderForm.deliveryNote}
+                                    onChange={event => handleManualOrderChange('deliveryNote', event.target.value)}
+                                    placeholder="Giao giờ hành chính, gọi trước..."
+                                    style={{ width: '100%', padding: '16px 20px', borderRadius: 12, border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 16, outline: 'none' }}
+                                />
+                            </div>
+                            {manualCreateError && <div style={{ gridColumn: '1/-1', color: '#ef4444', fontSize: 16, fontWeight: 500, padding: '12px 16px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: 8 }}>{manualCreateError}</div>}
+                            <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'flex-end', gap: 16, marginTop: 16 }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => {
+                                        setShowManualOrderForm(false);
+                                        setManualCreateError('');
+                                    }}
+                                    style={{ padding: '14px 28px', fontSize: 16 }}
+                                >
+                                    Hủy
+                                </button>
+                                <button type="submit" className="btn btn-primary" disabled={manualCreateLoading} style={{ opacity: manualCreateLoading ? 0.65 : 1, padding: '14px 28px', fontSize: 16 }}>
+                                    {manualCreateLoading ? 'Đang tạo...' : 'Tạo đơn thủ công'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
@@ -341,9 +570,9 @@ export default function OrderManagementPage() {
                                                     <button className="btn btn-primary" onClick={() => handleAccept(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>Chấp nhận</button>
                                                 </>
                                             )}
-                                            {/* Inbound ACCEPTED: Complete */}
+                                            {/* Inbound ACCEPTED: Mark as Delivered */}
                                             {activeTab === 'inbound' && order.status === 'ACCEPTED' && !order.cancelRequested && (
-                                                <button className="btn btn-primary" onClick={() => handleComplete(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}><ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Hoàn thành</button>
+                                                <button className="btn btn-primary" onClick={() => handleComplete(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}><ion-icon name="car-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Đã giao</button>
                                             )}
                                             {/* Inbound CANCEL_REQUESTED: Approve/Reject Cancel */}
                                             {activeTab === 'inbound' && order.cancelRequested && (
@@ -355,6 +584,20 @@ export default function OrderManagementPage() {
                                             {/* Both: Cancel (PENDING or ACCEPTED) */}
                                             {(order.status === 'PENDING' || order.status === 'ACCEPTED') && !order.cancelRequested && (
                                                 <button className="btn btn-secondary" onClick={() => handleCancel(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}><ion-icon name="ban-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> {activeTab === 'outbound' ? 'Hủy / Xin hủy' : 'Hủy'}</button>
+                                            )}
+                                            {/* Outbound DELIVERED: Buyer confirms receipt */}
+                                            {activeTab === 'outbound' && order.status === 'DELIVERED' && (
+                                                <>
+                                                    {order.deliveryConfirmed ? (
+                                                        <span style={{ fontSize: '0.78rem', padding: '4px 10px', borderRadius: 8, fontWeight: 700, background: order.deliveryStatus === 'ON_TIME' ? '#dcfce7' : order.deliveryStatus === 'LATE' ? '#fef3c7' : '#fee2e2', color: order.deliveryStatus === 'ON_TIME' ? '#15803d' : order.deliveryStatus === 'LATE' ? '#92400e' : '#dc2626' }}>
+                                                            {order.deliveryStatus === 'ON_TIME' ? 'Giao đúng hẹn' : order.deliveryStatus === 'LATE' ? 'Giao trễ' : 'Chưa giao'}
+                                                        </span>
+                                                    ) : (
+                                                        <button className="btn btn-primary" onClick={() => { setConfirmModalOrder(order); setConfirmRating(5); setConfirmComment(''); }} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#10b981' }}>
+                                                            <ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Xác nhận giao hàng
+                                                        </button>
+                                                    )}
+                                                </>
                                             )}
                                             {/* Show canceller */}
                                             {order.status === 'CANCELED' && order.cancelledBy && (
@@ -428,6 +671,84 @@ export default function OrderManagementPage() {
                             ))}
                         </tbody>
                     </table>
+                </div>
+            )}
+
+            {/* === XÁC NHẬN GIAO HÀNG + ĐÁNH GIÁ MODAL === */}
+            {confirmModalOrder && (
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)',
+                    backdropFilter: 'blur(6px)', zIndex: 10000,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                    <div style={{
+                        background: 'var(--bg-card)', borderRadius: 20, padding: '28px 32px',
+                        maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                    }}>
+                        <h2 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 800 }}>
+                            Xác nhận giao hàng
+                        </h2>
+                        <p style={{ margin: '0 0 20px', color: 'var(--text-secondary)', fontSize: 14 }}>
+                            Xác nhận đơn <strong>"{confirmModalOrder.title}"</strong> đã được giao như thế nào?
+                        </p>
+
+                        {/* Delivery result */}
+                        <div style={{ marginBottom: 20 }}>
+                            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 10, color: 'var(--text-primary)' }}>Kết quả giao hàng</label>
+                            <div style={{ display: 'flex', gap: 10 }}>
+                                {(['ON_TIME', 'LATE', 'NOT_DELIVERED'] as const).map(s => (
+                                    <button key={s} onClick={() => setConfirmStatus(s)} style={{
+                                        flex: 1, padding: '10px 8px', borderRadius: 10, border: `2px solid ${confirmStatus === s ? (
+                                            s === 'ON_TIME' ? '#10b981' : s === 'LATE' ? '#f59e0b' : '#ef4444'
+                                        ) : 'var(--border)'}`, background: confirmStatus === s ? (
+                                            s === 'ON_TIME' ? '#dcfce7' : s === 'LATE' ? '#fef3c7' : '#fee2e2'
+                                        ) : 'transparent', color: confirmStatus === s ? (
+                                            s === 'ON_TIME' ? '#15803d' : s === 'LATE' ? '#92400e' : '#dc2626'
+                                        ) : 'var(--text-secondary)', fontWeight: 700, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s'
+                                    }}>
+                                        {s === 'ON_TIME' ? '✓ Đúng hẹn' : s === 'LATE' ? '⚠ Trễ hẹn' : '✕ Chưa giao'}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Star rating */}
+                        <div style={{ marginBottom: 20 }}>
+                            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 10, color: 'var(--text-primary)' }}>Đánh giá xưởng</label>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                                {[1, 2, 3, 4, 5].map(star => (
+                                    <button key={star} onClick={() => setConfirmRating(star)} style={{
+                                        background: 'none', border: 'none', cursor: 'pointer', fontSize: 28,
+                                        color: star <= confirmRating ? '#f59e0b' : '#d1d5db',
+                                        transition: 'transform 0.1s', transform: star <= confirmRating ? 'scale(1.15)' : 'scale(1)',
+                                    }}>
+                                        ★
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Comment */}
+                        <div style={{ marginBottom: 24 }}>
+                            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)' }}>Nhận xét (tùy chọn)</label>
+                            <textarea
+                                value={confirmComment}
+                                onChange={e => setConfirmComment(e.target.value)}
+                                placeholder="Chia sẻ trải nghiệm của bạn với xưởng này..."
+                                rows={3}
+                                style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', fontSize: 13, resize: 'vertical', fontFamily: 'inherit', background: 'var(--bg-input)', boxSizing: 'border-box' }}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                            <button onClick={() => setConfirmModalOrder(null)} style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>
+                                Hủy
+                            </button>
+                            <button onClick={handleConfirmDelivery} disabled={confirmLoading} style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: confirmLoading ? '#a8a29e' : '#10b981', color: '#fff', fontWeight: 700, cursor: confirmLoading ? 'not-allowed' : 'pointer', fontSize: 13 }}>
+                                {confirmLoading ? 'Đang xác nhận...' : 'Xác nhận & Gửi đánh giá'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

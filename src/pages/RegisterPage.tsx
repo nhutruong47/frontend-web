@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import orcaLogo from '../assets/orca-logo.png';
@@ -7,12 +7,23 @@ export default function RegisterPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const { register } = useAuth();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const returnUrl = searchParams.get('returnUrl') || '/dashboard';
+
+    useEffect(() => {
+        const remembered = localStorage.getItem('orca_remember_username');
+        if (remembered) {
+            setUsername(remembered);
+            setRememberMe(true);
+        }
+    }, []);
 
     const friendlyRegisterError = (message?: string) => {
         const text = (message || '').toLowerCase();
@@ -47,6 +58,11 @@ export default function RegisterPage() {
         setIsLoading(true);
         try {
             await register({ username, password });
+            if (rememberMe) {
+                localStorage.setItem('orca_remember_username', username.trim());
+            } else {
+                localStorage.removeItem('orca_remember_username');
+            }
             navigate(returnUrl);
         } catch (err: unknown) {
             if (err && typeof err === 'object' && 'response' in err) {
@@ -97,13 +113,22 @@ export default function RegisterPage() {
                             <span className="input-icon"><ion-icon name="lock-closed-outline" style={{ fontSize: '16px' }}></ion-icon></span>
                             <input
                                 id="register-password"
-                                type="password"
-                                className="form-input"
+                                type={showPassword ? 'text' : 'password'}
+                                className="form-input password-input"
                                 placeholder="Ít nhất 6 ký tự"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 autoComplete="new-password"
                             />
+                            <button
+                                type="button"
+                                className="password-toggle-btn"
+                                onClick={() => setShowPassword(prev => !prev)}
+                                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                                title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                            >
+                                <ion-icon name={showPassword ? 'eye-off-outline' : 'eye-outline'}></ion-icon>
+                            </button>
                         </div>
                     </div>
 
@@ -113,15 +138,33 @@ export default function RegisterPage() {
                             <span className="input-icon"><ion-icon name="shield-checkmark-outline" style={{ fontSize: '16px' }}></ion-icon></span>
                             <input
                                 id="register-confirm-password"
-                                type="password"
+                                type={showConfirmPassword ? 'text' : 'password'}
                                 className="form-input"
                                 placeholder="Nhập lại mật khẩu"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 autoComplete="new-password"
                             />
+                            <button
+                                type="button"
+                                className="password-toggle-btn"
+                                onClick={() => setShowConfirmPassword(prev => !prev)}
+                                aria-label={showConfirmPassword ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận'}
+                                title={showConfirmPassword ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận'}
+                            >
+                                <ion-icon name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}></ion-icon>
+                            </button>
                         </div>
                     </div>
+
+                    <label className="remember-row">
+                        <input
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={e => setRememberMe(e.target.checked)}
+                        />
+                        <span>Ghi nhớ tài khoản</span>
+                    </label>
 
                     {error && (
                         <div className="form-error">

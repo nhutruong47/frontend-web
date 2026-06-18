@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { teamService } from '../services/groupService';
-import { interGroupOrderService } from '../services/interGroupOrderService';
-import type { Team, InterGroupOrder } from '../types/types';
+import { interGroupOrderService, reviewService } from '../services/interGroupOrderService';
+import type { Team, InterGroupOrder, Review, ReviewSummary } from '../types/types';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import './Marketplace.css';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
+import { useRef } from 'react';
 
 type FactoryProfileTab = 'overview' | 'capabilities' | 'equipment' | 'certificates' | 'reviews' | 'portfolio' | 'rfq';
 type AvailabilityStatus = 'AVAILABLE' | 'LIMITED' | 'FULLY_BOOKED' | 'UNKNOWN';
@@ -99,8 +102,77 @@ const SPECIALTY_OPTIONS = [
     'Thiết kế bao bì',
 ];
 const CERTIFICATE_OPTIONS = ['HACCP', 'ISO 22000', 'ISO 9001', 'OCOP', 'FDA', 'Khác'];
-const RFQ_TYPE_OPTIONS = ['Rang cà phê', 'Gia công OEM', 'Đóng gói', 'Xay cà phê', 'Private Label', 'Mua cà phê nhân', 'Khác'];
-const RFQ_UNIT_OPTIONS = ['kg', 'tấn', 'bao', 'gói'];
+
+const RFQ_SERVICE_OPTIONS = [
+    { value: 'Roasting', label: 'Rang cà phê (Roasting)' },
+    { value: 'Packaging', label: 'Đóng gói (Packaging)' },
+    { value: 'OEM', label: 'Gia công OEM' },
+    { value: 'Private Label', label: 'Private Label' },
+    { value: 'Grinding', label: 'Xay cà phê (Grinding)' },
+    { value: 'Green Coffee', label: 'Mua cà phê nhân' },
+    { value: 'Blend Development', label: 'Phối trộn blend' },
+    { value: 'Sample Roasting', label: 'Rang mẫu / Test profile' },
+    { value: 'QC Cupping', label: 'QC / Cupping' },
+    { value: 'Drying', label: 'Sấy / sơ chế' },
+    { value: 'Other', label: 'Khác' },
+];
+const RFQ_UNIT_OPTIONS = [
+    { value: 'kg', label: 'kg' },
+    { value: 'ton', label: 'Tấn (Ton)' },
+    { value: 'bag', label: 'Bao' },
+    { value: 'package', label: 'Gói' },
+    { value: 'batch', label: 'Mẻ / Batch' },
+];
+const COFFEE_TYPE_OPTIONS = [
+    { value: 'Arabica', label: 'Arabica' },
+    { value: 'Robusta', label: 'Robusta' },
+    { value: 'Liberica', label: 'Liberica' },
+    { value: 'Excelsa', label: 'Excelsa' },
+    { value: 'Blend', label: 'Blend (Phối trộn)' },
+    { value: 'Arabica Specialty', label: 'Arabica Specialty' },
+    { value: 'Fine Robusta', label: 'Fine Robusta' },
+    { value: 'Culi / Peaberry', label: 'Culi / Peaberry' },
+    { value: 'Moka', label: 'Moka' },
+    { value: 'Catimor', label: 'Catimor' },
+    { value: 'Bourbon', label: 'Bourbon' },
+    { value: 'Typica', label: 'Typica' },
+    { value: 'Caturra', label: 'Caturra' },
+    { value: 'Gesha / Geisha', label: 'Gesha / Geisha' },
+    { value: 'Ethiopia Heirloom', label: 'Ethiopia Heirloom' },
+    { value: 'Colombia Supremo', label: 'Colombia Supremo' },
+    { value: 'Brazil Santos', label: 'Brazil Santos' },
+    { value: 'Vietnam Robusta', label: 'Vietnam Robusta' },
+    { value: 'Green Coffee Beans', label: 'Cà phê nhân xanh' },
+    { value: 'Roasted Beans', label: 'Cà phê rang nguyên hạt' },
+    { value: 'Ground Coffee', label: 'Cà phê rang xay' },
+    { value: 'Instant Coffee', label: 'Cà phê hòa tan' },
+    { value: 'Other', label: 'Khác' },
+];
+const ROAST_PROFILE_OPTIONS = [
+    { value: 'Light', label: 'Light Roast' },
+    { value: 'Medium Light', label: 'Medium Light' },
+    { value: 'Medium', label: 'Medium Roast' },
+    { value: 'Medium Dark', label: 'Medium Dark' },
+    { value: 'Dark', label: 'Dark Roast' },
+    { value: 'Espresso Roast', label: 'Espresso Roast' },
+    { value: 'Custom', label: 'Theo profile riêng' },
+];
+const PACKAGING_FORMAT_OPTIONS = [
+    { value: '100g', label: 'Túi 100g' },
+    { value: '250g', label: 'Túi 250g' },
+    { value: '500g', label: 'Túi 500g' },
+    { value: '1kg', label: 'Túi 1kg' },
+    { value: '5kg', label: 'Bao 5kg' },
+    { value: '10kg', label: 'Bao 10kg' },
+    { value: '20kg', label: 'Bao 20kg' },
+    { value: '25kg', label: 'Bao 25kg' },
+    { value: '50kg', label: 'Bao 50kg' },
+    { value: 'Drip bag', label: 'Drip bag' },
+    { value: 'Capsule', label: 'Capsule / Pod' },
+    { value: 'Tin can', label: 'Lon thiếc' },
+    { value: 'Private Label', label: 'Bao bì private label' },
+    { value: 'Custom', label: 'Khác (Custom)' },
+];
 
 const profileTabLabels: Record<FactoryProfileTab, string> = {
     overview: 'Tổng quan',
@@ -127,7 +199,7 @@ const REQUEST_STORAGE_KEY = 'orca-marketplace-rfqs';
 const emptyValue = 'Chưa cập nhật';
 const fallbackFactoryImages = [
     'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?auto=format&fit=crop&w=900&q=85',
-    'https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1559525839-b184a4d698c7?auto=format&fit=crop&w=900&q=85',
     'https://images.unsplash.com/photo-1596496350324-a212260cb462?auto=format&fit=crop&w=900&q=85',
     'https://images.unsplash.com/photo-1574634534894-89d7576c8259?auto=format&fit=crop&w=900&q=85',
 ];
@@ -255,8 +327,8 @@ const normalizeFactory = (team: Team): MarketplaceFactory => {
         
         capabilitiesMock: {
             services: splitMultiValue(team.specialty).length > 0 ? splitMultiValue(team.specialty) : ['Rang cà phê', 'Đóng gói', 'Gia công OEM'],
-            coffeeTypes: ['Arabica', 'Robusta', 'Blend', 'Specialty Coffee'],
-            packagingFormats: ['250g', '500g', '1kg', 'Drip Bag', 'Bulk']
+            coffeeTypes: COFFEE_TYPE_OPTIONS.slice(0, 16).map(option => option.label),
+            packagingFormats: PACKAGING_FORMAT_OPTIONS.map(option => option.label)
         },
         equipmentMock: {
             roasters: [
@@ -364,6 +436,15 @@ const translations = {
 };
 
 export default function MarketplacePage() {
+    const container = useRef<HTMLDivElement>(null);
+    
+    useGSAP(() => {
+        const tl = gsap.timeline();
+        tl.from('.mp-hero-copy h1, .mp-hero-copy p', { y: 30, opacity: 0, duration: 0.8, stagger: 0.2, ease: 'power3.out' })
+          .from('.mp-top-search', { scaleX: 0.95, opacity: 0, duration: 0.5, ease: 'power2.out' }, '-=0.4')
+          .from('.mp-market-card', { y: 40, opacity: 0, duration: 0.6, stagger: 0.05, ease: 'power3.out' }, '-=0.2');
+    }, { scope: container });
+
     const { user } = useAuth();
     const navigate = useNavigate();
     const [language, setLanguage] = useState<'vi' | 'en'>('vi');
@@ -393,15 +474,22 @@ export default function MarketplacePage() {
     const [chatTarget, setChatTarget] = useState<MarketplaceFactory | null>(null);
     const [chatDraft, setChatDraft] = useState('');
     const [chatMessages, setChatMessages] = useState<{sender: 'me' | 'other', text: string}[]>([]);
+    const [factoryReviewsSummary, setFactoryReviewsSummary] = useState<Record<string, ReviewSummary>>({});
+    const [factoryReviews, setFactoryReviews] = useState<Record<string, Review[]>>({});
+    const [reviewsLoading, setReviewsLoading] = useState(false);
+    const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+    const [editReviewRating, setEditReviewRating] = useState(5);
+    const [editReviewStatus, setEditReviewStatus] = useState<'ON_TIME' | 'LATE' | 'NOT_DELIVERED'>('ON_TIME');
+    const [editReviewComment, setEditReviewComment] = useState('');
 
     const [showOrderModal, setShowOrderModal] = useState(false);
     const [selectedSeller, setSelectedSeller] = useState<Team | null>(null);
     const [buyerTeamId, setBuyerTeamId] = useState('');
     const [rfqTitle, setRfqTitle] = useState('');
-    const [rfqRequestType, setRfqRequestType] = useState(RFQ_TYPE_OPTIONS[0]);
+    const [rfqRequestType, setRfqRequestType] = useState(RFQ_SERVICE_OPTIONS[0].value);
     const [rfqProductName, setRfqProductName] = useState('');
     const [rfqQuantity, setRfqQuantity] = useState(1);
-    const [rfqUnit, setRfqUnit] = useState(RFQ_UNIT_OPTIONS[0]);
+    const [rfqUnit, setRfqUnit] = useState(RFQ_UNIT_OPTIONS[0].value);
     const [rfqDeadline, setRfqDeadline] = useState('');
     const [rfqBudget, setRfqBudget] = useState('');
     const [rfqQuality, setRfqQuality] = useState('');
@@ -467,6 +555,42 @@ export default function MarketplacePage() {
         fetchData();
     }, [user]);
 
+    useEffect(() => {
+        if (!allTeams.length) return;
+        const fetchReviews = async () => {
+            const summaries: typeof factoryReviewsSummary = {};
+            await Promise.all(allTeams.map(async (team) => {
+                try {
+                    summaries[team.id] = await reviewService.getSummary(team.id);
+                } catch {}
+            }));
+            setFactoryReviewsSummary(summaries);
+        };
+        fetchReviews();
+    }, [allTeams]);
+
+    const loadFactoryReviews = async (teamId: string) => {
+        setReviewsLoading(true);
+        try {
+            const [reviews, summary] = await Promise.all([
+                reviewService.getByTeam(teamId),
+                reviewService.getSummary(teamId),
+            ]);
+            setFactoryReviews(prev => ({ ...prev, [teamId]: reviews }));
+            setFactoryReviewsSummary(prev => ({ ...prev, [teamId]: summary }));
+        } catch (err) {
+            console.error('Failed to load factory reviews', err);
+        } finally {
+            setReviewsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (selectedFactory && activeProfileTab === 'reviews') {
+            loadFactoryReviews(selectedFactory.id);
+        }
+    }, [selectedFactory?.id, activeProfileTab]);
+
     const factories = useMemo(() => allTeams.map(normalizeFactory), [allTeams]);
 
     const displayedFactories = useMemo(() => {
@@ -509,7 +633,7 @@ export default function MarketplacePage() {
 
     const selectedCompareFactories = factories.filter(factory => compareIds.includes(factory.id));
     const myPublishedTeams = myTeams.filter(team => team.isPublished);
-    const featuredFactories = displayedFactories.slice(0, 3);
+    const featuredFactories = displayedFactories;
     const totalCompletedOrders = factories.reduce((sum, factory) => sum + (factory.completedOrders || 0), 0);
 
     const fillPublishForm = (team: Team) => {
@@ -621,10 +745,10 @@ export default function MarketplacePage() {
         setSelectedSeller(seller || null);
         setBuyerTeamId(myTeams[0]?.id || '');
         setRfqTitle('');
-        setRfqRequestType(RFQ_TYPE_OPTIONS[0]);
+        setRfqRequestType(RFQ_SERVICE_OPTIONS[0].value);
         setRfqProductName('');
         setRfqQuantity(1);
-        setRfqUnit(RFQ_UNIT_OPTIONS[0]);
+        setRfqUnit(RFQ_UNIT_OPTIONS[0].value);
         setRfqDeadline('');
         setRfqBudget('');
         setRfqQuality('');
@@ -777,6 +901,60 @@ export default function MarketplacePage() {
         }
     };
 
+    const deliveryResultLabel = (status?: string) => {
+        switch (status) {
+            case 'ON_TIME': return 'Giao đúng hẹn';
+            case 'LATE': return 'Giao trễ';
+            case 'NOT_DELIVERED': return 'Chưa nhận hàng';
+            default: return 'Chưa rõ';
+        }
+    };
+
+    const canManageReview = (review: Review) => {
+        if (!user) return false;
+        const ownsByUser = review.buyerUserId === user.id;
+        const ownsByTeam = myTeams.some(team => team.id === review.buyerTeamId && team.ownerId === user.id);
+        return ownsByUser || ownsByTeam;
+    };
+
+    const startEditReview = (review: Review) => {
+        setEditingReviewId(review.id);
+        setEditReviewRating(review.rating);
+        setEditReviewStatus(review.deliveryResult);
+        setEditReviewComment(review.comment || '');
+    };
+
+    const cancelEditReview = () => {
+        setEditingReviewId(null);
+        setEditReviewRating(5);
+        setEditReviewStatus('ON_TIME');
+        setEditReviewComment('');
+    };
+
+    const handleUpdateReview = async (factoryId: string, reviewId: string) => {
+        try {
+            await reviewService.update(reviewId, {
+                rating: editReviewRating,
+                deliveryResult: editReviewStatus,
+                comment: editReviewComment,
+            });
+            cancelEditReview();
+            await loadFactoryReviews(factoryId);
+        } catch (err: any) {
+            alert(err?.response?.data?.error || 'Không thể cập nhật đánh giá.');
+        }
+    };
+
+    const handleDeleteReview = async (factoryId: string, reviewId: string) => {
+        if (!confirm('Xóa đánh giá này? Điểm sao của xưởng sẽ được cập nhật lại.')) return;
+        try {
+            await reviewService.remove(reviewId);
+            await loadFactoryReviews(factoryId);
+        } catch (err: any) {
+            alert(err?.response?.data?.error || 'Không thể xóa đánh giá.');
+        }
+    };
+
     const renderMetric = (label: string, value?: string | number) => (
         <div className="mp-capacity-metric">
             <span>{label}</span>
@@ -801,6 +979,116 @@ export default function MarketplacePage() {
                         {badge.label}
                     </span>
                 ))}
+            </div>
+        );
+    };
+
+    const renderReviewsTab = (factory: MarketplaceFactory) => {
+        const summary = factoryReviewsSummary[factory.id] || {};
+        const avgRating = summary.avgRating || 0;
+        const reviewCount = summary.reviewCount || 0;
+        const onTimeRate = summary.onTimeRate || 0;
+        const completed = summary.completedOrders || 0;
+        const late = summary.lateOrders || 0;
+        const starCounts = summary.starCounts || {};
+        const reviews = factoryReviews[factory.id] || [];
+
+        if (reviewsLoading && reviews.length === 0) {
+            return (
+                <div className="mp-profile-overview" style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                    <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+                        <div className="btn-spinner" style={{ margin: '0 auto 12px' }} />
+                        <p>Đang tải đánh giá...</p>
+                    </div>
+                </div>
+            );
+        }
+
+        if (reviewCount === 0) {
+            return (
+                <div className="mp-profile-overview" style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                    <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: 40, marginBottom: 12 }}>Chưa có đánh giá</div>
+                        <p>Chưa có đơn hàng nào được hoàn thành với xưởng này.</p>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="mp-profile-overview" style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                <div style={{display: 'flex', alignItems: 'stretch', gap: '24px', padding: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', flexWrap: 'wrap'}}>
+                    <div style={{textAlign: 'center', minWidth: 120}}>
+                        <div style={{fontSize: '36px', fontWeight: 700, color: '#f59e0b'}}>{avgRating > 0 ? avgRating.toFixed(1) : '-'}</div>
+                        <div style={{color: '#f59e0b', margin: '4px 0', letterSpacing: '2px'}}>{avgRating > 0 ? '★'.repeat(Math.round(avgRating)) + '☆'.repeat(5 - Math.round(avgRating)) : '-'}</div>
+                        <div style={{fontSize: '13px', color: '#a79d94'}}>{reviewCount} đánh giá</div>
+                    </div>
+                    <div style={{flex: 1, minWidth: 240}}>
+                        {[5, 4, 3, 2, 1].map(star => {
+                            const count = Number(starCounts[String(star)] || starCounts[star] || 0);
+                            const pct = reviewCount > 0 ? Math.round((count / reviewCount) * 100) : 0;
+                            return (
+                                <div key={star} style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px'}}>
+                                    <span style={{fontSize: '12px', color: '#f59e0b', width: '44px'}}>{star} sao</span>
+                                    <div style={{flex: 1, height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden'}}>
+                                        <div style={{height: '100%', background: '#f59e0b', width: `${pct}%`, transition: 'width 0.3s'}} />
+                                    </div>
+                                    <span style={{fontSize: '12px', color: '#a79d94', width: '56px', textAlign: 'right'}}>{count} ({pct}%)</span>
+                                </div>
+                            );
+                        })}
+                        <div style={{display: 'flex', gap: 16, marginTop: 10, flexWrap: 'wrap'}}>
+                            <span style={{fontSize: 12, color: '#a79d94'}}>Đúng hẹn {Math.round(onTimeRate)}%</span>
+                            <span style={{fontSize: 12, color: '#a79d94'}}>{completed} đơn hoàn thành</span>
+                            <span style={{fontSize: 12, color: '#a79d94'}}>{late} đơn trễ</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
+                    {reviews.map(review => (
+                        <div key={review.id} style={{padding: 16, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10}}>
+                            {editingReviewId === review.id ? (
+                                <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
+                                    <div style={{display: 'flex', gap: 6}}>
+                                        {[1, 2, 3, 4, 5].map(star => (
+                                            <button key={star} onClick={() => setEditReviewRating(star)} style={{background: 'transparent', border: 'none', color: star <= editReviewRating ? '#f59e0b' : '#6b7280', fontSize: 24, cursor: 'pointer'}}>★</button>
+                                        ))}
+                                    </div>
+                                    <select value={editReviewStatus} onChange={event => setEditReviewStatus(event.target.value as typeof editReviewStatus)} style={{padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)'}}>
+                                        <option value="ON_TIME">Giao đúng hẹn</option>
+                                        <option value="LATE">Giao trễ</option>
+                                        <option value="NOT_DELIVERED">Chưa nhận hàng</option>
+                                    </select>
+                                    <textarea value={editReviewComment} onChange={event => setEditReviewComment(event.target.value)} rows={3} style={{padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', resize: 'vertical'}} />
+                                    <div style={{display: 'flex', gap: 8, justifyContent: 'flex-end'}}>
+                                        <button onClick={cancelEditReview} style={{padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer'}}>Hủy</button>
+                                        <button onClick={() => handleUpdateReview(factory.id, review.id)} style={{padding: '8px 12px', borderRadius: 8, border: 'none', background: '#10b981', color: '#fff', fontWeight: 700, cursor: 'pointer'}}>Lưu đánh giá</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <div style={{display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap'}}>
+                                        <div>
+                                            <strong style={{color: '#ece8e1'}}>{review.buyerTeamName || review.buyerUserName || 'Người đặt hàng'}</strong>
+                                            <div style={{fontSize: 12, color: '#a79d94', marginTop: 4}}>
+                                                {deliveryResultLabel(review.deliveryResult)} - {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+                                            </div>
+                                        </div>
+                                        <div style={{color: '#f59e0b', letterSpacing: 1}}>{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
+                                    </div>
+                                    {review.comment && <p style={{margin: '12px 0 0', color: '#cfc7bf', lineHeight: 1.6}}>{review.comment}</p>}
+                                    {canManageReview(review) && (
+                                        <div style={{display: 'flex', gap: 8, marginTop: 12}}>
+                                            <button onClick={() => startEditReview(review)} style={{padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.08)', color: '#fbbf24', cursor: 'pointer'}}>Sửa</button>
+                                            <button onClick={() => handleDeleteReview(factory.id, review.id)} style={{padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.08)', color: '#fca5a5', cursor: 'pointer'}}>Xóa</button>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     };
@@ -893,39 +1181,54 @@ export default function MarketplacePage() {
                     </div>
                 );
             case 'reviews':
+                return renderReviewsTab(factory);
                 return (
                     <div className="mp-profile-overview" style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '24px', padding: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)'}}>
-                            <div style={{textAlign: 'center'}}>
-                                <div style={{fontSize: '36px', fontWeight: 700, color: '#f59e0b'}}>{factory.ratingMock}</div>
-                                <div style={{color: '#f59e0b', margin: '4px 0', letterSpacing: '2px'}}>★★★★☆</div>
-                                <div style={{fontSize: '13px', color: '#a79d94'}}>{factory.reviewCountMock} đánh giá</div>
-                            </div>
-                            <div style={{flex: 1}}>
-                                {['5', '4', '3', '2', '1'].map((star, i) => (
-                                    <div key={star} style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px'}}>
-                                        <span style={{fontSize: '12px', color: '#a79d94', width: '20px'}}>{star}★</span>
-                                        <div style={{flex: 1, height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden'}}>
-                                            <div style={{height: '100%', background: '#f59e0b', width: i === 0 ? '70%' : i === 1 ? '20%' : '0%'}}></div>
+                        {(() => {
+                            const summary = factoryReviewsSummary[factory.id] || {};
+                            const avgRating = summary.avgRating || 0;
+                            const reviewCount = summary.reviewCount || 0;
+                            const onTimeRate = summary.onTimeRate || 0;
+                            const completed = summary.completedOrders || 0;
+                            const late = summary.lateOrders || 0;
+                            if (reviewCount === 0) {
+                                return (
+                                    <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+                                        <div style={{ fontSize: 40, marginBottom: 12 }}>Chưa có đánh giá</div>
+                                        <p>Chưa có đơn hàng nào được hoàn thành với xưởng này.</p>
+                                    </div>
+                                );
+                            }
+                            return (
+                                <>
+                                    <div style={{display: 'flex', alignItems: 'center', gap: '24px', padding: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)'}}>
+                                        <div style={{textAlign: 'center'}}>
+                                            <div style={{fontSize: '36px', fontWeight: 700, color: '#f59e0b'}}>{avgRating > 0 ? avgRating.toFixed(1) : '—'}</div>
+                                            <div style={{color: '#f59e0b', margin: '4px 0', letterSpacing: '2px'}}>{avgRating > 0 ? '★'.repeat(Math.round(avgRating)) + '☆'.repeat(5 - Math.round(avgRating)) : '—'}</div>
+                                            <div style={{fontSize: '13px', color: '#a79d94'}}>{reviewCount} đánh giá</div>
+                                        </div>
+                                        <div style={{flex: 1}}>
+                                            {[['Đúng hẹn', onTimeRate, '#10b981'], ['Trễ hẹn', 100 - onTimeRate, '#f59e0b']].map(([label, pct, color]) => (
+                                                <div key={label as string} style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px'}}>
+                                                    <span style={{fontSize: '12px', color: '#a79d94', width: '70px'}}>{label}</span>
+                                                    <div style={{flex: 1, height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden'}}>
+                                                        <div style={{height: '100%', background: color as string, width: `${pct}%`, transition: 'width 0.3s'}}></div>
+                                                    </div>
+                                                    <span style={{fontSize: '12px', color: '#a79d94', width: '35px', textAlign: 'right'}}>{pct}%</span>
+                                                </div>
+                                            ))}
+                                            <div style={{display: 'flex', gap: 16, marginTop: 8}}>
+                                                <span style={{fontSize: 12, color: '#a79d94'}}>✓ {completed} đơn đúng hẹn</span>
+                                                <span style={{fontSize: 12, color: '#a79d94'}}>⚠ {late} đơn trễ</span>
+                                            </div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div style={{display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px'}}>
-                            {factory.reviewsMock?.map((r, i) => (
-                                <div key={i} style={{padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px'}}>
-                                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px'}}>
-                                        <div>
-                                            <strong style={{color: '#ece8e1', marginRight: '8px'}}>{r.company}</strong>
-                                            <span style={{color: '#f59e0b', fontSize: '14px'}}>{"★".repeat(r.rating || 5)}</span>
-                                        </div>
-                                        <span style={{fontSize: '12px', color: '#8f8580'}}>{r.date}</span>
+                                    <div style={{fontSize: 13, color: 'var(--text-muted)', padding: '0 4px'}}>
+                                        Đánh giá chi tiết sẽ hiển thị sau khi có đơn hàng được hoàn thành.
                                     </div>
-                                    <p style={{margin: 0, color: '#a79d94', fontSize: '14px', lineHeight: '1.5'}}>{r.content}</p>
-                                </div>
-                            ))}
-                        </div>
+                                </>
+                            );
+                        })()}
                     </div>
                 );
             case 'portfolio':
@@ -971,7 +1274,7 @@ export default function MarketplacePage() {
     }
 
     return (
-        <div className="mp-body mp-market-style mp-manufacturing-market">
+        <div className="mp-body mp-market-style mp-manufacturing-market" ref={container}>
             <Sidebar />
 
             <header className="mp-topbar">
@@ -1003,7 +1306,7 @@ export default function MarketplacePage() {
                             <span className="material-symbols-outlined">verified</span>
                             Hệ sinh thái đối tác
                         </span>
-                        <h1>Mạng Lưới Xưởng Rang <em>Chuyên Nghiệp</em></h1>
+                        <h1><span style={{color: "#F59E0B"}}>Mạng Lưới</span> Xưởng Rang <em>Chuyên Nghiệp</em></h1>
                         <p>Kết nối trực tiếp với những xưởng rang thủ công và công nghiệp hàng đầu Việt Nam. Nâng tầm chất lượng cà phê cho doanh nghiệp của bạn.</p>
                         <div className="mp-hero-buttons">
                             <button onClick={() => document.getElementById('mp-partners')?.scrollIntoView({ behavior: 'smooth' })}>Tìm đối tác ngay</button>
@@ -1083,7 +1386,7 @@ export default function MarketplacePage() {
                             {category.label}
                         </button>
                     ))}
-                    <div className="mp-top-search" style={{marginLeft: 'auto'}}>
+                    <div className="mp-top-search mp-spotlight-search" style={{marginLeft: 'auto'}}>
                         <span className="material-symbols-outlined">search</span>
                         <input
                             type="text"
@@ -1203,11 +1506,11 @@ export default function MarketplacePage() {
                                         </div>
                                         <div className="mp-factory-actions" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '0 16px 16px'}}>
                                             {isOwnFactory ? (
-                                                <button onClick={() => openEditPublishedTeam(factory)} style={{gridColumn: '1 / -1', background: 'var(--bg-input)', color: '#fff', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer'}}>{t.manageFactory}</button>
+                                                <button onClick={() => openEditPublishedTeam(factory)} style={{gridColumn: '1 / -1', background: 'var(--bg-input)', color: 'var(--text-primary)', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, height: 38}}>{t.manageFactory}</button>
                                             ) : (
                                                 <>
-                                                    <button onClick={() => { setSelectedFactory(factory); setActiveProfileTab('overview'); }} style={{background: 'var(--bg-input)', color: '#fff', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer'}}>{t.viewCapacity}</button>
-                                                    <button onClick={() => { const fact = factory; handleOrderClick(fact); }} style={{background: '#d4a574', color: '#1a1a1a', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600}}>{t.sendRequest}</button>
+                                                    <button onClick={() => { setSelectedFactory(factory); setActiveProfileTab('overview'); }} style={{background: 'var(--bg-input)', color: 'var(--text-primary)', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>{t.viewCapacity}</button>
+                                                    <button onClick={() => { const fact = factory; handleOrderClick(fact); }} style={{background: '#d4a574', color: '#1a1a1a', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>{t.sendRequest}</button>
                                                 </>
                                             )}
                                         </div>
@@ -1538,13 +1841,7 @@ export default function MarketplacePage() {
                         </div>
                         {selectedSeller && <div className="mp-modal-seller">Xưởng nhận RFQ: <strong>{selectedSeller.name}</strong></div>}
                         <form onSubmit={handleSubmitOrder}>
-                            <div className="mp-form-group">
-                                <label>Bên đặt gia công</label>
-                                <select value={buyerTeamId} onChange={event => setBuyerTeamId(event.target.value)}>
-                                    <option value="">Tài khoản cá nhân của tôi</option>
-                                    {myTeams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
-                                </select>
-                            </div>
+                            
                             <div className="mp-form-group">
                                 <label>Tiêu đề RFQ</label>
                                 <input value={rfqTitle} onChange={event => setRfqTitle(event.target.value)} placeholder="VD: Báo giá gia công 2 tấn Arabica" required />
@@ -1553,20 +1850,18 @@ export default function MarketplacePage() {
                                 <div className="mp-form-group">
                                     <label>Dịch vụ yêu cầu (Service Required)</label>
                                     <select value={rfqRequestType} onChange={event => setRfqRequestType(event.target.value)} required>
-                                        <option value="Roasting">Rang cà phê (Roasting)</option>
-                                        <option value="Packaging">Đóng gói (Packaging)</option>
-                                        <option value="OEM">Gia công OEM</option>
-                                        <option value="Private Label">Private Label</option>
+                                        {RFQ_SERVICE_OPTIONS.map(option => (
+                                            <option key={option.value} value={option.value}>{option.label}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div className="mp-form-group">
                                     <label>Loại sản phẩm (Product Type)</label>
                                     <select value={rfqProductName} onChange={event => setRfqProductName(event.target.value)} required>
                                         <option value="">Chọn loại cà phê</option>
-                                        <option value="Arabica">Arabica</option>
-                                        <option value="Robusta">Robusta</option>
-                                        <option value="Blend">Blend (Phối trộn)</option>
-                                        <option value="Other">Khác</option>
+                                        {COFFEE_TYPE_OPTIONS.map(option => (
+                                            <option key={option.value} value={option.value}>{option.label}</option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
@@ -1578,8 +1873,9 @@ export default function MarketplacePage() {
                                 <div className="mp-form-group">
                                     <label>Đơn vị (Unit)</label>
                                     <select value={rfqUnit} onChange={event => setRfqUnit(event.target.value)} required>
-                                        <option value="kg">kg</option>
-                                        <option value="ton">Tấn (Ton)</option>
+                                        {RFQ_UNIT_OPTIONS.map(option => (
+                                            <option key={option.value} value={option.value}>{option.label}</option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
@@ -1588,19 +1884,18 @@ export default function MarketplacePage() {
                                     <label>Mức rang (Roast Profile)</label>
                                     <select value={rfqQuality} onChange={event => setRfqQuality(event.target.value)}>
                                         <option value="">Không yêu cầu</option>
-                                        <option value="Light">Light Roast</option>
-                                        <option value="Medium">Medium Roast</option>
-                                        <option value="Dark">Dark Roast</option>
+                                        {ROAST_PROFILE_OPTIONS.map(option => (
+                                            <option key={option.value} value={option.value}>{option.label}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div className="mp-form-group">
                                     <label>Quy cách đóng gói (Packaging)</label>
                                     <select value={rfqPackaging} onChange={event => setRfqPackaging(event.target.value)}>
                                         <option value="">Không yêu cầu</option>
-                                        <option value="250g">Túi 250g</option>
-                                        <option value="500g">Túi 500g</option>
-                                        <option value="1kg">Túi 1kg</option>
-                                        <option value="Custom">Khác (Custom)</option>
+                                        {PACKAGING_FORMAT_OPTIONS.map(option => (
+                                            <option key={option.value} value={option.value}>{option.label}</option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
@@ -1906,4 +2201,3 @@ export default function MarketplacePage() {
         </div>
     );
 }
-

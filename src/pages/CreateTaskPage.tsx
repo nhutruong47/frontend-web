@@ -297,14 +297,14 @@ export default function CreateTaskPage() {
                 }
                 body.task-studio-mode .layout-content {
                     padding: 0;
-                    background: #ffffff;
+                    background: var(--bg-primary);
                 }
                 body.task-studio-mode .layout-main {
-                    background: #ffffff;
+                    background: var(--bg-primary);
                 }
                 body.task-studio-mode .sidebar {
-                    background: #f9f9f9;
-                    border-right: 1px solid #ececec;
+                    background: var(--bg-secondary);
+                    border-right: 1px solid var(--border);
                     box-shadow: none;
                 }
                 body.task-studio-mode .sidebar-logo {
@@ -312,29 +312,29 @@ export default function CreateTaskPage() {
                     margin-bottom: 20px;
                 }
                 body.task-studio-mode .logo-text {
-                    color: #111 !important;
-                    -webkit-text-fill-color: #111;
+                    color: var(--accent-primary) !important;
+                    -webkit-text-fill-color: var(--accent-primary);
                     letter-spacing: 0.12em;
                 }
                 body.task-studio-mode .logo-icon {
-                    color: #111 !important;
-                    background: #f0f0f0;
-                    box-shadow: inset 0 0 0 1px #d6d6d6;
+                    color: var(--accent-primary) !important;
+                    background: var(--bg-secondary);
+                    box-shadow: inset 0 0 0 1px var(--border);
                 }
                 body.task-studio-mode .nav-label {
-                    color: #111;
+                    color: var(--text-secondary);
                     opacity: 1;
                 }
                 body.task-studio-mode .nav-item {
-                    color: #202123;
+                    color: var(--text-primary);
                     background: transparent;
                     border-radius: 10px;
                     font-weight: 520;
                 }
                 body.task-studio-mode .nav-item.active,
                 body.task-studio-mode .nav-item:hover {
-                    color: #111;
-                    background: #eeeeee;
+                    color: var(--accent-primary);
+                    background: rgba(50, 34, 20, 0.04);
                     box-shadow: none;
                     transform: none;
                 }
@@ -345,8 +345,8 @@ export default function CreateTaskPage() {
                     min-height: 100vh;
                     display: grid;
                     grid-template-rows: auto minmax(0, 1fr) auto;
-                    color: #202123;
-                    background: #fff;
+                    color: var(--text-primary);
+                    background: var(--bg-primary);
                     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                 }
                 .task-gpt-topbar {
@@ -360,7 +360,7 @@ export default function CreateTaskPage() {
                     display: inline-flex;
                     align-items: center;
                     gap: 8px;
-                    color: #202123;
+                    color: var(--text-primary);
                     font-size: 18px;
                     font-weight: 650;
                 }
@@ -368,7 +368,7 @@ export default function CreateTaskPage() {
                     display: inline-flex;
                     align-items: center;
                     gap: 16px;
-                    color: #202123;
+                    color: var(--text-primary);
                     font-size: 14px;
                     font-weight: 650;
                 }
@@ -402,7 +402,7 @@ export default function CreateTaskPage() {
                 }
                 .task-gpt-empty h1 {
                     margin: 0 0 14px;
-                    color: #202123;
+                    color: var(--text-primary);
                     font-size: clamp(1.8rem, 3vw, 2.6rem);
                     font-weight: 650;
                     letter-spacing: 0;
@@ -410,7 +410,7 @@ export default function CreateTaskPage() {
                 .task-gpt-empty p {
                     max-width: 620px;
                     margin: 0;
-                    color: #6f6f6f;
+                    color: var(--text-secondary);
                     font-size: 16px;
                     line-height: 1.6;
                 }
@@ -424,9 +424,9 @@ export default function CreateTaskPage() {
                 .task-gpt-suggestion {
                     min-height: 54px;
                     padding: 0 16px;
-                    color: #343541;
-                    background: #fff;
-                    border: 1px solid #e5e5e5;
+                    color: var(--text-primary);
+                    background: var(--bg-card);
+                    border: 1px solid var(--border);
                     border-radius: 14px;
                     font: inherit;
                     font-size: 14px;
@@ -435,7 +435,7 @@ export default function CreateTaskPage() {
                     cursor: pointer;
                 }
                 .task-gpt-suggestion:hover {
-                    background: #f7f7f7;
+                    background: var(--bg-card-hover);
                 }
                 .task-gpt-message-row {
                     display: flex;
@@ -449,14 +449,14 @@ export default function CreateTaskPage() {
                 }
                 .task-gpt-bubble {
                     max-width: min(720px, 82%);
-                    color: #202123;
+                    color: var(--text-primary);
                     font-size: 16px;
                     line-height: 1.72;
                 }
                 .task-gpt-message-row.user .task-gpt-bubble {
                     max-width: min(520px, 72%);
                     padding: 11px 18px;
-                    background: #f4f4f4;
+                    background: var(--bg-secondary);
                     border-radius: 22px;
                 }
                 .task-gpt-message-row.assistant .task-gpt-bubble {
@@ -465,7 +465,7 @@ export default function CreateTaskPage() {
                 }
                 .task-gpt-assistant-head {
                     margin-bottom: 8px;
-                    color: #202123;
+                    color: var(--text-primary);
                     font-size: 15px;
                     font-weight: 650;
                 }
@@ -474,25 +474,25 @@ export default function CreateTaskPage() {
                     align-items: center;
                     gap: 16px;
                     margin-top: 14px;
-                    color: #676767;
+                    color: var(--text-secondary);
                     font-size: 18px;
                 }
                 .task-gpt-token {
                     margin-left: auto;
-                    color: #8a8a8a;
+                    color: var(--text-muted);
                     font-size: 12px;
                     font-weight: 650;
                 }
                 .task-gpt-result {
                     margin-top: 20px;
                     padding: 18px;
-                    border: 1px solid #e5e5e5;
+                    border: 1px solid var(--border);
                     border-radius: 16px;
-                    background: #fff;
+                    background: var(--bg-card);
                     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
                 }
                 .task-gpt-loading {
-                    color: #6f6f6f;
+                    color: var(--text-secondary);
                     font-size: 16px;
                     line-height: 1.6;
                 }
@@ -501,7 +501,8 @@ export default function CreateTaskPage() {
                     bottom: 0;
                     z-index: 10;
                     padding: 18px 24px 14px;
-                    background: linear-gradient(180deg, rgba(255,255,255,0), #fff 22%, #fff 100%);
+                    background: var(--bg-primary);
+                    border-top: 1px solid var(--border);
                 }
                 .task-gpt-composer {
                     width: min(880px, 100%);
@@ -512,8 +513,8 @@ export default function CreateTaskPage() {
                     align-items: end;
                     gap: 10px;
                     padding: 10px 12px 10px 16px;
-                    background: #fff;
-                    border: 1px solid #d9d9d9;
+                    background: var(--bg-card);
+                    border: 1px solid var(--border);
                     border-radius: 28px;
                     box-shadow: 0 10px 34px rgba(0, 0, 0, 0.08);
                 }
@@ -529,7 +530,7 @@ export default function CreateTaskPage() {
                     cursor: pointer;
                 }
                 .task-gpt-icon-btn {
-                    color: #202123;
+                    color: var(--text-primary);
                     background: transparent;
                     font-size: 24px;
                 }
@@ -538,7 +539,7 @@ export default function CreateTaskPage() {
                     max-height: 170px;
                     min-height: 42px;
                     padding: 9px 4px;
-                    color: #202123;
+                    color: var(--text-primary);
                     background: transparent;
                     border: 0;
                     outline: 0;
@@ -548,7 +549,7 @@ export default function CreateTaskPage() {
                     line-height: 1.5;
                 }
                 .task-gpt-textarea::placeholder {
-                    color: #8a8a8a;
+                    color: var(--text-muted);
                 }
                 .task-gpt-mode {
                     min-height: 34px;
@@ -556,25 +557,26 @@ export default function CreateTaskPage() {
                     align-items: center;
                     gap: 6px;
                     padding: 0 10px;
-                    color: #6f6f6f;
+                    color: var(--text-secondary);
                     background: transparent;
                     border: 0;
                     font: inherit;
                     font-size: 14px;
                 }
                 .task-gpt-send {
-                    color: #fff;
-                    background: #202123;
+                    color: var(--bg-primary);
+                    background: var(--text-primary);
                     font-size: 18px;
                 }
                 .task-gpt-send:disabled {
-                    background: #d7d7d7;
+                    background: var(--border);
+                    color: var(--text-muted);
                     cursor: not-allowed;
                 }
                 .task-gpt-disclaimer {
                     width: min(880px, 100%);
                     margin: 8px auto 0;
-                    color: #8a8a8a;
+                    color: var(--text-muted);
                     font-size: 12px;
                     text-align: center;
                 }
@@ -589,16 +591,16 @@ export default function CreateTaskPage() {
                     width: 100%;
                     margin: 12px 0;
                     font-size: 13px;
-                    background: #fff;
+                    background: var(--bg-card);
                 }
                 .markdown-content th,
                 .markdown-content td {
-                    border: 1px solid #ececec;
+                    border: 1px solid var(--border);
                     padding: 10px;
                     text-align: left;
                 }
                 .markdown-content th {
-                    background: #f7f7f7;
+                    background: var(--bg-secondary);
                     font-weight: 700;
                 }
                 @media (max-width: 760px) {
@@ -1420,12 +1422,12 @@ export default function CreateTaskPage() {
                                                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
                                                     {m.jobLabels && m.jobLabels.length > 0 ? (
                                                         m.jobLabels.map((label: string, idx: number) => (
-                                                            <span key={idx} style={{ background: '#ede9fe', color: '#7c3aed', padding: '2px 8px', borderRadius: 12, fontSize: 10, fontWeight: 700 }}>
+                                                            <span key={idx} style={{ background: 'rgba(212, 165, 116, 0.12)', color: 'var(--accent-primary)', padding: '2px 8px', borderRadius: 12, fontSize: 10, fontWeight: 700 }}>
                                                                 {label}
                                                             </span>
                                                         ))
                                                     ) : (
-                                                        <span style={{ fontSize: 10, color: '#94a3b8', fontStyle: 'italic' }}>Chưa gán nhãn</span>
+                                                        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic' }}>Chưa gán nhãn</span>
                                                     )}
                                                 </div>
                                             </div>
@@ -1433,7 +1435,7 @@ export default function CreateTaskPage() {
                                     );
                                 })}
                             </div>
-                            <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 10, lineHeight: 1.5 }}>
+                            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.5 }}>
                                 <ion-icon name="information-circle-outline" style={{ fontSize: 12, verticalAlign: 'middle' }}></ion-icon>{' '}
                                 AI sẽ tự động phân công dựa trên nhãn dán công việc.
                             </p>
@@ -1494,7 +1496,7 @@ export default function CreateTaskPage() {
                     <div style={{
                         flex: 1, minHeight: 0, padding: '24px', overflowY: 'auto',
                         display: 'flex', flexDirection: 'column', gap: 16,
-                        background: '#f8fafc' // Slight off-white background to match screenshot
+                        background: 'var(--bg-input)' // Slight off-white background to match screenshot
                     }}>
                         {messages.length === 0 ? (
                             <div style={{ margin: 'auto', textAlign: 'center', opacity: 0.5 }}>
@@ -1542,7 +1544,7 @@ export default function CreateTaskPage() {
                                             borderBottomLeftRadius: '4px',
                                             background: msg.result?.needsClarification ? '#fff9db' : '#f1f5f9', // Yellowish for questions
                                             border: msg.result?.needsClarification ? '1px solid #f9eb97' : 'none',
-                                            color: '#334155',
+                                            color: 'var(--text-primary)',
                                             fontSize: '15px',
                                             lineHeight: '1.6',
                                             alignSelf: 'flex-start',
@@ -1568,7 +1570,7 @@ export default function CreateTaskPage() {
                                                                 chatInputRef.current?.focus();
                                                             }}
                                                             style={{
-                                                                background: '#ffffff',
+                                                                background: 'var(--bg-card)',
                                                                 border: '1px solid #fde68a',
                                                                 color: '#d97706',
                                                                 padding: '6px 12px',
@@ -1587,7 +1589,7 @@ export default function CreateTaskPage() {
                                         </div>
                                     )}
                                     {showTokens && (
-                                        <span style={{ marginTop: 6, padding: '0 6px', color: '#64748b', fontSize: 11, fontWeight: 700 }}>
+                                        <span style={{ marginTop: 6, padding: '0 6px', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700 }}>
                                             {formatTokenCount(estimateTokens(msg.content))} token
                                         </span>
                                     )}
@@ -1599,7 +1601,7 @@ export default function CreateTaskPage() {
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                 <div style={{
                                     padding: '14px 18px', borderRadius: '20px', borderBottomLeftRadius: '4px',
-                                    background: '#f1f5f9', color: '#64748b', fontSize: '15px', display: 'flex', gap: '8px', alignItems: 'center'
+                                    background: 'var(--bg-secondary)', color: 'var(--text-secondary)', fontSize: '15px', display: 'flex', gap: '8px', alignItems: 'center'
                                 }}>
                                     <span className="dot-typing" style={{ background: '#94a3b8' }}></span> Đang phân tích...
                                 </div>
@@ -1609,7 +1611,7 @@ export default function CreateTaskPage() {
                     </div>
 
                     {/* Input Area */}
-                    <div style={{ padding: '24px', borderTop: '1px solid var(--border)', background: '#ffffff' }}>
+                    <div style={{ padding: '24px', borderTop: '1px solid var(--border)', background: 'var(--bg-card)' }}>
                         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
                             <textarea
                                 ref={chatInputRef}
@@ -1626,12 +1628,12 @@ export default function CreateTaskPage() {
                                 rows={2}
                                 style={{
                                     flex: 1, fontSize: 15, fontFamily: 'inherit',
-                                    background: '#ffffff',
+                                    background: 'var(--bg-card)',
                                     border: '2px solid #cbd5e1', // Slightly thicker border as per mockup
                                     borderRadius: '12px',
                                     padding: '14px 16px',
                                     resize: 'none', outline: 'none',
-                                    color: '#1e293b'
+                                    color: 'var(--text-primary)'
                                 }}
                             />
                             <button
@@ -1648,7 +1650,7 @@ export default function CreateTaskPage() {
                                 <div style={{ width: 18, height: 18, border: '2px solid currentColor', borderRadius: '50%', opacity: 0.5 }}></div> Gửi
                             </button>
                         </div>
-                        <div style={{ marginTop: 12, fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
                             <ion-icon name="sparkles"></ion-icon> AI sẽ tạo công việc, phân công và hạn chót.
                         </div>
                     </div>
@@ -1770,33 +1772,33 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
     return (
         <div style={{
             width: '100%',
-            background: '#ffffff',
+            background: 'var(--bg-card)',
             borderRadius: '24px',
-            border: '1px solid #e2e8f0',
+            border: '1px solid var(--border)',
             boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
             overflow: 'hidden',
             marginBottom: 16,
             animation: 'slideUp 0.4s ease-out'
         }}>
             {/* Header Area */}
-            <div style={{ padding: '24px 32px', borderBottom: '1px solid #f1f5f9', position: 'relative' }}>
+            <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--border)', position: 'relative' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                    <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#1e293b' }}>Xem trước công việc</h2>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#ede9fe', color: '#7c3aed', padding: '4px 12px', borderRadius: '20px', fontSize: 11, fontWeight: 700 }}>
+                    <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>Xem trước công việc</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(212, 165, 116, 0.12)', color: 'var(--accent-primary)', padding: '4px 12px', borderRadius: '20px', fontSize: 11, fontWeight: 700 }}>
                         <ion-icon name="checkmark-done-outline"></ion-icon> AI ĐÃ XỬ LÝ
                     </div>
                 </div>
-                <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>Xem lại chi tiết công việc và phân bổ nhân sự trước khi xác nhận.</p>
+                <p style={{ margin: 0, fontSize: 14, color: 'var(--text-secondary)' }}>Xem lại chi tiết công việc và phân bổ nhân sự trước khi xác nhận.</p>
             </div>
 
             <div style={{ padding: '32px' }}>
                 {/* Standardization Card */}
-                <div style={{ background: '#fafafa', borderRadius: '16px', border: '1px solid #f1f5f9', padding: '24px' }}>
+                <div style={{ background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', padding: '24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
                         <span style={{ fontSize: 20, color: '#f59e0b' }}><ion-icon name="clipboard-outline"></ion-icon></span>
                         <div style={{ flex: 1 }}>
-                            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#334155' }}>Công việc đã chuẩn hóa</h3>
-                            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>
+                            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>Công việc đã chuẩn hóa</h3>
+                            <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
                                 AI đã gợi ý người phụ trách cho {assignedCount}/{totalTasks} task dựa trên job labels.
                             </p>
                         </div>
@@ -1819,15 +1821,15 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
 
                     {/* Title Input */}
                     <div style={{ marginBottom: 24 }}>
-                        <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8 }}>Tên công việc</label>
+                        <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>Tên công việc</label>
                         <input
                             type="text"
                             value={editedResult.title || ''}
                             onChange={e => updateField('title', e.target.value)}
                             style={{
                                 width: '100%', padding: '14px 18px', borderRadius: '12px',
-                                border: '1px solid #e2e8f0', background: '#fff',
-                                color: '#1e293b', fontSize: 15, fontWeight: 500, outline: 'none',
+                                border: '1px solid var(--border)', background: 'var(--bg-card)',
+                                color: 'var(--text-primary)', fontSize: 15, fontWeight: 500, outline: 'none',
                                 transition: 'border-color 0.2s'
                             }}
                         />
@@ -1835,7 +1837,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
 
                     {/* Task List (Mô tả chi tiết) */}
                     <div style={{ marginBottom: 24 }}>
-                        <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8 }}>Chi tiết mô tả</label>
+                        <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>Chi tiết mô tả</label>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                             {editedResult.tasks?.map((task, idx) => (
                                 <div key={idx} style={{
@@ -1845,7 +1847,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
                                     padding: 18,
                                     borderRadius: 18,
                                     border: '1px solid #dbe3ef',
-                                    background: '#fff',
+                                    background: 'var(--bg-card)',
                                     boxShadow: '0 8px 24px rgba(15, 23, 42, 0.06)'
                                 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -1875,7 +1877,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
                                                         padding: 0,
                                                         border: 0,
                                                         background: 'transparent',
-                                                        color: '#0f172a',
+                                                        color: 'var(--text-primary)',
                                                         fontSize: 17,
                                                         fontWeight: 850,
                                                         outline: 'none'
@@ -1891,7 +1893,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
                                                 width: 34,
                                                 height: 34,
                                                 borderRadius: '50%',
-                                                background: '#fff1f2',
+                                                background: 'rgba(239, 68, 68, 0.1)',
                                                 border: '1px solid #fecdd3',
                                                 color: '#e11d48',
                                                 cursor: 'pointer',
@@ -1907,7 +1909,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
 
                                     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.45fr) minmax(260px, 0.8fr)', gap: 16, alignItems: 'stretch' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
-                                            <label style={{ fontSize: 12, fontWeight: 850, color: '#475569' }}>Mô tả chi tiết</label>
+                                            <label style={{ fontSize: 12, fontWeight: 850, color: 'var(--text-secondary)' }}>Mô tả chi tiết</label>
                                             <textarea
                                                 value={task.description || ''}
                                                 onChange={e => updateTaskDescription(idx, e.target.value)}
@@ -1918,8 +1920,8 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
                                                     padding: '13px 14px',
                                                     borderRadius: 14,
                                                     border: '1px solid #cbd5e1',
-                                                    background: '#f8fafc',
-                                                    color: '#334155',
+                                                    background: 'var(--bg-input)',
+                                                    color: 'var(--text-primary)',
                                                     fontSize: 14,
                                                     lineHeight: 1.55,
                                                     resize: 'vertical',
@@ -1928,11 +1930,11 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
                                                 }}
                                             />
                                             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 9px', borderRadius: 999, background: '#f1f5f9', color: '#475569', fontSize: 12, fontWeight: 750 }}>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 9px', borderRadius: 999, background: 'var(--bg-secondary)', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 750 }}>
                                                     <ion-icon name="barbell-outline"></ion-icon>
                                                     Workload: {task.workload || 1}
                                                 </span>
-                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 9px', borderRadius: 999, background: '#fff7ed', color: '#9a3412', fontSize: 12, fontWeight: 750 }}>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 9px', borderRadius: 999, background: 'rgba(249, 115, 22, 0.1)', color: 'var(--warning)', fontSize: 12, fontWeight: 750 }}>
                                                     <ion-icon name="flag-outline"></ion-icon>
                                                     Priority: {task.priority || 2}
                                                 </span>
@@ -1976,7 +1978,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
                                                     <div style={{
                                                         marginTop: 2,
                                                         fontSize: 15,
-                                                        color: '#0f172a',
+                                                        color: 'var(--text-primary)',
                                                         fontWeight: 900,
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
@@ -1988,7 +1990,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
                                             </div>
 
                                             <div>
-                                                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: '#475569', fontWeight: 850 }}>Chọn member</label>
+                                                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--text-secondary)', fontWeight: 850 }}>Chọn member</label>
                                                 <select
                                                     value={task.suggestedAssigneeId || ''}
                                                     onChange={e => updateTaskAssignee(idx, e.target.value)}
@@ -1998,8 +2000,8 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
                                                         padding: '0 12px',
                                                         borderRadius: 12,
                                                         border: '1px solid #cbd5e1',
-                                                        background: '#fff',
-                                                        color: '#0f172a',
+                                                        background: 'var(--bg-card)',
+                                                        color: 'var(--text-primary)',
                                                         fontSize: 14,
                                                         fontWeight: 700,
                                                         outline: 'none'
@@ -2035,7 +2037,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
                                                     style={{
                                                         alignSelf: 'flex-start',
                                                         border: '1px solid #bbf7d0',
-                                                        background: '#fff',
+                                                        background: 'var(--bg-card)',
                                                         color: '#047857',
                                                         borderRadius: 9,
                                                         padding: '7px 10px',
@@ -2067,21 +2069,21 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
                     {/* Deadline & Priority Row */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
                         <div>
-                            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8 }}>Hạn chót</label>
+                            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>Hạn chót</label>
                             <input
                                 type="text"
                                 value={editedResult.deadline || ''}
                                 onChange={e => updateField('deadline', e.target.value)}
                                 style={{
                                     width: '100%', padding: '12px 16px', borderRadius: '12px',
-                                    border: '1px solid #e2e8f0', background: '#fff',
-                                    color: '#334155', fontSize: 14, outline: 'none'
+                                    border: '1px solid var(--border)', background: 'var(--bg-card)',
+                                    color: 'var(--text-primary)', fontSize: 14, outline: 'none'
                                 }}
                             />
                         </div>
                         <div>
-                            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8 }}>Ưu tiên</label>
-                            <div style={{ display: 'flex', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', background: '#fff' }}>
+                            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>Ưu tiên</label>
+                            <div style={{ display: 'flex', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--bg-card)' }}>
                                 {['Low', 'Medium', 'High'].map((p) => (
                                     <button
                                         key={p}
@@ -2114,7 +2116,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
                                     key={idx}
                                     onClick={() => onAsk(q)}
                                     style={{
-                                        background: '#fff', border: '1px solid #e0e7ff',
+                                        background: 'var(--bg-card)', border: '1px solid var(--border)',
                                         color: '#4f46e5', padding: '8px 16px', borderRadius: '12px',
                                         fontSize: 13, fontWeight: 600, cursor: 'pointer',
                                         transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
@@ -2132,7 +2134,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
                 {/* Footer Buttons */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
                     <button
-                        style={{ padding: '12px 32px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}
+                        style={{ padding: '12px 32px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}
                     >
                         Hủy
                     </button>

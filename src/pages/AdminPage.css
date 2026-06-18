@@ -70,6 +70,10 @@
   color: var(--text-primary);
   font: 800 12px var(--font);
   cursor: pointer;
+  padding: 0 14px;
+  text-shadow: none !important;
+  -webkit-text-stroke: 0 !important;
+  white-space: nowrap;
 }
 
 .admin-button-primary {
@@ -85,6 +89,7 @@
 .admin-icon-button {
   width: 36px;
   padding: 0;
+  text-shadow: none !important;
 }
 
 .admin-nav {

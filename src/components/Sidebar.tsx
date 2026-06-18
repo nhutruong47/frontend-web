@@ -17,7 +17,7 @@ export default function Sidebar() {
     const getPlanColor = (plan: string) => {
         switch (plan.toLowerCase()) {
             case 'free': return { bg: '#6b7280', text: '#fff', label: 'Miễn phí' };
-            case 'plus': return { bg: 'linear-gradient(135deg, #f59e0b, #d97706)', text: '#fff', label: 'Plus' };
+            case 'plus': return { bg: 'transparent', text: '#e7a766', label: 'Plus' };
             case 'pro': return { bg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', text: '#fff', label: 'Pro' };
             case 'enterprise': return { bg: 'linear-gradient(135deg, #ec4899, #db2777)', text: '#fff', label: 'Enterprise' };
             default: return { bg: '#6b7280', text: '#fff', label: plan };

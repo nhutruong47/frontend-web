@@ -1,5 +1,5 @@
 import api from './api';
-import type { Team, Goal, Task, InventoryItem, ProductionOrder, ProductionBatch } from '../types/types';
+import type { Team, Goal, Task, ProductionOrder } from '../types/types';
 import type { AppNotification, SalaryReport } from '../types/types';
 
 // === Team/Group API ===
@@ -34,6 +34,7 @@ export const teamService = {
 export const goalService = {
     getByTeam: (teamId: string) =>
         api.get<Goal[]>(`/api/goals?teamId=${teamId}`).then(r => r.data),
+    getDetail: (id: string) => api.get<Goal>(`/api/goals/${id}`).then(r => r.data),
     create: (data: Partial<Goal>) =>
         api.post<Goal>('/api/goals', data).then(r => r.data),
     updateStatus: (id: string, status: string) =>
@@ -45,6 +46,7 @@ export const goalService = {
 export const taskService = {
     getByGoal: (goalId: string) =>
         api.get<Task[]>(`/api/tasks/by-goal/${goalId}`).then(r => r.data),
+    getDetail: (id: string) => api.get<Task>(`/api/tasks/${id}`).then(r => r.data),
     getMyTasks: (memberId: string) =>
         api.get<Task[]>(`/api/tasks/member/${memberId}`).then(r => r.data),
     create: (data: Partial<Task>) =>
@@ -82,18 +84,104 @@ export const taskService = {
         api.patch<Task>(`/api/tasks/${taskId}/respond`, { accepted }).then(r => r.data),
     getSalaryReport: (teamId: string) =>
         api.get<SalaryReport[]>(`/api/tasks/salary/${teamId}`).then(r => r.data),
+    exportSalaryExcel: (teamId: string) =>
+        api.get(`/api/tasks/salary/${teamId}/export-excel`, { responseType: 'blob' }),
+    payoutSalary: (teamId: string) =>
+        api.post<{ message: string; totalEmployees: number; totalSalary: number; currency: string }>(
+            `/api/tasks/salary/${teamId}/payout`
+        ).then(r => r.data),
 };
 
 export const productionService = {
-    getOrders: (teamId: string) =>
-        api.get<ProductionOrder[]>(`/api/production/teams/${teamId}/orders`).then(r => r.data),
+    getOrders: (teamId: string, activeOnly = false) =>
+        api.get<ProductionOrder[]>(
+            activeOnly
+                ? `/api/production/teams/${teamId}/orders/active`
+                : `/api/production/teams/${teamId}/orders`
+        ).then(r => r.data),
+
     createOrder: (teamId: string, data: Partial<ProductionOrder>) =>
         api.post<ProductionOrder>(`/api/production/teams/${teamId}/orders`, data).then(r => r.data),
-    getBatches: (teamId: string) =>
-        api.get<ProductionBatch[]>(`/api/production/teams/${teamId}/batches`).then(r => r.data),
-    createBatch: (teamId: string, data: Partial<ProductionBatch>) =>
-        api.post<ProductionBatch>(`/api/production/teams/${teamId}/batches`, data).then(r => r.data),
+
+    getOrder: (orderId: string) =>
+        api.get<ProductionOrder>(`/api/production/orders/${orderId}`).then(r => r.data),
+
+    updateOrder: (orderId: string, data: Partial<ProductionOrder>) =>
+        api.patch<ProductionOrder>(`/api/production/orders/${orderId}`, data).then(r => r.data),
+
+    deleteOrder: (orderId: string) =>
+        api.delete(`/api/production/orders/${orderId}`).then(r => r.data),
+
+    updateOrderStatus: (orderId: string, status: string) =>
+        api.patch<ProductionOrder>(`/api/production/orders/${orderId}/status`, { status }).then(r => r.data),
+
+    generatePlan: (orderId: string) =>
+        api.post<ProductionPlan>(`/api/production/plans/orders/${orderId}/generate`).then(r => r.data),
+
+    getPlan: (planId: string) =>
+        api.get<ProductionPlan>(`/api/production/plans/${planId}`).then(r => r.data),
+
+    getPlansByOrder: (orderId: string) =>
+        api.get<ProductionPlan[]>(`/api/production/plans/orders/${orderId}`).then(r => r.data),
+
+    approvePlan: (planId: string, approvedBy?: string) =>
+        api.patch<ProductionPlan>(`/api/production/plans/${planId}/approve`, { approvedBy }).then(r => r.data),
+
+    getDailyTargetsByPlan: (planId: string) =>
+        api.get<DailyTarget[]>(`/api/production/plans/${planId}/daily-targets`).then(r => r.data),
+
+    updateDailyActual: (targetId: string, data: {
+        actualRoastKg?: number;
+        actualQcKg?: number;
+        actualQcFailKg?: number;
+        actualPackagedKg?: number;
+        actualPackages?: number;
+        notes?: string;
+        issues?: string;
+    }) =>
+        api.patch<DailyTarget>(`/api/production/plans/daily-targets/${targetId}`, data).then(r => r.data),
+
+    getTodayTarget: (teamId: string) =>
+        api.get<DailyTarget>(`/api/production/plans/today/${teamId}`).then(r => r.data).catch(() => null),
+
+    getDashboard: (teamId: string) =>
+        api.get<any>(`/api/production/dashboard/${teamId}`).then(r => r.data),
+
+    getProductivity: (teamId: string, startDate: string, endDate: string) =>
+        api.get<any>(`/api/production/dashboard/${teamId}/productivity`, {
+            params: { startDate, endDate }
+        }).then(r => r.data),
+
+    // === NEW: Daily Production Board ===
+    getDailyBoard: (teamId: string) =>
+        api.get<any>(`/api/production/board/${teamId}/today`).then(r => r.data),
+
+    getBoardByDate: (teamId: string, date: string) =>
+        api.get<any>(`/api/production/board/${teamId}/date/${date}`).then(r => r.data),
+
+    getCalendarBoard: (teamId: string, startDate: string, endDate: string) =>
+        api.get<any[]>(`/api/production/board/${teamId}/calendar`, {
+            params: { startDate, endDate }
+        }).then(r => r.data),
+
+    getWorkforce: (teamId: string) =>
+        api.get<any>(`/api/production/board/${teamId}/workforce`).then(r => r.data),
+
+    // === NEW: Analytics ===
+    getAnalytics: (teamId: string, startDate: string, endDate: string) =>
+        api.get<any>(`/api/production/analytics/${teamId}`, {
+            params: { startDate, endDate }
+        }).then(r => r.data),
+
+    getReplan: (orderId: string) =>
+        api.get<any>(`/api/production/analytics/orders/${orderId}/replan`).then(r => r.data),
+
+    applyReplan: (orderId: string, revisedTargets: any[]) =>
+        api.post<any>(`/api/production/analytics/orders/${orderId}/replan/apply`, revisedTargets).then(r => r.data),
 };
+
+import type { DailyTarget } from '../types/types';
+import type { ProductionPlan } from '../types/types';
 
 export const workforceService = {
     getSkills: (teamId: string) =>
@@ -113,17 +201,6 @@ export const aiPlanService = {
         api.post(`/api/ai-plans/teams/${teamId}`, data).then(r => r.data),
     updateStatus: (planId: string, status: string) =>
         api.patch(`/api/ai-plans/${planId}/status`, { status }).then(r => r.data),
-};
-
-// === Inventory API ===
-export const inventoryService = {
-    getByTeam: (teamId: string) =>
-        api.get<InventoryItem[]>(`/api/inventory?teamId=${teamId}`).then(r => r.data),
-    create: (data: Partial<InventoryItem>) =>
-        api.post<InventoryItem>('/api/inventory', data).then(r => r.data),
-    updateQuantity: (id: string, quantity: number) =>
-        api.patch<InventoryItem>(`/api/inventory/${id}/quantity`, { quantity }).then(r => r.data),
-    delete: (id: string) => api.delete(`/api/inventory/${id}`),
 };
 
 // === Trial Status ===

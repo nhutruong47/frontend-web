@@ -2,7 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from './Sidebar';
-import { Bell, MoreHorizontal, Check, MessageSquare, AlertCircle, MessageCircle, Edit } from 'lucide-react';
+import { Bell, MoreHorizontal, MessageCircle, Edit } from 'lucide-react';
+import { teamService, notificationService } from '../services/groupService';
+import type { AppNotification } from '../types/types';
 
 export default function Layout() {
     const { user, logout } = useAuth();
@@ -13,70 +15,27 @@ export default function Layout() {
     const notifRef = useRef<HTMLDivElement>(null);
     const msgRef = useRef<HTMLDivElement>(null);
 
-    // Mock notifications
-    const [notifications] = useState([
-        {
-            id: 1,
-            userName: 'Admin Hệ Thống',
-            avatar: 'https://ui-avatars.com/api/?name=Admin&background=1e293b&color=fff',
-            action: 'đã từ chối yêu cầu đăng xưởng của bạn do thiếu giấy phép kinh doanh hợp lệ.',
-            isRead: false,
-            time: 'Vừa xong',
-            badgeIcon: <AlertCircle size={12} color="#fff" />,
-            badgeColor: '#f85149'
-        },
-        {
-            id: 2,
-            userName: 'ORCA Factory Manager',
-            avatar: 'https://ui-avatars.com/api/?name=ORCA&background=f59e0b&color=fff',
-            action: 'đã nhắc đến bạn trong một bình luận: "Vui lòng cập nhật tiến độ".',
-            isRead: false,
-            time: '21 giờ',
-            badgeIcon: <MessageSquare size={12} color="#fff" />,
-            badgeColor: '#10b981'
-        },
-        {
-            id: 3,
-            userName: 'Hệ thống',
-            avatar: 'https://ui-avatars.com/api/?name=HT&background=3b82f6&color=fff',
-            action: 'chào mừng bạn đến với hệ thống quản lý Orca.',
-            isRead: true,
-            time: '1 ngày',
-            badgeIcon: <Check size={12} color="#fff" />,
-            badgeColor: '#3b82f6'
-        }
-    ]);
+    const [notifications, setNotifications] = useState<AppNotification[]>([]);
+    const [messageGroups, setMessageGroups] = useState<any[]>([]);
 
-    // Mock Groups/Messages
-    const [messageGroups] = useState([
-        {
-            id: 1,
-            name: 'Xưởng May Gia Công A',
-            avatar: 'https://ui-avatars.com/api/?name=Xưởng+A&background=0284c7&color=fff',
-            lastMessage: 'Đã nhận được mẫu vải, tiến độ đang tốt.',
-            time: '5 phút',
-            unreadCount: 3,
-            isActive: true
-        },
-        {
-            id: 2,
-            name: 'Nhóm Quản Lý Orca',
-            avatar: 'https://ui-avatars.com/api/?name=Orca&background=059669&color=fff',
-            lastMessage: 'Cuộc họp lúc 3h chiều nay nhé mọi người.',
-            time: '1 giờ',
-            unreadCount: 1,
-            isActive: true
-        },
-        {
-            id: 3,
-            name: 'Xưởng In Ấn B',
-            avatar: 'https://ui-avatars.com/api/?name=Xưởng+B&background=e11d48&color=fff',
-            lastMessage: 'File thiết kế này bị lỗi font rồi bạn ơi.',
-            time: '1 ngày',
-            unreadCount: 0,
-            isActive: false
+    useEffect(() => {
+        if (user) {
+            teamService.getMyTeams().then(teams => {
+                const mapped = teams.map(t => ({
+                    id: t.id,
+                    name: t.name,
+                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=0284c7&color=fff`,
+                    lastMessage: t.description || 'Nhấn để mở đoạn chat của nhóm',
+                    time: new Date(t.createdAt).toLocaleDateString('vi-VN'),
+                    unreadCount: 0,
+                    isActive: false
+                }));
+                setMessageGroups(mapped);
+            }).catch(console.error);
+
+            notificationService.getAll().then(setNotifications).catch(console.error);
         }
-    ]);
+    }, [user]);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -91,8 +50,8 @@ export default function Layout() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const unreadCount = notifications.filter(n => !n.isRead).length;
-    const displayNotifications = activeTab === 'all' ? notifications : notifications.filter(n => !n.isRead);
+    const unreadCount = notifications.filter(n => !n.read).length;
+    const displayNotifications = activeTab === 'all' ? notifications : notifications.filter(n => !n.read);
     
     const unreadMsgCount = messageGroups.reduce((acc, curr) => acc + curr.unreadCount, 0);
 
@@ -139,7 +98,7 @@ export default function Layout() {
                                                 className="fb-notification-item msg-item"
                                                 onClick={() => {
                                                     setShowMessages(false);
-                                                    navigate(`/groups/${group.id}/chat`);
+                                                    navigate(`/groups/${group.id}?openChat=1`);
                                                 }}
                                                 style={{cursor: 'pointer'}}
                                             >
@@ -197,25 +156,39 @@ export default function Layout() {
                                         <button className={activeTab === 'unread' ? 'active' : ''} onClick={() => setActiveTab('unread')}>Chưa đọc</button>
                                     </div>
                                     <div className="fb-notification-section">
-                                        <span>Trước đó</span>
+                                        <span>Gần đây</span>
                                         <button>Xem tất cả</button>
                                     </div>
                                     <div className="fb-notification-list">
                                         {displayNotifications.map(notif => (
-                                            <div key={notif.id} className={`fb-notification-item ${notif.isRead ? 'read' : 'unread'}`}>
+                                            <div 
+                                                key={notif.id} 
+                                                className={`fb-notification-item ${notif.read ? 'read' : 'unread'}`}
+                                                onClick={() => {
+                                                    if (!notif.read) {
+                                                        notificationService.markAsRead(notif.id).then(() => {
+                                                            setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+                                                        }).catch(console.error);
+                                                    }
+                                                    if (notif.taskId) {
+                                                        // Example navigation if there's a taskId
+                                                        setShowNotifications(false);
+                                                    }
+                                                }}
+                                                style={{cursor: 'pointer'}}
+                                            >
                                                 <div className="fb-notif-avatar-wrapper">
-                                                    <img src={notif.avatar} alt="avatar" className="fb-notif-avatar" />
-                                                    <div className="fb-notif-badge" style={{ backgroundColor: notif.badgeColor }}>
-                                                        {notif.badgeIcon}
+                                                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 700 }}>
+                                                        <Bell size={24} color="#fff" />
                                                     </div>
                                                 </div>
                                                 <div className="fb-notif-content">
                                                     <p>
-                                                        <strong>{notif.userName}</strong> {notif.action}
+                                                        <strong>Hệ thống</strong> {notif.message}
                                                     </p>
-                                                    <span className="fb-notif-time">{notif.time}</span>
+                                                    <span className="fb-notif-time">{new Date(notif.createdAt).toLocaleDateString('vi-VN')}</span>
                                                 </div>
-                                                {!notif.isRead && <div className="fb-notif-unread-dot"></div>}
+                                                {!notif.read && <div className="fb-notif-unread-dot"></div>}
                                             </div>
                                         ))}
                                     </div>
