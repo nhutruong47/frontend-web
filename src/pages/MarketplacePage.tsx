@@ -459,9 +459,9 @@ export default function MarketplacePage() {
     
     useGSAP(() => {
         const tl = gsap.timeline();
-        tl.from('.mp-hero-copy h1, .mp-hero-copy p', { y: 30, opacity: 0, duration: 0.8, stagger: 0.2, ease: 'power3.out' })
+        tl.from('.mp-market-hero-copy h1, .mp-market-hero-copy p', { y: 30, opacity: 0, duration: 0.8, stagger: 0.2, ease: 'power3.out' })
           .from('.mp-top-search', { scaleX: 0.95, opacity: 0, duration: 0.5, ease: 'power2.out' }, '-=0.4')
-          .from('.mp-market-card', { y: 40, opacity: 0, duration: 0.6, stagger: 0.05, ease: 'power3.out' }, '-=0.2');
+          .from('.mp-factory-card', { y: 40, opacity: 0, duration: 0.6, stagger: 0.05, ease: 'power3.out' }, '-=0.2');
     }, { scope: container });
 
     const { user } = useAuth();
