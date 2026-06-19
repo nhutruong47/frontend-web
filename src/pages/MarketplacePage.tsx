@@ -26,6 +26,7 @@ type ManufacturingRequest = {
 };
 
 type MarketplaceFactory = Team & {
+    rating?: number;
     monthlyCapacity?: string;
     availableCapacity?: string;
     moq?: string;

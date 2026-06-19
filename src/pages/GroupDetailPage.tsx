@@ -356,19 +356,7 @@ export default function GroupDetailPage() {
         } catch (e: any) { setError(e?.response?.data?.error || 'Lỗi'); } finally { setLoading(false); }
     };
 
-    const handleTaskStatus = async (taskId: string, status: string) => {
-        try {
-            setError('');
-            await taskService.updateStatus(taskId, status);
-            if (id) {
-                const g = await goalService.getByTeam(id);
-                setGoals(g);
-                Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat()));
-            }
-        } catch (e: any) {
-            setError(e?.response?.data?.error || 'Khong the cap nhat trang thai task');
-        }
-    };
+
 
     const handleAddTask = async () => {
         if (!id || !newTaskTitle.trim()) return;

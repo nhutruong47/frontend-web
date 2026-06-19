@@ -185,8 +185,6 @@ export default function AiAssistantPanel({ onCreateGoal, trialActive, trialDays,
 
             {/* Nội dung — chỉ hiện khi không collapsed */}
             {!isCollapsed && (
-
-            {!isCollapsed && (
             <>
             {/* Chat Messages Area */}
             <div className="ai-chat-container" style={{
