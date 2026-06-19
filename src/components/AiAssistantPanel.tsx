@@ -24,6 +24,11 @@ export default function AiAssistantPanel({ onCreateGoal, trialActive, trialDays,
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [loading, setLoading] = useState(false);
     const [showTokens, setShowTokens] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [panelHeight, setPanelHeight] = useState(460);
+    const [isResizing, setIsResizing] = useState(false);
+    const resizeStartY = useRef(0);
+    const resizeStartH = useRef(0);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const totalTokens = messages.reduce((sum, message) => sum + estimateTokens(message.content), 0);
 
@@ -34,6 +39,25 @@ export default function AiAssistantPanel({ onCreateGoal, trialActive, trialDays,
     useEffect(() => {
         scrollToBottom();
     }, [messages, loading]);
+
+    const startResize = (e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsResizing(true);
+        resizeStartY.current = e.clientY;
+        resizeStartH.current = panelHeight;
+    };
+
+    useEffect(() => {
+        if (!isResizing) return;
+        const onMove = (e: MouseEvent) => {
+            const delta = resizeStartY.current - e.clientY;
+            setPanelHeight(Math.max(280, Math.min(800, resizeStartH.current + delta)));
+        };
+        const onUp = () => setIsResizing(false);
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+        return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    }, [isResizing]);
 
     const handleSend = async () => {
         if (!input.trim() || !trialActive || loading) return;
@@ -86,14 +110,33 @@ export default function AiAssistantPanel({ onCreateGoal, trialActive, trialDays,
             background: 'linear-gradient(135deg, rgba(99,102,241,0.05) 0%, rgba(168,85,247,0.03) 100%)',
             border: '1px solid rgba(99,102,241,0.2)',
             borderRadius: 16,
-            padding: '20px 24px',
             marginBottom: 20,
             display: 'flex',
             flexDirection: 'column',
-            maxHeight: '600px', // Allow scrolling for chat
+            height: isCollapsed ? 'auto' : panelHeight,
+            transition: isCollapsed ? 'height 0.2s ease' : 'none',
+            overflow: 'hidden',
+            position: 'relative',
         }}>
+            {/* Resize handle */}
+            {!isCollapsed && (
+                <div
+                    onMouseDown={startResize}
+                    style={{
+                        position: 'absolute', top: 0, left: 0, right: 0,
+                        height: 4, cursor: 'ns-resize', zIndex: 2,
+                        borderRadius: '16px 16px 0 0',
+                    }}
+                    title="Kéo dãn khung"
+                />
+            )}
+
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '16px 20px 0',
+                flexShrink: 0,
+            }}>
                 <span className="icon-container glow" style={{ width: 36, height: 36, fontSize: 20, background: 'rgba(99,102,241,0.15)', borderColor: 'rgba(99,102,241,0.3)', color: '#818cf8' }}><ion-icon name="hardware-chip-outline"></ion-icon></span>
                 <div>
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -106,7 +149,7 @@ export default function AiAssistantPanel({ onCreateGoal, trialActive, trialDays,
                 <button
                     type="button"
                     onClick={() => setShowTokens(prev => !prev)}
-                    style={{ marginLeft: 'auto', fontSize: 10, padding: '4px 10px', borderRadius: 20, background: showTokens ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.05)', color: showTokens ? '#a5b4fc' : 'var(--text-secondary)', fontWeight: 700, border: '1px solid rgba(99,102,241,0.24)', cursor: 'pointer' }}
+                    style={{ fontSize: 10, padding: '4px 10px', borderRadius: 20, background: showTokens ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.05)', color: showTokens ? '#a5b4fc' : 'var(--text-secondary)', fontWeight: 700, border: '1px solid rgba(99,102,241,0.24)', cursor: 'pointer' }}
                 >
                     {showTokens ? `Token: ${formatTokenCount(totalTokens)}` : 'Xem token'}
                 </button>
@@ -117,26 +160,44 @@ export default function AiAssistantPanel({ onCreateGoal, trialActive, trialDays,
                 ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                         <span style={{ fontSize: 10, padding: '3px 10px', borderRadius: 20, background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <ion-icon name="close-circle-outline" style={{ fontSize: '12px' }}></ion-icon> Hết hạn dùng thử
+                            <ion-icon name="close-circle-outline" style={{ fontSize: '12px' }}></ion-icon> Hết hạn
                         </span>
                         <Link to="/upgrade" style={{ fontSize: 10, padding: '4px 10px', borderRadius: 20, background: 'rgba(124,92,255,0.16)', color: '#a78bfa', fontWeight: 700, border: '1px solid rgba(124,92,255,0.28)' }}>
-                            Nâng cấp token
+                            Nâng cấp
                         </Link>
                     </div>
                 )}
+                {/* Nút đóng / thu gọn */}
+                <button
+                    type="button"
+                    onClick={() => setIsCollapsed(c => !c)}
+                    title={isCollapsed ? 'Mở rộng' : 'Thu gọn'}
+                    style={{
+                        marginLeft: 'auto', background: 'none', border: 'none',
+                        cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 20,
+                        padding: '2px 4px', display: 'flex', alignItems: 'center',
+                        borderRadius: 6, transition: 'color 0.15s',
+                    }}
+                >
+                    <ion-icon name={isCollapsed ? 'expand-outline' : 'remove-outline'}></ion-icon>
+                </button>
             </div>
 
+            {/* Nội dung — chỉ hiện khi không collapsed */}
+            {!isCollapsed && (
+
+            {!isCollapsed && (
+            <>
             {/* Chat Messages Area */}
             <div className="ai-chat-container" style={{
                 flex: 1,
                 overflowY: 'auto',
                 minHeight: '200px',
-                maxHeight: '400px',
-                paddingRight: '8px',
+                maxHeight: `${panelHeight - 180}px`,
+                padding: '16px 20px 0',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '16px',
-                marginBottom: '16px',
             }}>
                 {messages.length === 0 ? (
                     <div style={{ margin: 'auto', textAlign: 'center', opacity: 0.5 }}>
@@ -275,6 +336,8 @@ export default function AiAssistantPanel({ onCreateGoal, trialActive, trialDays,
                     <ion-icon name="send-outline" style={{ fontSize: '16px' }}></ion-icon>
                 </button>
             </div>
+            </>
+            )}
         </div>
     );
 }

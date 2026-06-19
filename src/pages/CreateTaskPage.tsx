@@ -388,7 +388,7 @@ export default function CreateTaskPage() {
                     padding: 34px 24px 170px;
                 }
                 .task-gpt-inner {
-                    width: min(880px, 100%);
+                    width: min(1200px, 100%);
                     margin: 0 auto;
                     display: grid;
                     gap: 28px;
@@ -419,7 +419,7 @@ export default function CreateTaskPage() {
                     display: grid;
                     grid-template-columns: repeat(2, minmax(0, 1fr));
                     gap: 12px;
-                    width: min(680px, 100%);
+                    width: min(880px, 100%);
                 }
                 .task-gpt-suggestion {
                     min-height: 54px;
@@ -448,13 +448,13 @@ export default function CreateTaskPage() {
                     justify-content: flex-start;
                 }
                 .task-gpt-bubble {
-                    max-width: min(720px, 82%);
+                    max-width: min(960px, 90%);
                     color: var(--text-primary);
                     font-size: 16px;
                     line-height: 1.72;
                 }
                 .task-gpt-message-row.user .task-gpt-bubble {
-                    max-width: min(520px, 72%);
+                    max-width: min(720px, 75%);
                     padding: 11px 18px;
                     background: var(--bg-secondary);
                     border-radius: 22px;
@@ -505,7 +505,7 @@ export default function CreateTaskPage() {
                     border-top: 1px solid var(--border);
                 }
                 .task-gpt-composer {
-                    width: min(880px, 100%);
+                    width: min(1200px, 100%);
                     min-height: 74px;
                     margin: 0 auto;
                     display: grid;

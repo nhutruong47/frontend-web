@@ -484,6 +484,7 @@ export default function MarketplacePage() {
     const [minCapacityFilter, setMinCapacityFilter] = useState('');
     const [verifiedFilter, setVerifiedFilter] = useState('');
     const [certificateFilter, setCertificateFilter] = useState('');
+    const [minRatingFilter, setMinRatingFilter] = useState('');
     const [selectedFactory, setSelectedFactory] = useState<MarketplaceFactory | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [showProductFactories, setShowProductFactories] = useState(false);
@@ -649,10 +650,11 @@ export default function MarketplacePage() {
                 || (verifiedFilter === 'verified' ? factory.verificationStatus === 'APPROVED' : factory.verificationStatus !== 'APPROVED');
             const matchesCertificate = !certificateFilter
                 || (certificateFilter === 'has' ? Boolean(factory.certifications?.length) : !factory.certifications?.length);
+            const matchesRating = !minRatingFilter || (factory.rating || 0) >= Number(minRatingFilter);
 
-            return matchesSearch && matchesRegion && matchesType && matchesSpecialty && matchesStatus && matchesCapacity && matchesVerified && matchesCertificate;
+            return matchesSearch && matchesRegion && matchesType && matchesSpecialty && matchesStatus && matchesCapacity && matchesVerified && matchesCertificate && matchesRating;
         });
-    }, [certificateFilter, factories, factoryTypeFilter, minCapacityFilter, regionFilter, searchQuery, specialtyFilter, statusFilter, verifiedFilter, t]);
+    }, [certificateFilter, factories, factoryTypeFilter, minCapacityFilter, regionFilter, searchQuery, specialtyFilter, statusFilter, verifiedFilter, minRatingFilter, t]);
 
     const selectedCompareFactories = factories.filter(factory => compareIds.includes(factory.id));
     const myPublishedTeams = myTeams.filter(team => team.isPublished);
@@ -1453,6 +1455,32 @@ export default function MarketplacePage() {
                             <h2>Xưởng Đối Tác</h2>
                             <p>Những đơn vị rang uy tín hàng đầu trong mạng lưới ORCA</p>
                         </div>
+                        <div style={{ display: 'flex', gap: 12 }}>
+                            <select
+                                value={minRatingFilter}
+                                onChange={e => setMinRatingFilter(e.target.value)}
+                                className="mp-filter-select"
+                                style={{
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border)',
+                                    background: 'var(--bg-secondary)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '13px',
+                                    fontWeight: 600,
+                                    outline: 'none',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <option value="">Tất cả số sao</option>
+                                <option value="5">5 Sao</option>
+                                <option value="4">Từ 4 Sao</option>
+                                <option value="3">Từ 3 Sao</option>
+                                <option value="2">Từ 2 Sao</option>
+                                <option value="1">Từ 1 Sao</option>
+                                <option value="0">Từ 0 Sao</option>
+                            </select>
+                        </div>
                     </div>
 
                     {error && <div className="mp-error">{error}</div>}
@@ -1557,11 +1585,11 @@ export default function MarketplacePage() {
                     )}
                     {totalPages > 1 && (
                         <div className="mp-pagination">
-                            <button disabled={currentPage === 1} onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); document.getElementById('mp-partners')?.scrollIntoView({ behavior: 'smooth' }); }}>
+                            <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}>
                                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span> Trước
                             </button>
                             <span className="mp-page-info">Trang {currentPage} / {totalPages}</span>
-                            <button disabled={currentPage === totalPages} onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); document.getElementById('mp-partners')?.scrollIntoView({ behavior: 'smooth' }); }}>
+                            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}>
                                 Sau <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_right</span>
                             </button>
                         </div>

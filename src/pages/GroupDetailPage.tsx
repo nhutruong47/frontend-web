@@ -729,53 +729,53 @@ export default function GroupDetailPage() {
 
             {/* ===== DB ROADMAP: same source as task table ===== */}
             {isAdmin && latestGoal && (
-            <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 18, boxShadow: '0 10px 26px rgba(15,23,42,0.06)' }}>
-                <div style={{ padding: '16px 20px', borderBottom: '1px solid #edf2f7', background: 'linear-gradient(180deg, #fffaf3, #fff)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+            <div style={{ background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden', marginBottom: 18, boxShadow: '0 10px 26px rgba(0,0,0,0.06)' }}>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
-                        <span style={{ width: 36, height: 36, borderRadius: 10, background: '#f3dfc6', color: '#8a5a2d', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                        <span style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(212, 165, 116, 0.15)', color: 'var(--accent-primary)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                             <ion-icon name="flag-outline" style={{ fontSize: 18 }}></ion-icon>
                         </span>
                         <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: 11, color: '#9a6b3b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Muc tieu san xuat</div>
-                            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#172033', lineHeight: 1.35 }}>{latestGoal.title}</h3>
-                            <div style={{ marginTop: 6, color: '#64748b', fontSize: 13 }}>{latestGoal.outputTarget || latestGoal.rawInstruction}</div>
+                            <div style={{ fontSize: 11, color: 'var(--accent-primary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Muc tieu san xuat</div>
+                            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.35 }}>{latestGoal.title}</h3>
+                            <div style={{ marginTop: 6, color: 'var(--text-secondary)', fontSize: 13 }}>{latestGoal.outputTarget || latestGoal.rawInstruction}</div>
                         </div>
                     </div>
-                    <span style={{ background: '#f3dfc6', color: '#6b4321', padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap' }}>CAP NHAT MOI NHAT</span>
+                    <span style={{ background: 'rgba(212, 165, 116, 0.15)', color: 'var(--accent-primary)', padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap' }}>CAP NHAT MOI NHAT</span>
                 </div>
                 <div style={{ padding: 20 }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Roadmap tu task database</div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Roadmap tu task database</div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
                         <thead>
-                            <tr style={{ background: '#f8fafc' }}>
+                            <tr style={{ background: 'var(--bg-secondary)' }}>
                                 {['STT', 'Cong viec', 'Nguoi chinh', 'Du phong', 'Giam sat', 'Trang thai', 'Tien do'].map((h, i) => (
-                                    <th key={i} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 800, color: '#334155', borderBottom: '1px solid #e2e8f0' }}>{h}</th>
+                                    <th key={i} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 800, color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>{h}</th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
                             {latestGoalTasks.length === 0 ? (
-                                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 28, color: '#94a3b8', fontSize: 13 }}>Chua co task trong database</td></tr>
+                                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 28, color: 'var(--text-muted)', fontSize: 13 }}>Chua co task trong database</td></tr>
                             ) : latestGoalTasks.map((task, index) => {
                                 const status = STATUS_COLORS[task.status] || STATUS_COLORS.PENDING;
                                 const actual = Number(task.actualOutput ?? 0);
                                 const target = Number(task.outputTarget ?? 0);
                                 const progressPct = target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : (task.completionPercentage || 0);
                                 return (
-                                    <tr key={task.id} style={{ borderBottom: '1px solid #edf2f7' }}>
-                                        <td style={{ padding: '10px 12px', color: '#475569', fontSize: 13 }}>{index + 1}</td>
+                                    <tr key={task.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', fontSize: 13 }}>{index + 1}</td>
                                         <td style={{ padding: '10px 12px' }}>
-                                            <div style={{ color: '#0f172a', fontWeight: 700, fontSize: 13 }}>{task.title}</div>
-                                            <div style={{ color: '#94a3b8', fontSize: 11, marginTop: 2 }}>{task.productionStage || task.taskCode}</div>
+                                            <div style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{task.title}</div>
+                                            <div style={{ color: 'var(--text-secondary)', fontSize: 11, marginTop: 2 }}>{task.productionStage || task.taskCode}</div>
                                             {task.dependencyTaskTitles && task.dependencyTaskTitles.length > 0 && <div style={{ color: '#dc2626', fontSize: 11, marginTop: 3 }}>Depends on: {task.dependencyTaskTitles.join(', ')}</div>}
                                         </td>
-                                        <td style={{ padding: '10px 12px', color: '#334155', fontSize: 13 }}>{task.memberName || '-'}</td>
-                                        <td style={{ padding: '10px 12px', color: '#334155', fontSize: 13 }}>{task.backupMemberName || '-'}</td>
-                                        <td style={{ padding: '10px 12px', color: '#334155', fontSize: 13 }}>{task.supervisorName || '-'}</td>
+                                        <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', fontSize: 13 }}>{task.memberName || '-'}</td>
+                                        <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', fontSize: 13 }}>{task.backupMemberName || '-'}</td>
+                                        <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', fontSize: 13 }}>{task.supervisorName || '-'}</td>
                                         <td style={{ padding: '10px 12px' }}><span style={{ background: status.bg, color: status.color, padding: '4px 9px', borderRadius: 8, fontSize: 11, fontWeight: 800 }}>{status.label}</span></td>
                                         <td style={{ padding: '10px 12px', minWidth: 120 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <div style={{ flex: 1, height: 6, background: '#f1f5f9', borderRadius: 999, overflow: 'hidden' }}>
+                                                <div style={{ flex: 1, height: 6, background: 'var(--bg-secondary)', borderRadius: 999, overflow: 'hidden' }}>
                                                     <div style={{ height: '100%', width: `${progressPct}%`, background: status.color, borderRadius: 999 }} />
                                                 </div>
                                                 <span style={{ color: status.color, fontSize: 12, fontWeight: 800, minWidth: 34 }}>{progressPct}%</span>
@@ -845,10 +845,10 @@ export default function GroupDetailPage() {
             )}
 
             {/* ===== TASK TABLE ===== */}
-            <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 18 }}>
-                <div style={{ padding: '16px 24px', borderBottom: '1px solid #e2e8f0' }}>
+            <div style={{ background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden', marginBottom: 18 }}>
+                <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1e293b' }}>
+                        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
                             <ion-icon name="list-outline" style={{ verticalAlign: 'middle', marginRight: 6, color: '#d4a574' }}></ion-icon>
                             CÔNG VIỆC
                         </h3>
@@ -923,35 +923,69 @@ export default function GroupDetailPage() {
                     </div>
                 </div>
 
-                {/* Add task inline form */}
+                {/* Add task modal */}
                 {showAddTask && isAdmin && (
-                    <div style={{ padding: '16px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <select value={selectedGoalId || ''} onChange={e => setSelectedGoalId(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, background: '#fff' }}>
-                            <option value="">Công việc thủ công</option>
-                            {goals.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
-                        </select>
-                        <input value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} placeholder="Tên task *" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, flex: 1 }} />
-                        <input value={newTaskDesc} onChange={e => setNewTaskDesc(e.target.value)} placeholder="Mô tả" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, width: 180 }} />
-                        <select value={newTaskStage} onChange={e => setNewTaskStage(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, background: '#fff' }}>
-                            {['Roasting', 'Cooling', 'Grinding', 'Packaging', 'Quality Check', 'Inventory'].map(stage => <option key={stage} value={stage}>{stage}</option>)}
-                        </select>
-                        <select value={newTaskPriority} onChange={e => setNewTaskPriority(Number(e.target.value))} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, background: '#fff' }}>
-                            <option value={1}>Thấp</option>
-                            <option value={2}>Trung bình</option>
-                            <option value={3}>Cao</option>
-                        </select>
-                        <input value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} type="datetime-local" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13 }} />
-                        <input value={newTaskWorkload} onChange={e => setNewTaskWorkload(e.target.value)} placeholder="Giờ công" type="number" min="0" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, width: 100 }} />
-                        <button onClick={handleAddTask} disabled={loading || !newTaskTitle.trim()} style={{ background: '#d4a574', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Tạo</button>
-                        <button onClick={() => setShowAddTask(false)} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: 12, cursor: 'pointer', color: '#64748b' }}>Hủy</button>
+                    <div className="modal-overlay" onClick={() => setShowAddTask(false)} style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 600, width: '90%', background: 'var(--bg-panel, #fff)', color: 'var(--text-primary, #1a1a1a)', borderRadius: 16, padding: '32px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                            <h2 style={{ margin: '0 0 24px', fontSize: 20 }}>Tạo công việc mới</h2>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Loại công việc / Mục tiêu</label>
+                                    <select value={selectedGoalId || ''} onChange={e => setSelectedGoalId(e.target.value)} style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border, #cbd5e1)', fontSize: 14, background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)' }}>
+                                        <option value="">Công việc thủ công</option>
+                                        {goals.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Tên task <span style={{ color: '#dc2626' }}>*</span></label>
+                                    <input value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} placeholder="Tên task" style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border, #cbd5e1)', fontSize: 14, background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} autoFocus />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Mô tả</label>
+                                    <input value={newTaskDesc} onChange={e => setNewTaskDesc(e.target.value)} placeholder="Mô tả công việc..." style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border, #cbd5e1)', fontSize: 14, background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} />
+                                </div>
+                                <div style={{ display: 'flex', gap: 14 }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Giai đoạn</label>
+                                        <select value={newTaskStage} onChange={e => setNewTaskStage(e.target.value)} style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border, #cbd5e1)', fontSize: 14, background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)' }}>
+                                            {['Roasting', 'Cooling', 'Grinding', 'Packaging', 'Quality Check', 'Inventory'].map(stage => <option key={stage} value={stage}>{stage}</option>)}
+                                        </select>
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Mức ưu tiên</label>
+                                        <select value={newTaskPriority} onChange={e => setNewTaskPriority(Number(e.target.value))} style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border, #cbd5e1)', fontSize: 14, background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)' }}>
+                                            <option value={1}>Thấp</option>
+                                            <option value={2}>Trung bình</option>
+                                            <option value={3}>Cao</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: 14 }}>
+                                    <div style={{ flex: 2 }}>
+                                        <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Hạn chót (Deadline)</label>
+                                        <input value={newTaskDueTime} onChange={e => setNewTaskDueTime(e.target.value)} type="datetime-local" style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border, #cbd5e1)', fontSize: 14, background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Giờ công</label>
+                                        <input value={newTaskWorkload} onChange={e => setNewTaskWorkload(e.target.value)} placeholder="0" type="number" min="0" style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border, #cbd5e1)', fontSize: 14, background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} />
+                                    </div>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 28 }}>
+                                <button onClick={() => setShowAddTask(false)} style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid var(--border, #e2e8f0)', background: 'transparent', color: 'var(--text-primary, #64748b)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
+                                <button onClick={handleAddTask} disabled={loading || !newTaskTitle.trim()} style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (loading || !newTaskTitle.trim()) ? 0.6 : 1 }}>
+                                    {loading ? 'Đang tạo...' : 'Tạo công việc'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
 
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                        <tr style={{ background: '#f8fafc' }}>
-                            {['Tên công việc', 'Trạng thái', 'Xác nhận', 'Tiến độ', 'Ưu tiên', 'Thành viên', ''].map((h, i) => (
-                                <th key={i} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>{h}</th>
+                        <tr style={{ background: 'var(--bg-secondary)' }}>
+                            {['Tên công việc', 'Xác nhận', 'Tiến độ', 'Ưu tiên', 'Thành viên', ''].map((h, i) => (
+                                <th key={i} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border)' }}>{h}</th>
                             ))}
                         </tr>
                     </thead>
@@ -959,57 +993,43 @@ export default function GroupDetailPage() {
                         {(() => {
                             const filtered = (taskFilter === 'my' || !isAdmin) ? latestGoalTasks.filter(t => t.memberId === user?.id) : latestGoalTasks;
                             if (filtered.length === 0) {
-                                return <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 13 }}>Chưa có công việc nào trong danh sách này</td></tr>;
+                                return <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Chưa có công việc nào trong danh sách này</td></tr>;
                             }
                             return filtered.map(t => {
                                 const st = STATUS_COLORS[t.status] || STATUS_COLORS.PENDING;
                                 return (
-                                    <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                    <tr key={t.id} style={{ borderBottom: '1px solid var(--border)' }}>
                                         <td style={{ padding: '12px 16px' }}>
                                             {editingTaskId === t.id ? (
                                                 <div style={{ display: 'grid', gap: 6, minWidth: 220 }}>
-                                                    <input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)} placeholder="Tên công việc" style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid #d4a574', fontSize: 13, fontWeight: 700, color: '#1e293b' }} />
-                                                    <input value={editTaskDesc} onChange={e => setEditTaskDesc(e.target.value)} placeholder="Mô tả" style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, color: '#475569' }} />
+                                                    <input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)} placeholder="Tên công việc" style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid var(--accent-primary)', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', background: 'var(--bg-input)' }} />
+                                                    <input value={editTaskDesc} onChange={e => setEditTaskDesc(e.target.value)} placeholder="Mô tả" style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, color: 'var(--text-secondary)', background: 'var(--bg-input)' }} />
                                                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                                                        <select value={editTaskStage} onChange={e => setEditTaskStage(e.target.value)} style={{ padding: '6px 8px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, background: '#fff', color: '#475569' }}>
+                                                        <select value={editTaskStage} onChange={e => setEditTaskStage(e.target.value)} style={{ padding: '6px 8px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, background: 'var(--bg-input)', color: 'var(--text-secondary)' }}>
                                                             {['Roasting', 'Cooling', 'Grinding', 'Packaging', 'Quality Check', 'Inventory'].map(stage => <option key={stage} value={stage}>{stage}</option>)}
                                                         </select>
-                                                        <select value={editTaskPriority} onChange={e => setEditTaskPriority(Number(e.target.value))} style={{ padding: '6px 8px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, background: '#fff', color: '#475569' }}>
+                                                        <select value={editTaskPriority} onChange={e => setEditTaskPriority(Number(e.target.value))} style={{ padding: '6px 8px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, background: 'var(--bg-input)', color: 'var(--text-secondary)' }}>
                                                             <option value={1}>Thấp</option>
                                                             <option value={2}>TB</option>
                                                             <option value={3}>Cao</option>
                                                         </select>
-                                                        <input value={editTaskDueTime} onChange={e => setEditTaskDueTime(e.target.value)} type="datetime-local" style={{ padding: '6px 8px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, color: '#475569' }} />
+                                                        <input value={editTaskDueTime} onChange={e => setEditTaskDueTime(e.target.value)} type="datetime-local" style={{ padding: '6px 8px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, color: 'var(--text-secondary)', background: 'var(--bg-input)' }} />
                                                     </div>
                                                 </div>
                                             ) : (
                                                 <>
-                                                    {t.taskCode && <div style={{ fontSize: 10, color: '#c9884a', fontWeight: 800, letterSpacing: '0.08em', marginBottom: 2 }}>{t.taskCode}</div>}
-                                                    <div style={{ fontWeight: 600, fontSize: 14, color: '#1e293b' }}>{t.title}</div>
-                                                    {t.description && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{t.description}</div>}
+                                                    {t.taskCode && <div style={{ fontSize: 10, color: 'var(--accent-primary)', fontWeight: 800, letterSpacing: '0.08em', marginBottom: 2 }}>{t.taskCode}</div>}
+                                                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)' }}>{t.title}</div>
+                                                    {t.description && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{t.description}</div>}
                                                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
-                                                        {t.productionStage && <span style={{ fontSize: 11, color: '#64748b', background: '#f8fafc', borderRadius: 6, padding: '2px 6px' }}>{t.productionStage}</span>}
-                                                        {t.dependencyTaskTitles && t.dependencyTaskTitles.length > 0 && <span style={{ fontSize: 11, color: '#dc2626', background: '#fff1f2', borderRadius: 6, padding: '2px 6px' }}>Depends on: {t.dependencyTaskTitles.join(', ')}</span>}
+                                                        {t.productionStage && <span style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'var(--bg-secondary)', borderRadius: 6, padding: '2px 6px' }}>{t.productionStage}</span>}
+                                                        {t.dependencyTaskTitles && t.dependencyTaskTitles.length > 0 && <span style={{ fontSize: 11, color: '#dc2626', background: 'rgba(220, 38, 38, 0.1)', borderRadius: 6, padding: '2px 6px' }}>Depends on: {t.dependencyTaskTitles.join(', ')}</span>}
                                                         {(t.dueTime || t.deadline) && <span style={{ fontSize: 11, color: '#f59e0b' }}><ion-icon name="time-outline" style={{ fontSize: 11 }}></ion-icon> Hạn: {new Date(t.dueTime || t.deadline).toLocaleDateString('vi')}</span>}
                                                     </div>
                                                 </>
                                             )}
                                         </td>
-                                        <td style={{ padding: '12px 16px' }}>
-                                            {isAdmin ? (
-                                                <select value={t.status} onChange={e => handleTaskStatus(t.id, e.target.value)} style={{ background: st.bg, color: st.color, border: 'none', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                                                    <option value="BLOCKED">Bi khoa</option>
-                                                    <option value="READY">San sang</option>
-                                                    <option value="WAITING_APPROVAL">Cho duyet</option>
-                                                    <option value="CANCELLED">Da huy</option>
-                                                    <option value="PENDING">Chờ xử lý</option>
-                                                    <option value="IN_PROGRESS">Đang làm</option>
-                                                    <option value="COMPLETED">Hoàn thành</option>
-                                                </select>
-                                            ) : (
-                                                <span style={{ background: st.bg, color: st.color, padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700 }}>{st.label}</span>
-                                            )}
-                                        </td>
+
                                         <td style={{ padding: '12px 16px' }}>
                                             {(() => {
                                                 const as = t.acceptanceStatus || 'WAITING';
@@ -1565,31 +1585,31 @@ export default function GroupDetailPage() {
             {/* Add Inventory Modal */}
             {showAddInventory && isAdmin && (
                 <div className="modal-overlay" onClick={() => setShowAddInventory(false)} style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 450, width: '90%', background: '#fff', color: '#1a1a1a', borderRadius: 16, padding: '24px' }}>
-                        <h2 style={{ margin: '0 0 20px', color: '#1e293b', fontSize: 18 }}>Nhập hàng hóa mới</h2>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 600, width: '90%', background: 'var(--bg-panel, #fff)', color: 'var(--text-primary, #1a1a1a)', borderRadius: 16, padding: '32px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                        <h2 style={{ margin: '0 0 24px', fontSize: 20 }}>Nhập hàng hóa mới</h2>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                             <div>
-                                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>Tên hàng hóa <span style={{ color: '#dc2626' }}>*</span></label>
-                                <input value={invName} onChange={e => setInvName(e.target.value)} placeholder="Ví dụ: Cà phê hạt loại A..." style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, outline: 'none', background: '#f8fafc', boxSizing: 'border-box' }} autoFocus />
+                                <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Tên hàng hóa <span style={{ color: '#dc2626' }}>*</span></label>
+                                <input value={invName} onChange={e => setInvName(e.target.value)} placeholder="Ví dụ: Cà phê hạt loại A..." style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} autoFocus />
                             </div>
-                            <div style={{ display: 'flex', gap: 14 }}>
+                            <div style={{ display: 'flex', gap: 16 }}>
                                 <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>Số lượng <span style={{ color: '#dc2626' }}>*</span></label>
-                                    <input type="number" value={invQty} onChange={e => setInvQty(e.target.value)} placeholder="0" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, outline: 'none', background: '#f8fafc', boxSizing: 'border-box' }} />
+                                    <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Số lượng <span style={{ color: '#dc2626' }}>*</span></label>
+                                    <input type="number" value={invQty} onChange={e => setInvQty(e.target.value)} placeholder="0" style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} />
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>Đơn vị</label>
-                                    <input value={invUnit} onChange={e => setInvUnit(e.target.value)} placeholder="VD: kg, hộp..." style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, outline: 'none', background: '#f8fafc', boxSizing: 'border-box' }} />
+                                    <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Đơn vị</label>
+                                    <input value={invUnit} onChange={e => setInvUnit(e.target.value)} placeholder="VD: kg, hộp..." style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} />
                                 </div>
                             </div>
                             <div>
-                                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>Mức báo sắp hết</label>
-                                <input type="number" value={invThreshold} onChange={e => setInvThreshold(e.target.value)} placeholder="Cảnh báo khi nhỏ hơn hoặc bằng (VD: 10)" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, outline: 'none', background: '#f8fafc', boxSizing: 'border-box' }} />
+                                <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Mức báo sắp hết</label>
+                                <input type="number" value={invThreshold} onChange={e => setInvThreshold(e.target.value)} placeholder="Cảnh báo khi nhỏ hơn hoặc bằng (VD: 10)" style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} />
                             </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 28 }}>
-                            <button onClick={() => setShowAddInventory(false)} style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
-                            <button onClick={handleAddInventory} disabled={loading || !invName.trim() || !invQty} style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: (loading || !invName.trim() || !invQty) ? 0.6 : 1 }}>
+                        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 32 }}>
+                            <button onClick={() => setShowAddInventory(false)} style={{ padding: '12px 24px', borderRadius: 10, border: '1px solid var(--border, #e2e8f0)', background: 'transparent', color: 'var(--text-primary, #64748b)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
+                            <button onClick={handleAddInventory} disabled={loading || !invName.trim() || !invQty} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (loading || !invName.trim() || !invQty) ? 0.6 : 1 }}>
                                 {loading ? 'Đang lưu...' : 'Lưu vào kho'}
                             </button>
                         </div>
