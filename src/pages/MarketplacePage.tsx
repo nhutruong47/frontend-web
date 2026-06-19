@@ -1460,21 +1460,21 @@ export default function MarketplacePage() {
                         <div className="mp-factory-grid">
                             {featuredFactories.map((factory, index) => {
                                 const isOwnFactory = factory.ownerId === user?.id;
-                                const image = factory.factoryImageUrl || factory.factoryImages?.[0] || fallbackFactoryImages[getFactoryImageSeed(factory) % fallbackFactoryImages.length];
+                                const hasImage = Boolean(factory.factoryImageUrl || (factory.factoryImages && factory.factoryImages.length > 0));
+                                const image = factory.factoryImageUrl || factory.factoryImages?.[0];
                                 return (
                                     <article key={factory.id} className="mp-factory-card">
                                         <div className="mp-factory-image">
-                                            <img 
-                                                src={image} 
-                                                alt={`Ảnh xưởng ${factory.name}`} 
-                                                onError={(e) => {
-                                                    const target = e.target as HTMLImageElement;
-                                                    if (!target.dataset.fallback) {
-                                                        target.dataset.fallback = 'true';
-                                                        target.src = fallbackFactoryImages[getFactoryImageSeed(factory) % fallbackFactoryImages.length];
-                                                    }
-                                                }}
-                                            />
+                                            {hasImage ? (
+                                                <img 
+                                                    src={image} 
+                                                    alt={`Ảnh xưởng ${factory.name}`} 
+                                                />
+                                            ) : (
+                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#212836', color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic', minHeight: '160px' }}>
+                                                    Chưa đăng tải sản phẩm
+                                                </div>
+                                            )}
                                             <span className="mp-card-ribbon">{t[factory.statusBadgeMock?.replace(' ', '_') || ''] || factory.statusBadgeMock}</span>
                                         </div>
                                         <div className="mp-factory-card-body" style={{padding: '16px 20px'}}>
