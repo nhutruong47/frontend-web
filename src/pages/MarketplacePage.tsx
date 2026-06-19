@@ -194,15 +194,34 @@ const verificationStatusLabel = (status: string) => {
     return labels[status] || status;
 };
 
-const REQUEST_STORAGE_KEY = 'orca-marketplace-rfqs';
-
-const emptyValue = 'Chưa cập nhật';
 const fallbackFactoryImages = [
-    'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?auto=format&fit=crop&w=900&q=85',
     'https://images.unsplash.com/photo-1559525839-b184a4d698c7?auto=format&fit=crop&w=900&q=85',
-    'https://images.unsplash.com/photo-1596496350324-a212260cb462?auto=format&fit=crop&w=900&q=85',
-    'https://images.unsplash.com/photo-1574634534894-89d7576c8259?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1442512595305-bd2700d599a0?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1504813184591-58d0426f8d05?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1551888419-f538eec4c278?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1524350876685-274059332603?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1512516624996-24ba08ffc05e?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1507133750050-4a2ce37285f1?auto=format&fit=crop&w=900&q=85'
 ];
+
+const getFactoryImageSeed = (factory: any) => {
+    if (!factory) return 0;
+    if (factory.id) {
+        let hash = 0;
+        for (let i = 0; i < factory.id.length; i++) {
+            hash = factory.id.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return Math.abs(hash);
+    }
+    return (factory.name?.length || 0) + (factory.completedOrders || 0) + (factory.completedOrdersMock || 0);
+};
 
 const marketplaceCategories = [
     { label: 'Tất cả', icon: 'all_inclusive' },
@@ -1441,7 +1460,7 @@ export default function MarketplacePage() {
                         <div className="mp-factory-grid">
                             {featuredFactories.map((factory, index) => {
                                 const isOwnFactory = factory.ownerId === user?.id;
-                                const image = factory.factoryImageUrl || factory.factoryImages?.[0] || fallbackFactoryImages[index % fallbackFactoryImages.length];
+                                const image = factory.factoryImageUrl || factory.factoryImages?.[0] || fallbackFactoryImages[getFactoryImageSeed(factory) % fallbackFactoryImages.length];
                                 return (
                                     <article key={factory.id} className="mp-factory-card">
                                         <div className="mp-factory-image">
@@ -1452,7 +1471,7 @@ export default function MarketplacePage() {
                                                     const target = e.target as HTMLImageElement;
                                                     if (!target.dataset.fallback) {
                                                         target.dataset.fallback = 'true';
-                                                        target.src = fallbackFactoryImages[index % fallbackFactoryImages.length];
+                                                        target.src = fallbackFactoryImages[getFactoryImageSeed(factory) % fallbackFactoryImages.length];
                                                     }
                                                 }}
                                             />
@@ -1477,7 +1496,7 @@ export default function MarketplacePage() {
                                                     <span style={{fontSize: 11, color: 'var(--text-muted)'}}>{t.trustScore}</span>
                                                 </div>
                                                 <div className="mp-metric" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4}}>
-                                                    <span style={{fontSize: 14, fontWeight: 600, color: '#f59e0b'}}>{factory.ratingMock}★</span>
+                                                    <span style={{fontSize: 14, fontWeight: 600, color: '#f59e0b'}}>{factory.ratingMock?.toFixed(1)}★</span>
                                                     <span style={{fontSize: 11, color: 'var(--text-muted)'}}>{t.rating} ({factory.reviewCountMock})</span>
                                                 </div>
                                                 <div className="mp-metric" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4}}>
@@ -1734,7 +1753,7 @@ export default function MarketplacePage() {
                                                 const target = e.target as HTMLImageElement;
                                                 if (!target.dataset.fallback) {
                                                     target.dataset.fallback = 'true';
-                                                    target.src = fallbackFactoryImages[i % fallbackFactoryImages.length];
+                                                    target.src = fallbackFactoryImages[(getFactoryImageSeed(selectedFactory) + i) % fallbackFactoryImages.length];
                                                 }
                                             }}
                                         />
@@ -1749,7 +1768,7 @@ export default function MarketplacePage() {
                                             const target = e.target as HTMLImageElement;
                                             if (!target.dataset.fallback) {
                                                 target.dataset.fallback = 'true';
-                                                target.src = fallbackFactoryImages[0];
+                                                target.src = fallbackFactoryImages[getFactoryImageSeed(selectedFactory) % fallbackFactoryImages.length];
                                             }
                                         }}
                                     />
@@ -1792,7 +1811,7 @@ export default function MarketplacePage() {
                 <div className="fb-chat-popup">
                     <div className="fb-chat-header" onClick={() => setShowChatModal(false)}>
                         <div className="fb-chat-header-info">
-                            <img src={chatTarget.factoryImageUrl || chatTarget.factoryImages?.[0] || fallbackFactoryImages[0]} alt="avatar" />
+                            <img src={chatTarget.factoryImageUrl || chatTarget.factoryImages?.[0] || fallbackFactoryImages[getFactoryImageSeed(chatTarget) % fallbackFactoryImages.length]} alt="avatar" />
                             <div className="fb-chat-header-text">
                                 <h4>{chatTarget.name}</h4>
                                 <span>Đang hoạt động</span>
