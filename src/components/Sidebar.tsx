@@ -218,12 +218,11 @@ export default function Sidebar() {
                                 style={{
                                     background: planStyle.bg,
                                     color: planStyle.text,
-                                    padding: '2px 10px',
+                                    padding: planStyle.bg === 'transparent' ? '2px 0' : '2px 10px',
                                     borderRadius: '12px',
                                     fontSize: '10px',
-                                    fontWeight: 700,
+                                    fontWeight: 800,
                                     textTransform: 'uppercase',
-                                    letterSpacing: '0.5px',
                                     display: 'inline-block',
                                     marginTop: '2px'
                                 }}

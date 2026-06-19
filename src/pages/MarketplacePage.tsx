@@ -487,6 +487,7 @@ export default function MarketplacePage() {
     const [selectedFactory, setSelectedFactory] = useState<MarketplaceFactory | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [showProductFactories, setShowProductFactories] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
     const [activeProfileTab, setActiveProfileTab] = useState<FactoryProfileTab>('overview');
     const [compareIds, setCompareIds] = useState<string[]>([]);
 
@@ -655,7 +656,15 @@ export default function MarketplacePage() {
 
     const selectedCompareFactories = factories.filter(factory => compareIds.includes(factory.id));
     const myPublishedTeams = myTeams.filter(team => team.isPublished);
-    const featuredFactories = displayedFactories;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [displayedFactories]);
+
+    const itemsPerPage = 12;
+    const totalPages = Math.ceil(displayedFactories.length / itemsPerPage);
+    const featuredFactories = displayedFactories.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
     const totalCompletedOrders = factories.reduce((sum, factory) => sum + (factory.completedOrders || 0), 0);
 
     const fillPublishForm = (team: Team) => {
@@ -1444,10 +1453,6 @@ export default function MarketplacePage() {
                             <h2>Xưởng Đối Tác</h2>
                             <p>Những đơn vị rang uy tín hàng đầu trong mạng lưới ORCA</p>
                         </div>
-                        <button className="mp-view-all-btn" onClick={() => document.getElementById('mp-partners')?.scrollIntoView({ behavior: 'smooth' })}>
-                            Xem tất cả xưởng
-                            <span className="material-symbols-outlined">arrow_forward</span>
-                        </button>
                     </div>
 
                     {error && <div className="mp-error">{error}</div>}
@@ -1466,7 +1471,7 @@ export default function MarketplacePage() {
                                 const hasImage = Boolean(factory.factoryImageUrl || (factory.factoryImages && factory.factoryImages.length > 0));
                                 const image = factory.factoryImageUrl || factory.factoryImages?.[0];
                                 return (
-                                    <article key={factory.id} className="mp-factory-card">
+                                    <article key={factory.id} className="mp-factory-card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                         <div className="mp-factory-image">
                                             {hasImage ? (
                                                 <img 
@@ -1489,7 +1494,7 @@ export default function MarketplacePage() {
                                             )}
                                             <span className="mp-card-ribbon">{t[factory.statusBadgeMock?.replace(' ', '_') || ''] || factory.statusBadgeMock}</span>
                                         </div>
-                                        <div className="mp-factory-card-body" style={{padding: '16px 20px'}}>
+                                        <div className="mp-factory-card-body" style={{padding: '16px 20px', display: 'flex', flexDirection: 'column', flexGrow: 1}}>
                                             <div className="mp-fcard-header">
                                                 <h3>{factory.name} {factory.verifiedFactory && <span className="material-symbols-outlined verified-icon" title={t.verifiedFactory} style={{fontSize: 16, color: '#10b981'}}>verified</span>}</h3>
                                                 <span className="mp-fcard-location"><span className="material-symbols-outlined" style={{fontSize: 14}}>location_on</span> {t[factory.region || ''] || factory.region || t.vietnam}</span>
@@ -1535,7 +1540,7 @@ export default function MarketplacePage() {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="mp-factory-actions" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '0 16px 16px'}}>
+                                        <div className="mp-factory-actions" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '0 16px 16px', marginTop: 'auto'}}>
                                             {isOwnFactory ? (
                                                 <button onClick={() => openEditPublishedTeam(factory)} style={{gridColumn: '1 / -1', background: 'var(--bg-input)', color: 'var(--text-primary)', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, height: 38}}>{t.manageFactory}</button>
                                             ) : (
@@ -1548,6 +1553,17 @@ export default function MarketplacePage() {
                                     </article>
                                 );
                             })}
+                        </div>
+                    )}
+                    {totalPages > 1 && (
+                        <div className="mp-pagination">
+                            <button disabled={currentPage === 1} onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); document.getElementById('mp-partners')?.scrollIntoView({ behavior: 'smooth' }); }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span> Trước
+                            </button>
+                            <span className="mp-page-info">Trang {currentPage} / {totalPages}</span>
+                            <button disabled={currentPage === totalPages} onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); document.getElementById('mp-partners')?.scrollIntoView({ behavior: 'smooth' }); }}>
+                                Sau <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_right</span>
+                            </button>
                         </div>
                     )}
                 </section>
