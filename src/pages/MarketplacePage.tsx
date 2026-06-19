@@ -195,19 +195,19 @@ const verificationStatusLabel = (status: string) => {
 };
 
 const fallbackFactoryImages = [
-    'https://images.unsplash.com/photo-1559525839-b184a4d698c7?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1514432324607-a09d9b4aefda?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1504630083234-14187a9df0f5?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1498804103079-a6351b050096?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1497515114889-1c06568a37b8?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1511537190424-bbbab87ac5eb?auto=format&fit=crop&w=900&q=85',
     'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=900&q=85',
+    'https://images.unsplash.com/photo-1512568400610-62da28bc8a13?auto=format&fit=crop&w=900&q=85',
     'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=85',
-    'https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=900&q=85',
-    'https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=900&q=85',
-    'https://images.unsplash.com/photo-1442512595305-bd2700d599a0?auto=format&fit=crop&w=900&q=85',
-    'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=900&q=85',
-    'https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=900&q=85',
-    'https://images.unsplash.com/photo-1504813184591-58d0426f8d05?auto=format&fit=crop&w=900&q=85',
-    'https://images.unsplash.com/photo-1551888419-f538eec4c278?auto=format&fit=crop&w=900&q=85',
-    'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?auto=format&fit=crop&w=900&q=85',
-    'https://images.unsplash.com/photo-1524350876685-274059332603?auto=format&fit=crop&w=900&q=85',
-    'https://images.unsplash.com/photo-1512516624996-24ba08ffc05e?auto=format&fit=crop&w=900&q=85',
     'https://images.unsplash.com/photo-1507133750050-4a2ce37285f1?auto=format&fit=crop&w=900&q=85'
 ];
 
@@ -252,7 +252,7 @@ const featuredProducts = [
         description: 'Vị đậm đà, body mượt mà với hương chocolate và hạt dẻ.',
         price: '380.000đ',
         unit: '/kg',
-        image: 'https://images.unsplash.com/photo-1559525839-b184a4d698c7?auto=format&fit=crop&w=720&q=85',
+        image: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=720&q=85',
         origin: 'Huila, Colombia',
         roastLevel: 'Medium',
         processing: 'Washed',
@@ -264,7 +264,7 @@ const featuredProducts = [
         description: 'Độ chua sáng, nốt hương trái cây nhiệt đới rõ nét.',
         price: '550.000đ',
         unit: '/kg',
-        image: 'https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=720&q=85',
+        image: 'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?auto=format&fit=crop&w=720&q=85',
         origin: 'Nyeri, Kenya',
         roastLevel: 'Light',
         processing: 'Washed',
@@ -276,7 +276,7 @@ const featuredProducts = [
         description: 'Thiết bị cầm tay độ chính xác cao cho hạt xanh. Giúp kiểm soát chất lượng cà phê nhân xanh trước khi rang một cách dễ dàng và nhanh chóng.',
         price: '2.100.000đ',
         unit: '/chiếc',
-        image: 'https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=720&q=85',
+        image: 'https://images.unsplash.com/photo-1510707577719-ae7c14805e3a?auto=format&fit=crop&w=720&q=85',
         origin: 'Đài Loan',
         stock: 'Còn 5 chiếc',
         tasteNotes: []
@@ -286,7 +286,7 @@ const featuredProducts = [
         description: 'Gói 5 mẫu profile khác nhau cho 1kg hạt. Phù hợp cho khách hàng muốn tìm ra profile rang tối ưu nhất cho dòng hạt mới trước khi sản xuất số lượng lớn.',
         price: '350.000đ',
         unit: '/lần',
-        image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=720&q=85',
+        image: 'https://images.unsplash.com/photo-1580933073521-dc49ac0d4e6a?auto=format&fit=crop&w=720&q=85',
         stock: 'Nhận yêu cầu liên tục',
         tasteNotes: []
     },
@@ -1468,7 +1468,15 @@ export default function MarketplacePage() {
                                             {hasImage ? (
                                                 <img 
                                                     src={image} 
-                                                    alt={`Ảnh xưởng ${factory.name}`} 
+                                                    alt={`Ảnh xưởng ${factory.name}`}
+                                                    onError={(e) => {
+                                                        const target = e.currentTarget;
+                                                        target.style.display = 'none';
+                                                        const placeholder = document.createElement('div');
+                                                        placeholder.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background-color:#212836;color:var(--text-muted);font-size:13px;font-style:italic;min-height:160px;';
+                                                        placeholder.textContent = 'Chưa đăng tải sản phẩm';
+                                                        target.parentNode?.insertBefore(placeholder, target);
+                                                    }}
                                                 />
                                             ) : (
                                                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#212836', color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic', minHeight: '160px' }}>
