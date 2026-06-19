@@ -397,8 +397,11 @@ const availabilityCopy = (status?: AvailabilityStatus) => {
     }
 };
 
+const emptyValue = <span className="mp-empty-value">Chưa cập nhật</span>;
+const REQUEST_STORAGE_KEY = 'orca_manufacturing_requests';
+
 const displayPercent = (value?: number) => (typeof value === 'number' ? `${value}%` : emptyValue);
-const displayText = (value?: string | number | null) => (value || value === 0 ? String(value) : emptyValue);
+const displayText = (value?: any) => (value || value === 0 ? value : emptyValue);
 
 const loadRequests = (): ManufacturingRequest[] => {
     try {
@@ -974,7 +977,7 @@ export default function MarketplacePage() {
         }
     };
 
-    const renderMetric = (label: string, value?: string | number) => (
+    const renderMetric = (label: string, value?: string | number | React.ReactNode) => (
         <div className="mp-capacity-metric">
             <span>{label}</span>
             <strong>{displayText(value)}</strong>
@@ -1458,7 +1461,7 @@ export default function MarketplacePage() {
                         </div>
                     ) : (
                         <div className="mp-factory-grid">
-                            {featuredFactories.map((factory, index) => {
+                            {featuredFactories.map((factory) => {
                                 const isOwnFactory = factory.ownerId === user?.id;
                                 const hasImage = Boolean(factory.factoryImageUrl || (factory.factoryImages && factory.factoryImages.length > 0));
                                 const image = factory.factoryImageUrl || factory.factoryImages?.[0];
