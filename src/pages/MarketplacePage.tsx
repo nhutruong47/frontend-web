@@ -1472,6 +1472,7 @@ export default function MarketplacePage() {
                                                 <img 
                                                     src={image} 
                                                     alt={`Ảnh xưởng ${factory.name}`}
+                                                    referrerPolicy="no-referrer"
                                                     onError={(e) => {
                                                         const target = e.currentTarget;
                                                         target.style.display = 'none';
