@@ -8,9 +8,7 @@ import {
   Building2,
   CalendarDays,
   CheckCircle2,
-  Cpu,
   CreditCard,
-  Database,
   DollarSign,
   Download,
   
@@ -24,7 +22,6 @@ import {
   ReceiptText,
   RotateCcw,
   Search,
-  Server,
   Settings,
   ShieldCheck,
   ShoppingCart,

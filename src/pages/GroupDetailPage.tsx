@@ -153,7 +153,7 @@ export default function GroupDetailPage() {
     const [chatInput, setChatInput] = useState('');
     const [dmUserId, setDmUserId] = useState<string | null>(null);
     const [showChat, setShowChat] = useState(false);
-    const [showChatTokens, setShowChatTokens] = useState(false);
+    const showChatTokens = false;
     const [chatExpanded, setChatExpanded] = useState(true);
     const [showVideoCall, setShowVideoCall] = useState(false);
     const [chatAttachment, setChatAttachment] = useState<File | null>(null);
@@ -168,7 +168,6 @@ export default function GroupDetailPage() {
     const chatTabRef = useRef<'group' | 'dm'>(chatTab);
     const dmUserIdRef = useRef<string | null>(dmUserId);
     const showChatRef = useRef(showChat);
-    const chatTokenTotal = chatMessages.reduce((sum, message) => sum + estimateTokens(message.content), 0);
     const unreadDmTotal = Object.values(unreadDmCounts).reduce((sum, count) => sum + count, 0);
     const unreadTotal = unreadGroupCount + unreadDmTotal;
     useEffect(() => { chatTabRef.current = chatTab; }, [chatTab]);
@@ -1052,21 +1051,6 @@ export default function GroupDetailPage() {
                                 return <tr><td colSpan={5} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Chưa có công việc nào trong danh sách này</td></tr>;
                             }
                             return filtered.map(t => {
-                                const actual = Number(t.actualOutput ?? 0);
-                                const target = Number(t.outputTarget ?? t.workload ?? 0);
-                                const progressPct = target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : (t.completionPercentage || 0);
-
-                                let displayStatusKey = t.status;
-                                if (target > 0) {
-                                    if (progressPct >= 100) {
-                                        displayStatusKey = 'COMPLETED';
-                                    } else if (progressPct > 0) {
-                                        displayStatusKey = 'IN_PROGRESS';
-                                    } else {
-                                        displayStatusKey = 'PENDING';
-                                    }
-                                }
-                                const st = STATUS_COLORS[displayStatusKey] || STATUS_COLORS.PENDING;
                                 return (
                                     <tr key={t.id} style={{ borderBottom: '1px solid var(--border)' }}>
                                         <td style={{ padding: '12px 16px' }}>
@@ -1998,7 +1982,6 @@ export default function GroupDetailPage() {
                                                     return <div style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '40px 0' }}>Không có giai đoạn nào.</div>;
                                                 }
                                                 return items.map(([stage, count], i) => {
-                                                    const pct = maxCount > 0 ? Math.round((count / maxCount) * 100) : 0;
                                                     return (
                                                         <div key={i} style={{ background: 'var(--bg-card, #1e293b)', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--border, #334155)', display: 'flex', alignItems: 'center', gap: 16 }}>
                                                             <div style={{ width: 100, fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>

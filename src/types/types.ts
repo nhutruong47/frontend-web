@@ -154,6 +154,7 @@ export interface Task {
     outputTarget?: number;
     actualOutput?: number;
     defectQuantity?: number;
+    unit?: string;
     deadline: string;
     createdById?: string;
     createdByName?: string;
