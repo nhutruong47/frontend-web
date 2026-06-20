@@ -972,7 +972,7 @@ export default function GroupDetailPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ background: 'var(--bg-secondary)' }}>
-                            {['Tên công việc', 'Xác nhận', 'Tiến độ', 'Ưu tiên', 'Thành viên', ''].map((h, i) => (
+                            {['Tên công việc', 'Tiến độ', 'Ưu tiên', 'Thành viên', ''].map((h, i) => (
                                 <th key={i} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border)' }}>{h}</th>
                             ))}
                         </tr>
@@ -981,7 +981,7 @@ export default function GroupDetailPage() {
                         {(() => {
                             const filtered = (taskFilter === 'my' || !isAdmin) ? latestGoalTasks.filter(t => t.memberId === user?.id) : latestGoalTasks;
                             if (filtered.length === 0) {
-                                return <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Chưa có công việc nào trong danh sách này</td></tr>;
+                                return <tr><td colSpan={5} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Chưa có công việc nào trong danh sách này</td></tr>;
                             }
                             return filtered.map(t => {
                                 const st = STATUS_COLORS[t.status] || STATUS_COLORS.PENDING;
@@ -1017,88 +1017,65 @@ export default function GroupDetailPage() {
                                                 </>
                                             )}
                                         </td>
-
-                                        <td style={{ padding: '12px 16px' }}>
-                                            {(() => {
-                                                const as = t.acceptanceStatus || 'WAITING';
-                                                const aStyle = as === 'ACCEPTED' ? { bg: '#dcfce7', color: '#16a34a', label: 'Đã nhận' }
-                                                    : as === 'REJECTED' ? { bg: '#fee2e2', color: '#dc2626', label: 'Từ chối' }
-                                                    : { bg: '#fef3c7', color: '#d97706', label: 'Chờ xác nhận' };
-                                                return (
-                                                    <div>
-                                                        <span style={{ background: aStyle.bg, color: aStyle.color, padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', display: 'inline-block' }}>{aStyle.label}</span>
-                                                        {as === 'WAITING' && (t.memberId === user?.id || isAdmin) && (
-                                                            <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
-                                                                <button onClick={async () => { await taskService.respondToTask(t.id, true); const g = await goalService.getByTeam(id!); setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }} style={{ padding: '3px 8px', borderRadius: 6, border: 'none', background: '#10b981', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>Nhận</button>
-                                                                <button onClick={async () => { await taskService.respondToTask(t.id, false); const g = await goalService.getByTeam(id!); setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }} style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid #fca5a5', background: '#fff', color: '#dc2626', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>Từ chối</button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })()}
-                                        </td>
                                         <td style={{ padding: '12px 16px', minWidth: 180 }}>
                                             {(() => {
                                                 const target = Number(t.outputTarget ?? t.workload ?? 0);
                                                 const actual = Number(t.actualOutput ?? 0);
-                                                const progressPct = target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : (t.completionPercentage || 0);
+                                                const unit = t.unit || 'kg';
+                                                const pct = target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : (t.completionPercentage || 0);
+                                                const barColor = pct >= 100 ? '#16a34a' : pct >= 60 ? '#d97706' : '#dc2626';
                                                 return (
-                                                    <div style={{ display: 'grid', gap: 6 }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                                            <span style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>Actual</span>
-                                                            <input
-                                                                type="number"
-                                                                min={0}
-                                                                defaultValue={t.actualOutput ?? ''}
-                                                                onBlur={async e => {
-                                                                    const value = e.currentTarget.value;
-                                                                    try {
-                                                                        setError('');
-                                                                        await taskService.update(t.id, { actualOutput: value === '' ? undefined : Number(value), outputTarget: t.outputTarget ?? undefined });
-                                                                        const g = await goalService.getByTeam(id!);
-                                                                        setGoals(g);
-                                                                        Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat()));
-                                                                    } catch (err: any) {
-                                                                        setError(err?.response?.data?.error || 'Khong the cap nhat san luong');
-                                                                    }
-                                                                }}
-                                                                style={{ width: 72, padding: '4px 8px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 12 }}
-                                                            />
-                                                            <span style={{ fontSize: 11, color: '#64748b' }}>/</span>
-                                                            <span style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>Mong muốn</span>
+                                                    <div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
                                                             {isAdmin ? (
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                                    <input
-                                                                        type="number"
-                                                                        min={0}
-                                                                        defaultValue={t.outputTarget ?? t.workload ?? ''}
-                                                                        onBlur={async e => {
-                                                                            const value = e.currentTarget.value;
-                                                                            try {
-                                                                                setError('');
-                                                                                await taskService.update(t.id, { outputTarget: value === '' ? undefined : Number(value), actualOutput: t.actualOutput ?? undefined });
-                                                                                if (id) {
-                                                                                    const g = await goalService.getByTeam(id);
-                                                                                    setGoals(g);
-                                                                                    Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat()));
-                                                                                }
-                                                                            } catch (err: any) {
-                                                                                setError(err?.response?.data?.error || 'Không thể cập nhật sản lượng mong muốn');
-                                                                            }
-                                                                        }}
-                                                                        style={{ width: 72, padding: '4px 8px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 12 }}
-                                                                    />
-                                                                    <span style={{ fontSize: 12, color: '#1e293b', fontWeight: 700 }}>kg</span>
-                                                                </div>
+                                                                <input
+                                                                    type="number"
+                                                                    min={0}
+                                                                    defaultValue={target || ''}
+                                                                    placeholder={String(target || '')}
+                                                                    onBlur={async e => {
+                                                                        const value = e.currentTarget.value;
+                                                                        try {
+                                                                            setError('');
+                                                                            await taskService.update(t.id, { outputTarget: value === '' ? undefined : Number(value) });
+                                                                            if (id) { goalService.getByTeam(id).then(g => { setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }); }
+                                                                        } catch (err: any) {
+                                                                            setError(err?.response?.data?.error || 'Không thể cập nhật mục tiêu');
+                                                                        }
+                                                                    }}
+                                                                    onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                                                    style={{ width: 64, padding: '3px 6px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 12, fontWeight: 700, color: '#1e293b' }}
+                                                                />
                                                             ) : (
-                                                                <span style={{ fontSize: 12, color: '#1e293b', fontWeight: 700 }}>{t.outputTarget ?? t.workload ?? 0} kg</span>
+                                                                <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>{target} {unit}</span>
                                                             )}
                                                         </div>
-                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                                                            <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 999, overflow: 'hidden' }}>
-                                                                <div style={{ height: '100%', width: `${progressPct}%`, background: st.color, borderRadius: 999, transition: 'width 0.3s' }} />
-                                                            </div>
-                                                            <span style={{ fontSize: 12, fontWeight: 700, color: st.color }}>{progressPct}%</span>
+                                                        <input
+                                                            type="range"
+                                                            min={0}
+                                                            max={Math.max(target, actual, 1)}
+                                                            value={actual}
+                                                            onChange={(e) => {
+                                                                const val = Number(e.target.value);
+                                                                setAllTasks(prev => prev.map(tk => tk.id === t.id ? { ...tk, actualOutput: val } : tk));
+                                                            }}
+                                                            onMouseUp={(e) => {
+                                                                const val = Number((e.target as HTMLInputElement).value);
+                                                                taskService.update(t.id, { actualOutput: val })
+                                                                    .catch((err: any) => setError(err?.response?.data?.error || 'Khong the cap nhat'))
+                                                                    .then(() => { if (id) { goalService.getByTeam(id).then(g => { setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }); } });
+                                                            }}
+                                                            onTouchEnd={(e) => {
+                                                                const val = Number((e.target as HTMLInputElement).value);
+                                                                taskService.update(t.id, { actualOutput: val })
+                                                                    .catch((err: any) => setError(err?.response?.data?.error || 'Khong the cap nhat'))
+                                                                    .then(() => { if (id) { goalService.getByTeam(id).then(g => { setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }); } });
+                                                            }}
+                                                            style={{ width: '100%', accentColor: barColor, cursor: 'pointer', height: 4 }}
+                                                        />
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                                                            <span style={{ fontSize: 11, color: '#64748b' }}>{actual} / {target} {unit}</span>
+                                                            <span style={{ fontSize: 12, fontWeight: 700, color: barColor }}>{pct}%</span>
                                                         </div>
                                                     </div>
                                                 );

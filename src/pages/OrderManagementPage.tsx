@@ -26,14 +26,6 @@ export default function OrderManagementPage() {
     const [loading, setLoading] = useState(true);
     const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
     const [unreadOutboundCount, setUnreadOutboundCount] = useState(0);
-    const [unreadInboundCount, setUnreadInboundCount] = useState(0);
-
-    // Confirm delivery modal
-    const [confirmModalOrder, setConfirmModalOrder] = useState<InterGroupOrder | null>(null);
-    const [confirmStatus, setConfirmStatus] = useState<'ON_TIME' | 'LATE' | 'NOT_DELIVERED'>('ON_TIME');
-    const [confirmRating, setConfirmRating] = useState(5);
-    const [confirmComment, setConfirmComment] = useState('');
-    const [confirmLoading, setConfirmLoading] = useState(false);
 
     const [showManualOrderForm, setShowManualOrderForm] = useState(false);
     const [manualCreateLoading, setManualCreateLoading] = useState(false);
@@ -107,13 +99,6 @@ export default function OrderManagementPage() {
                     ? await interGroupOrderService.getMyOutboundOrders()
                     : await interGroupOrderService.getOutboundOrders(selectedTeam);
                 setUnreadOutboundCount(outb.filter(o => o.buyerViewed === false).length);
-
-                if (selectedTeam !== PERSONAL_BUYER && selectedTeam !== '') {
-                    const inb = await interGroupOrderService.getInboundOrders(selectedTeam);
-                    setUnreadInboundCount(inb.filter(o => o.sellerViewed === false).length);
-                } else {
-                    setUnreadInboundCount(0);
-                }
             } catch (err) {}
         };
         fetchUnreadCounts();
@@ -154,35 +139,13 @@ export default function OrderManagementPage() {
     };
 
     const handleComplete = async (orderId: string) => {
-        if (!confirm('Xưởng đã giao hàng xong? Đơn sẽ chuyển sang trạng thái "Đã giao — Chờ xác nhận".')) return;
+        if (!confirm('Hoàn thành đơn hàng này?')) return;
         try {
             await interGroupOrderService.completeOrder(orderId);
-            setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'DELIVERED' } : o));
+            setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'COMPLETED' } : o));
         } catch (err) {
             alert('Có lỗi xảy ra.');
             console.error(err);
-        }
-    };
-
-    const handleConfirmDelivery = async () => {
-        if (!confirmModalOrder) return;
-        setConfirmLoading(true);
-        try {
-            const updated = await interGroupOrderService.buyerConfirmDelivery(confirmModalOrder.id, {
-                deliveryStatus: confirmStatus,
-                rating: confirmRating,
-                comment: confirmComment,
-            });
-            setOrders(orders.map(o => o.id === confirmModalOrder.id ? { ...o, ...updated } : o));
-            setConfirmModalOrder(null);
-            setConfirmComment('');
-            setConfirmRating(5);
-            setConfirmStatus('ON_TIME');
-            alert('Xác nhận giao hàng thành công! Cảm ơn bạn đã đánh giá.');
-        } catch (err: any) {
-            alert(err?.response?.data?.error || 'Có lỗi xảy ra khi xác nhận.');
-        } finally {
-            setConfirmLoading(false);
         }
     };
 
@@ -265,16 +228,11 @@ export default function OrderManagementPage() {
             case 'PENDING': return <span className="status-badge status-pending"><ion-icon name="time-outline" style={{ fontSize: '13px' }}></ion-icon> Chờ xử lý</span>;
             case 'ACCEPTED': return <span className="status-badge status-accepted"><ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Đã nhận làm</span>;
             case 'REJECTED': return <span className="status-badge status-rejected"><ion-icon name="close-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Bị từ chối</span>;
-            case 'DELIVERED': return <span className="status-badge" style={{ background: '#fef3c7', color: '#92400e' }}><ion-icon name="car-outline" style={{ fontSize: '13px' }}></ion-icon> Đã giao — {order.deliveryConfirmed ? 'Đã xác nhận' : 'Chờ xác nhận'}</span>;
             case 'COMPLETED': return <span className="status-badge status-completed"><ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Hoàn thành</span>;
             case 'CANCELED': return <span className="status-badge status-canceled"><ion-icon name="ban-outline" style={{ fontSize: '13px' }}></ion-icon> Đã hủy</span>;
             default: return <span className="status-badge">{order.status}</span>;
         }
     };
-
-    const pendingInboundCount = activeTab === 'inbound'
-        ? orders.filter(order => order.status === 'PENDING').length
-        : 0;
 
     const deliveryFailureLabel = (action?: string) => {
         switch (action) {
@@ -325,34 +283,9 @@ export default function OrderManagementPage() {
                         style={{ display: 'flex', alignItems: 'center', gap: 4 }}
                     >
                         <ion-icon name="arrow-down-outline" style={{ fontSize: '15px' }}></ion-icon> Đơn xưởng khác đặt (Bán/Gia công)
-                        {unreadInboundCount > 0 && <span className="nav-badge" style={{ background: '#E53935', color: '#fff', fontSize: '0.75rem', padding: '2px 6px', borderRadius: '10px', marginLeft: 4 }}>{unreadInboundCount}</span>}
                     </button>
                 </div>
             </div>
-
-            {!loading && pendingInboundCount > 0 && (
-                <div
-                    className="glass-panel"
-                    style={{
-                        marginBottom: 20,
-                        padding: '16px 20px',
-                        border: '1px solid rgba(217, 156, 95, 0.42)',
-                        background: 'linear-gradient(135deg, rgba(255, 247, 237, 0.96), rgba(255, 255, 255, 0.92))',
-                        color: '#3b2414',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12,
-                    }}
-                >
-                    <span className="icon-container glow" style={{ width: 34, height: 34, fontSize: 20 }}>
-                        <ion-icon name="notifications-outline"></ion-icon>
-                    </span>
-                    <div>
-                        <strong>Bạn có {pendingInboundCount} đơn đặt hàng mới cần phản hồi.</strong>
-                        <p style={{ margin: '4px 0 0', color: '#7a563c' }}>Kiểm tra thông tin đơn, sau đó chấp nhận hoặc từ chối ngay trong bảng bên dưới.</p>
-                    </div>
-                </div>
-            )}
 
             {activeTab === 'inbound' && (
                 <div className="glass-panel" style={{ padding: '16px 20px', marginBottom: 20, border: '1px solid rgba(217, 156, 95, 0.28)' }}>
@@ -585,20 +518,6 @@ export default function OrderManagementPage() {
                                             {(order.status === 'PENDING' || order.status === 'ACCEPTED') && !order.cancelRequested && (
                                                 <button className="btn btn-secondary" onClick={() => handleCancel(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}><ion-icon name="ban-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> {activeTab === 'outbound' ? 'Hủy / Xin hủy' : 'Hủy'}</button>
                                             )}
-                                            {/* Outbound DELIVERED: Buyer confirms receipt */}
-                                            {activeTab === 'outbound' && order.status === 'DELIVERED' && (
-                                                <>
-                                                    {order.deliveryConfirmed ? (
-                                                        <span style={{ fontSize: '0.78rem', padding: '4px 10px', borderRadius: 8, fontWeight: 700, background: order.deliveryStatus === 'ON_TIME' ? '#dcfce7' : order.deliveryStatus === 'LATE' ? '#fef3c7' : '#fee2e2', color: order.deliveryStatus === 'ON_TIME' ? '#15803d' : order.deliveryStatus === 'LATE' ? '#92400e' : '#dc2626' }}>
-                                                            {order.deliveryStatus === 'ON_TIME' ? 'Giao đúng hẹn' : order.deliveryStatus === 'LATE' ? 'Giao trễ' : 'Chưa giao'}
-                                                        </span>
-                                                    ) : (
-                                                        <button className="btn btn-primary" onClick={() => { setConfirmModalOrder(order); setConfirmRating(5); setConfirmComment(''); }} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#10b981' }}>
-                                                            <ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Xác nhận giao hàng
-                                                        </button>
-                                                    )}
-                                                </>
-                                            )}
                                             {/* Show canceller */}
                                             {order.status === 'CANCELED' && order.cancelledBy && (
                                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Bởi: {order.cancelledBy === 'BUYER' ? 'Bên mua' : 'Bên bán'}</span>
@@ -674,83 +593,6 @@ export default function OrderManagementPage() {
                 </div>
             )}
 
-            {/* === XÁC NHẬN GIAO HÀNG + ĐÁNH GIÁ MODAL === */}
-            {confirmModalOrder && (
-                <div style={{
-                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)',
-                    backdropFilter: 'blur(6px)', zIndex: 10000,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                    <div style={{
-                        background: 'var(--bg-card)', borderRadius: 20, padding: '28px 32px',
-                        maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-                    }}>
-                        <h2 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 800 }}>
-                            Xác nhận giao hàng
-                        </h2>
-                        <p style={{ margin: '0 0 20px', color: 'var(--text-secondary)', fontSize: 14 }}>
-                            Xác nhận đơn <strong>"{confirmModalOrder.title}"</strong> đã được giao như thế nào?
-                        </p>
-
-                        {/* Delivery result */}
-                        <div style={{ marginBottom: 20 }}>
-                            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 10, color: 'var(--text-primary)' }}>Kết quả giao hàng</label>
-                            <div style={{ display: 'flex', gap: 10 }}>
-                                {(['ON_TIME', 'LATE', 'NOT_DELIVERED'] as const).map(s => (
-                                    <button key={s} onClick={() => setConfirmStatus(s)} style={{
-                                        flex: 1, padding: '10px 8px', borderRadius: 10, border: `2px solid ${confirmStatus === s ? (
-                                            s === 'ON_TIME' ? '#10b981' : s === 'LATE' ? '#f59e0b' : '#ef4444'
-                                        ) : 'var(--border)'}`, background: confirmStatus === s ? (
-                                            s === 'ON_TIME' ? '#dcfce7' : s === 'LATE' ? '#fef3c7' : '#fee2e2'
-                                        ) : 'transparent', color: confirmStatus === s ? (
-                                            s === 'ON_TIME' ? '#15803d' : s === 'LATE' ? '#92400e' : '#dc2626'
-                                        ) : 'var(--text-secondary)', fontWeight: 700, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s'
-                                    }}>
-                                        {s === 'ON_TIME' ? '✓ Đúng hẹn' : s === 'LATE' ? '⚠ Trễ hẹn' : '✕ Chưa giao'}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Star rating */}
-                        <div style={{ marginBottom: 20 }}>
-                            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 10, color: 'var(--text-primary)' }}>Đánh giá xưởng</label>
-                            <div style={{ display: 'flex', gap: 6 }}>
-                                {[1, 2, 3, 4, 5].map(star => (
-                                    <button key={star} onClick={() => setConfirmRating(star)} style={{
-                                        background: 'none', border: 'none', cursor: 'pointer', fontSize: 28,
-                                        color: star <= confirmRating ? '#f59e0b' : '#d1d5db',
-                                        transition: 'transform 0.1s', transform: star <= confirmRating ? 'scale(1.15)' : 'scale(1)',
-                                    }}>
-                                        ★
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Comment */}
-                        <div style={{ marginBottom: 24 }}>
-                            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)' }}>Nhận xét (tùy chọn)</label>
-                            <textarea
-                                value={confirmComment}
-                                onChange={e => setConfirmComment(e.target.value)}
-                                placeholder="Chia sẻ trải nghiệm của bạn với xưởng này..."
-                                rows={3}
-                                style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', fontSize: 13, resize: 'vertical', fontFamily: 'inherit', background: 'var(--bg-input)', boxSizing: 'border-box' }}
-                            />
-                        </div>
-
-                        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                            <button onClick={() => setConfirmModalOrder(null)} style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>
-                                Hủy
-                            </button>
-                            <button onClick={handleConfirmDelivery} disabled={confirmLoading} style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: confirmLoading ? '#a8a29e' : '#10b981', color: '#fff', fontWeight: 700, cursor: confirmLoading ? 'not-allowed' : 'pointer', fontSize: 13 }}>
-                                {confirmLoading ? 'Đang xác nhận...' : 'Xác nhận & Gửi đánh giá'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

@@ -22,6 +22,7 @@ export default function FactoryDashboardPage() {
     const teamId = id || '';
     const [dashboard, setDashboard] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [updatingProgress, setUpdatingProgress] = useState<string | null>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -36,6 +37,24 @@ export default function FactoryDashboardPage() {
             console.error('Loi dashboard:', e);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const updateOrderProgress = async (orderId: string, newPercent: number) => {
+        setUpdatingProgress(orderId);
+        try {
+            await productionService.updateOrder(orderId, { progressPercent: newPercent });
+            setDashboard((prev: any) => ({
+                ...prev,
+                activeOrders: prev.activeOrders?.map((o: any) =>
+                    o.id === orderId ? { ...o, progressPercent: newPercent } : o
+                ),
+            }));
+        } catch (e) {
+            console.error('Loi cap nhat tien do:', e);
+            alert('Khong the cap nhat tien do');
+        } finally {
+            setUpdatingProgress(null);
         }
     };
 
@@ -118,8 +137,34 @@ export default function FactoryDashboardPage() {
                                         <span style={{ color: 'var(--text-secondary)' }}>Tien do</span>
                                         <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{order.progressPercent?.toFixed(0)}%</span>
                                     </div>
-                                    <div style={{ background: 'var(--bg-input)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
-                                        <div style={{ width: `${order.progressPercent || 0}%`, height: '100%', background: order.isAtRisk ? '#ef4444' : '#10b981', borderRadius: 4, transition: 'width 0.3s' }} />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <input
+                                            type="range"
+                                            min={0}
+                                            max={100}
+                                            value={order.progressPercent || 0}
+                                            onChange={(e) => {
+                                                const val = Number(e.target.value);
+                                                setDashboard((prev: any) => ({
+                                                    ...prev,
+                                                    activeOrders: prev.activeOrders?.map((o: any) =>
+                                                        o.id === order.id ? { ...o, progressPercent: val } : o
+                                                    ),
+                                                }));
+                                            }}
+                                            onMouseUp={(e) => updateOrderProgress(order.id, Number((e.target as HTMLInputElement).value))}
+                                            onTouchEnd={(e) => updateOrderProgress(order.id, Number((e.target as HTMLInputElement).value))}
+                                            disabled={updatingProgress === order.id}
+                                            style={{
+                                                flex: 1,
+                                                accentColor: order.isAtRisk ? '#ef4444' : '#10b981',
+                                                cursor: 'pointer',
+                                                height: 4,
+                                            }}
+                                        />
+                                        {updatingProgress === order.id && (
+                                            <ion-icon name="sync" style={{ fontSize: 14, color: 'var(--text-muted)', animation: 'spin 1s linear infinite' }} />
+                                        )}
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>

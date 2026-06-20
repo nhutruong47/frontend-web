@@ -59,6 +59,7 @@ export default function DailyBoardPage() {
     const [board, setBoard] = useState<any>(null);
     const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [loading, setLoading] = useState(true);
+    const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
@@ -237,10 +238,48 @@ export default function DailyBoardPage() {
 
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div style={{ flex: 1, marginRight: 16 }}>
-                                        <ProgressBar value={row.progressPercent || 0} max={100} color="#10b981" height={6} />
+                                        <input
+                                            type="range"
+                                            min={0}
+                                            max={100}
+                                            value={row.progressPercent || 0}
+                                            onChange={(e) => {
+                                                const val = Number(e.target.value);
+                                                setBoard((prev: any) => ({
+                                                    ...prev,
+                                                    orderRows: prev.orderRows?.map((r: any) =>
+                                                        r.orderId === row.orderId ? { ...r, progressPercent: val } : r
+                                                    ),
+                                                }));
+                                            }}
+                                            onMouseUp={(e) => {
+                                                const val = Number((e.target as HTMLInputElement).value);
+                                                setUpdatingOrderId(row.orderId);
+                                                productionService.updateOrder(row.orderId, { progressPercent: val })
+                                                    .catch(() => alert('Khong the cap nhat tien do'))
+                                                    .finally(() => setUpdatingOrderId(null));
+                                            }}
+                                            onTouchEnd={(e) => {
+                                                const val = Number((e.target as HTMLInputElement).value);
+                                                setUpdatingOrderId(row.orderId);
+                                                productionService.updateOrder(row.orderId, { progressPercent: val })
+                                                    .catch(() => alert('Khong the cap nhat tien do'))
+                                                    .finally(() => setUpdatingOrderId(null));
+                                            }}
+                                            disabled={updatingOrderId === row.orderId}
+                                            style={{
+                                                width: '100%',
+                                                accentColor: '#10b981',
+                                                cursor: 'pointer',
+                                                height: 4,
+                                            }}
+                                        />
                                     </div>
-                                    <div style={{ fontSize: 14, fontWeight: 800, color: '#10b981', minWidth: 48, textAlign: 'right' }}>
+                                    <div style={{ fontSize: 14, fontWeight: 800, color: '#10b981', minWidth: 48, textAlign: 'right', display: 'flex', alignItems: 'center', gap: 4 }}>
                                         {(row.progressPercent || 0).toFixed(0)}%
+                                        {updatingOrderId === row.orderId && (
+                                            <ion-icon name="sync" style={{ fontSize: 12, color: 'var(--text-muted)', animation: 'spin 1s linear infinite' }} />
+                                        )}
                                     </div>
                                 </div>
                             </div>
