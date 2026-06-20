@@ -1060,13 +1060,13 @@ export default function GroupDetailPage() {
                                                                 setAllTasks(prev => prev.map(tk => tk.id === t.id ? { ...tk, actualOutput: val } : tk));
                                                             }}
                                                             onMouseUp={(e) => {
-                                                                const val = Number((e.target as HTMLInputElement).value);
+                                                                const val = Number(e.target.value);
                                                                 taskService.update(t.id, { actualOutput: val })
                                                                     .catch((err: any) => setError(err?.response?.data?.error || 'Khong the cap nhat'))
                                                                     .then(() => { if (id) { goalService.getByTeam(id).then(g => { setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }); } });
                                                             }}
                                                             onTouchEnd={(e) => {
-                                                                const val = Number((e.target as HTMLInputElement).value);
+                                                                const val = Number(e.target.value);
                                                                 taskService.update(t.id, { actualOutput: val })
                                                                     .catch((err: any) => setError(err?.response?.data?.error || 'Khong the cap nhat'))
                                                                     .then(() => { if (id) { goalService.getByTeam(id).then(g => { setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }); } });
