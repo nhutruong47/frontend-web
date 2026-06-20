@@ -62,8 +62,7 @@ type AdminSection =
   | 'subscriptions'
   | 'billing'
   | 'ai'
-  | 'support'
-  | 'system';
+  | 'support';
 
 
 
@@ -86,8 +85,7 @@ const tabs: Array<{ id: AdminSection; label: string; icon: React.ElementType }> 
   { id: 'subscriptions', label: 'Gói dịch vụ', icon: ReceiptText },
   { id: 'billing', label: 'Thanh toán', icon: CreditCard },
   { id: 'ai', label: 'Sử dụng AI', icon: Brain },
-  { id: 'support', label: 'Hỗ trợ', icon: BellRing },
-  { id: 'system', label: 'Hệ thống', icon: Server }
+  { id: 'support', label: 'Hỗ trợ', icon: BellRing }
 ];
 
 type KpiTone = 'coffee' | 'blue' | 'amber' | 'green' | 'violet';
@@ -177,25 +175,6 @@ const plans = [
   { name: 'Tăng trưởng', price: 1499000, period: 'Tháng', users: 30, orders: 1000, batches: 5000, workshops: 5, ai: 40000, features: ['Quy trình QC', 'Trợ lý AI', 'Xuất dữ liệu thanh toán'] },
   { name: 'Doanh nghiệp', price: 0, period: 'Năm', users: 500, orders: 99999, batches: 99999, workshops: 50, ai: 500000, features: ['Cam kết dịch vụ', 'Quy trình tùy chỉnh', 'Giới hạn AI riêng'] }
 ];
-
-const systemMetrics = [
-  { name: 'CPU', value: 68, icon: Cpu, tone: 'warning' },
-  { name: 'RAM', value: 74, icon: Server, tone: 'warning' },
-  { name: 'Cơ sở dữ liệu', value: 42, icon: Database, tone: 'success' },
-  { name: 'Yêu cầu API', value: 81, icon: Activity, tone: 'danger' },
-  { name: 'Tỷ lệ lỗi', value: 2.8, icon: XCircle, tone: 'danger' },
-  { name: 'Response Time', value: 184, icon: Gauge, tone: 'success' }
-];
-
-const realtimeData = [
-  { time: '10:00', cpu: 44, ram: 58, api: 320, errors: 0.8 },
-  { time: '10:05', cpu: 52, ram: 61, api: 390, errors: 1.1 },
-  { time: '10:10', cpu: 68, ram: 67, api: 470, errors: 2.4 },
-  { time: '10:15', cpu: 61, ram: 72, api: 430, errors: 1.7 },
-  { time: '10:20', cpu: 74, ram: 76, api: 510, errors: 2.8 }
-];
-
-
 
 const featureRows = [
   'Quản lý đơn hàng',
@@ -519,7 +498,7 @@ export default function AdminPage() {
         <div>
           <span className="admin-eyebrow">Quản trị ORCA SaaS</span>
           <h1>Tổng quan hệ thống</h1>
-          <p>Trung tâm điều hành cho Coffee Production Management Platform: doanh nghiệp, user, billing, AI, monitoring, audit và báo cáo điều hành.</p>
+          <p>Trung tâm điều hành cho Coffee Production Management Platform: doanh nghiệp, user, billing, AI, audit và báo cáo điều hành.</p>
         </div>
         <div className="admin-hero-actions">
           <button type="button" className="admin-button admin-button-soft"><CalendarDays size={16} /> 30 ngày</button>
@@ -740,22 +719,6 @@ export default function AdminPage() {
           </section>
         </div>
       )}
-      
-      {active === 'system' && (
-        <>
-          <section className="admin-system-grid">{systemMetrics.map(item => { const Icon = item.icon; return <article className={`admin-system-card admin-system-${item.tone}`} key={item.name}><Icon size={20} /><span>{item.name}</span><strong>{item.value}{item.name === 'Response Time' ? 'ms' : '%'}</strong><div><i style={{ width: `${Math.min(Number(item.value), 100)}%` }} /></div></article>; })}</section>
-          <ChartPanel title="Biểu đồ realtime CPU / RAM / API / Error"><ResponsiveContainer width="100%" height="100%"><LineChart data={realtimeData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="time" /><YAxis /><Tooltip /><Line dataKey="cpu" stroke="#d4a574" strokeWidth={2} /><Line dataKey="ram" stroke="#60a5fa" strokeWidth={2} /><Line dataKey="api" stroke="#22c55e" strokeWidth={2} /><Line dataKey="errors" stroke="#ef4444" strokeWidth={2} /></LineChart></ResponsiveContainer></ChartPanel>
-          <section className="admin-card"><h3>Nhật ký hệ thống</h3><div className="admin-log-list"><p><StatusBadge value="Critical" /> Độ trễ API vượt 800ms tại /api/ai/recommend</p><p><StatusBadge value="Medium" /> Nhóm kết nối cơ sở dữ liệu đạt 78%</p><p><StatusBadge value="Low" /> Sao lưu hằng ngày hoàn tất</p></div></section>
-        </>
-      )}
-
-      
-
-      
-
-      
-
-      
     </div>
   );
 }

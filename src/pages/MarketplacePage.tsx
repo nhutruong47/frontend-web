@@ -49,7 +49,7 @@ type MarketplaceFactory = Team & {
     notableCustomers?: string[];
     processedCoffeeLines?: string[];
     reviews?: { author: string; content: string; rating?: number; date?: string; company?: string }[];
-    
+
     // New Mock Fields for B2B Redesign
     trustScoreMock?: number;
     ratingMock?: number;
@@ -65,7 +65,7 @@ type MarketplaceFactory = Team & {
     yearsInOperationMock?: number;
     employeeCountMock?: number;
     factorySizeMock?: string;
-    
+
     capabilitiesMock?: {
         services: string[];
         coffeeTypes: string[];
@@ -317,7 +317,7 @@ const normalizeFactory = (team: Team): MarketplaceFactory => {
     const mockOnTimeRate = 90 + (seed % 10);
     const mockAvailableCap = (1 + (seed % 5)) + " Tấn";
     const statusBadges: ('Receiving Orders' | 'Nearly Full' | 'Temporarily Unavailable')[] = ['Receiving Orders', 'Nearly Full', 'Temporarily Unavailable'];
-    
+
     return {
         ...team,
         monthlyCapacity: buildCapacityLabel(team),
@@ -328,7 +328,7 @@ const normalizeFactory = (team: Team): MarketplaceFactory => {
         verifiedAddress: team.verificationStatus === 'APPROVED' && Boolean(team.businessAddress),
         verifiedCertification: team.verificationStatus === 'APPROVED' && Boolean(team.certificationDocument || team.certificates?.length),
         certifications: team.certificates?.length ? team.certificates : splitMultiValue(team.certificationDocument),
-        
+
         // Mock B2B assignments
         trustScoreMock: mockTrustScore,
         ratingMock: mockRating,
@@ -344,7 +344,7 @@ const normalizeFactory = (team: Team): MarketplaceFactory => {
         yearsInOperationMock: 2 + (seed % 10),
         employeeCountMock: 10 + (seed % 40),
         factorySizeMock: (500 + (seed % 10) * 100) + " m2",
-        
+
         capabilitiesMock: {
             services: splitMultiValue(team.specialty).length > 0 ? splitMultiValue(team.specialty) : ['Rang cà phê', 'Đóng gói', 'Gia công OEM'],
             coffeeTypes: COFFEE_TYPE_OPTIONS.slice(0, 16).map(option => option.label),
@@ -460,7 +460,7 @@ const translations = {
 
 export default function MarketplacePage() {
     const container = useRef<HTMLDivElement>(null);
-    
+
     useGSAP(() => {
         const tl = gsap.timeline();
         tl.from('.mp-market-hero-copy h1, .mp-market-hero-copy p', { y: 30, opacity: 0, duration: 0.8, stagger: 0.2, ease: 'power3.out' })
@@ -622,12 +622,12 @@ export default function MarketplacePage() {
         const removeAccents = (str: string) => str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
         const q = removeAccents(searchQuery.trim());
         const minCapacity = Number(minCapacityFilter) || 0;
-        
+
         return factories.filter(factory => {
             const translatedRegion = t[factory.region || ''] || factory.region || t.vietnam;
             const translatedType = t[factory.factoryType || ''] || factory.factoryType || t.roastery;
             const translatedTags = factory.specializationsMock?.map(tag => t[tag.replace(' ', '_')] || tag) || [];
-            
+
             const searchable = removeAccents([
                 factory.name,
                 factory.region,
@@ -769,7 +769,7 @@ export default function MarketplacePage() {
         const newMsg = chatDraft.trim();
         setChatMessages(prev => [...prev, { sender: 'me', text: newMsg }]);
         setChatDraft('');
-        
+
         setTimeout(() => {
             setChatMessages(prev => [...prev, { sender: 'other', text: 'Dạ, xưởng đã nhận được thông tin và sẽ phản hồi lại sớm ạ.' }]);
         }, 1500);
@@ -821,11 +821,11 @@ export default function MarketplacePage() {
                 rfqBudget ? `Ngân sách dự kiến: ${rfqBudget}` : '',
                 rfqNote ? `Ghi chú: ${rfqNote}` : '',
             ].filter(Boolean).join('\n');
-            
+
             setShowOrderModal(false);
             setShowAiMatching(true);
             setAiMatchingProgress(0);
-            
+
             const interval = setInterval(() => {
                 setAiMatchingProgress(prev => {
                     if (prev >= 100) {
@@ -1503,8 +1503,8 @@ export default function MarketplacePage() {
                                     <article key={factory.id} className="mp-factory-card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                         <div className="mp-factory-image">
                                             {hasImage ? (
-                                                <img 
-                                                    src={image} 
+                                                <img
+                                                    src={image}
                                                     alt={`Ảnh xưởng ${factory.name}`}
                                                     referrerPolicy="no-referrer"
                                                     onError={(e) => {
@@ -1708,7 +1708,7 @@ export default function MarketplacePage() {
                             <h2>{showProductFactories ? 'Xưởng nhận gia công' : 'Chi tiết sản phẩm'}</h2>
                             <button className="mp-modal-close" onClick={() => setSelectedProduct(null)}>×</button>
                         </div>
-                        
+
                         {!showProductFactories ? (
                             <>
                                 <div style={{ display: 'flex', gap: 32, marginBottom: 24, marginTop: 10 }}>
@@ -1721,13 +1721,13 @@ export default function MarketplacePage() {
                                             {selectedProduct.badge && <span style={{ background: '#d4a574', color: '#171a1b', padding: '4px 10px', borderRadius: 6, fontSize: 13, fontWeight: 700 }}>{selectedProduct.badge}</span>}
                                         </div>
                                         <p style={{ margin: '0 0 20px', color: '#a79d94', fontSize: 15, lineHeight: 1.6 }}>{selectedProduct.description}</p>
-                                        
+
                                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px 20px', borderRadius: 12, marginBottom: 20 }}>
                                             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, marginBottom: 16 }}>
                                                 <strong style={{ fontSize: 28, color: '#ffd9bd', lineHeight: 1 }}>{selectedProduct.price}</strong>
                                                 <small style={{ color: '#a79d94', fontSize: 15, marginBottom: 2 }}>{selectedProduct.unit}</small>
                                             </div>
-                                            
+
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 24px', fontSize: 14 }}>
                                                 {selectedProduct.origin && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#8f8580' }}>Xuất xứ:</span> <strong style={{ color: '#ece8e1', textAlign: 'right' }}>{selectedProduct.origin}</strong></div>}
                                                 {selectedProduct.processing && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#8f8580' }}>Sơ chế:</span> <strong style={{ color: '#ece8e1', textAlign: 'right' }}>{selectedProduct.processing}</strong></div>}
@@ -1801,10 +1801,10 @@ export default function MarketplacePage() {
                             {(selectedFactory.factoryImages && selectedFactory.factoryImages.length > 0) ? (
                                 <div className="mp-profile-gallery" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px', marginBottom: '16px' }}>
                                     {selectedFactory.factoryImages.map((img, i) => (
-                                        <img 
-                                            key={i} 
-                                            src={img} 
-                                            alt={`Ảnh ${i}`} 
+                                        <img
+                                            key={i}
+                                            src={img}
+                                            alt={`Ảnh ${i}`}
                                             style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }}
                                             onError={(e) => {
                                                 const target = e.target as HTMLImageElement;
@@ -1818,8 +1818,8 @@ export default function MarketplacePage() {
                                 </div>
                             ) : selectedFactory.factoryImageUrl ? (
                                 <div className="mp-profile-image">
-                                    <img 
-                                        src={selectedFactory.factoryImageUrl} 
+                                    <img
+                                        src={selectedFactory.factoryImageUrl}
                                         alt={`Ảnh xưởng ${selectedFactory.name}`}
                                         onError={(e) => {
                                             const target = e.target as HTMLImageElement;
@@ -1871,12 +1871,20 @@ export default function MarketplacePage() {
                             <img src={chatTarget.factoryImageUrl || chatTarget.factoryImages?.[0] || fallbackFactoryImages[getFactoryImageSeed(chatTarget) % fallbackFactoryImages.length]} alt="avatar" />
                             <div className="fb-chat-header-text">
                                 <h4>{chatTarget.name}</h4>
-                                <span>Đang hoạt động</span>
+                                <span style={{ color: '#10b981' }}>Đang hoạt động</span>
                             </div>
                         </div>
-                        <button className="fb-chat-close" onClick={(e) => { e.stopPropagation(); setShowChatModal(false); }}>
-                            <span className="material-symbols-outlined" style={{fontSize: 20}}>close</span>
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button className="fb-chat-action-btn" onClick={(e) => { e.stopPropagation(); alert('Tính năng gọi thoại đang được phát triển'); }}>
+                                <span className="material-symbols-outlined" style={{fontSize: 20}}>call</span>
+                            </button>
+                            <button className="fb-chat-action-btn" onClick={(e) => { e.stopPropagation(); alert('Tính năng gọi video đang được phát triển'); }}>
+                                <span className="material-symbols-outlined" style={{fontSize: 20}}>videocam</span>
+                            </button>
+                            <button className="fb-chat-close" onClick={(e) => { e.stopPropagation(); setShowChatModal(false); }}>
+                                <span className="material-symbols-outlined" style={{fontSize: 20}}>close</span>
+                            </button>
+                        </div>
                     </div>
                     <div className="fb-chat-body">
                         {chatMessages.map((msg, i) => (
@@ -1888,11 +1896,11 @@ export default function MarketplacePage() {
                         ))}
                     </div>
                     <div className="fb-chat-footer">
-                        <span className="material-symbols-outlined" style={{color: '#0084ff', cursor: 'pointer', fontSize: 24}}>add_circle</span>
-                        <span className="material-symbols-outlined" style={{color: '#0084ff', cursor: 'pointer', fontSize: 24}}>photo_camera</span>
-                        <input 
-                            className="fb-chat-input" 
-                            placeholder="Aa" 
+                        <span className="material-symbols-outlined" style={{color: '#d4a574', cursor: 'pointer', fontSize: 24}} onClick={() => alert('Tính năng gửi file đang được phát triển')}>attach_file</span>
+                        <span className="material-symbols-outlined" style={{color: '#d4a574', cursor: 'pointer', fontSize: 24}} onClick={() => alert('Tính năng gửi ảnh đang được phát triển')}>image</span>
+                        <input
+                            className="fb-chat-input"
+                            placeholder="Nhập tin nhắn..."
                             value={chatDraft}
                             onChange={event => setChatDraft(event.target.value)}
                             onKeyDown={e => {
@@ -1917,7 +1925,7 @@ export default function MarketplacePage() {
                         </div>
                         {selectedSeller && <div className="mp-modal-seller">Xưởng nhận RFQ: <strong>{selectedSeller.name}</strong></div>}
                         <form onSubmit={handleSubmitOrder}>
-                            
+
                             <div className="mp-form-group">
                                 <label>Tiêu đề RFQ</label>
                                 <input value={rfqTitle} onChange={event => setRfqTitle(event.target.value)} placeholder="VD: Báo giá gia công 2 tấn Arabica" required />
@@ -2247,7 +2255,7 @@ export default function MarketplacePage() {
                                     <h2 style={{margin: 0, color: '#ece8e1'}}>Phân tích hoàn tất!</h2>
                                 </div>
                                 <p style={{color: '#a79d94', marginBottom: 24}}>RFQ của bạn đã được ghi nhận. AI ORCA đã tự động phân bổ RFQ này cho <strong>Top 5 xưởng phù hợp nhất</strong>.</p>
-                                
+
                                 <div style={{display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32}}>
                                     {[1, 2, 3].map((_, idx) => {
                                         const matchFactory = featuredFactories[idx] || factories[idx] || {name: 'Xưởng gia công Cà phê'};

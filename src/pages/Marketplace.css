@@ -3872,8 +3872,8 @@ body.theme-dark .mp-manufacturing-market .mp-market-hero {
 }
 
 .fb-msg-row.sent .fb-msg-bubble {
-  background: #0084ff;
-  color: white;
+  background: #d4a574;
+  color: #1a1a1a;
 }
 
 .fb-chat-footer {
@@ -3903,7 +3903,7 @@ body.theme-dark .mp-manufacturing-market .mp-market-hero {
 .fb-chat-send {
   background: transparent;
   border: none;
-  color: #0084ff;
+  color: #d4a574;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -3917,7 +3917,24 @@ body.theme-dark .mp-manufacturing-market .mp-market-hero {
 }
 
 .fb-chat-send:not(:disabled):hover {
-  color: #006bce;
+  color: #b58550;
+}
+
+.fb-chat-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fb-chat-action-btn:hover {
+  background: var(--bg-input);
+  color: #d4a574;
 }
 
 /* GSAP Motion & Linear UI additions */

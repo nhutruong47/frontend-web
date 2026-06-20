@@ -34,6 +34,20 @@ const SHIFT_LABELS: Record<string, string> = {
     NGAY: 'Ca Ngay (6h-18h)',
 };
 
+const STAGE_UNIT: Record<string, { unit: string; max: number }> = {
+    RANG: { unit: 'kg', max: 99999 },
+    RANH_VA_CHON: { unit: 'kg', max: 99999 },
+    XAY: { unit: 'kg', max: 99999 },
+    DONG_GOI: { unit: 'goi', max: 99999 },
+    QA: { unit: 'mau', max: 99999 },
+    GIAO_HANG: { unit: 'don', max: 99999 },
+    DAN_TEM: { unit: 'tem', max: 99999 },
+};
+
+const PROGRESS_COLOR = '#d4a574';
+
+const unitForStage = (stage?: string) => STAGE_UNIT[stage || '']?.unit || 'kg';
+
 export default function ProductionPlanPage() {
     const { id } = useParams<{ id: string }>();
     const { userId } = useAuth();
@@ -45,6 +59,8 @@ export default function ProductionPlanPage() {
     const [plans, setPlans] = useState<ProductionPlan[]>([]);
     const [selectedPlan, setSelectedPlan] = useState<ProductionPlan | null>(null);
     const [dailyTargets, setDailyTargets] = useState<DailyTarget[]>([]);
+    const [targetEdits, setTargetEdits] = useState<Record<string, { actual: number; target: number }>>({});
+    const [savingTargetId, setSavingTargetId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'overview' | 'daily' | 'attendance'>('overview');
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
@@ -127,7 +143,33 @@ export default function ProductionPlanPage() {
         try {
             const targets = await productionService.getDailyTargetsByPlan(planId);
             setDailyTargets(targets || []);
+            setTargetEdits({});
         } catch (e) { console.error(e); }
+    };
+
+    const handleSaveTarget = async (target: DailyTarget) => {
+        if (!target.id) return;
+        const edit = targetEdits[target.id];
+        if (!edit) return;
+        setSavingTargetId(target.id);
+        try {
+            const updated = await productionService.updateDailyActual(target.id, {
+                actualRoastKg: edit.actual,
+                actualQcKg: edit.actual,
+                actualPackagedKg: edit.actual,
+                notes: target.notes
+            });
+            setDailyTargets(prev => prev.map(t => t.id === target.id ? updated : t));
+            setTargetEdits(prev => {
+                const next = { ...prev };
+                delete next[target.id!];
+                return next;
+            });
+        } catch (e: any) {
+            alert(e.response?.data?.error || 'Loi luu tien do');
+        } finally {
+            setSavingTargetId(null);
+        }
     };
 
     const handleCheckIn = async () => {
@@ -363,7 +405,22 @@ export default function ProductionPlanPage() {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                                     {dailyTargets.map(target => {
                                         const isToday = target.targetDate === new Date().toISOString().split('T')[0];
-                                        const completion = target.completionRate || 0;
+                                        const stage = (selectedOrder?.productType as string) || 'RANG';
+                                        const unit = unitForStage(stage);
+                                        const edit = target.id ? targetEdits[target.id] : undefined;
+                                        const targetQty = edit?.target ?? (target.targetQuantity || target.targetRoastKg || 0);
+                                        const actualQty = edit?.actual ?? (target.actualQuantity || target.actualRoastKg || 0);
+                                        const cappedActual = Math.min(actualQty, targetQty);
+                                        const livePct = targetQty > 0 ? Math.min(100, Math.round((cappedActual / targetQty) * 100)) : 0;
+
+                                        const updateField = (field: 'actual' | 'target', value: number) => {
+                                            if (!target.id) return;
+                                            const current = edit || { actual: actualQty, target: targetQty };
+                                            const next = { ...current, [field]: value };
+                                            if (field === 'actual' && value > current.target) next.actual = current.target;
+                                            if (field === 'target' && current.actual > value) next.actual = value;
+                                            setTargetEdits(prev => ({ ...prev, [target.id!]: next }));
+                                        };
 
                                         return (
                                             <div key={target.id} style={{
@@ -379,28 +436,59 @@ export default function ProductionPlanPage() {
                                                         {isToday && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, background: '#8b5cf6', color: '#fff', padding: '2px 8px', borderRadius: 4 }}>Hom nay</span>}
                                                         {target.isHoliday && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, background: 'var(--bg-input)', color: 'var(--text-muted)', padding: '2px 8px', borderRadius: 4 }}>Ngay nghi</span>}
                                                     </div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                        <span style={{ fontSize: 13, fontWeight: 600, color: '#10b981' }}>{completion.toFixed(0)}%</span>
-                                                        <div style={{ width: 80, height: 6, background: 'var(--bg-input)', borderRadius: 3 }}>
-                                                            <div style={{ width: `${completion}%`, height: '100%', background: completion >= 100 ? '#10b981' : completion >= 80 ? '#f59e0b' : '#ef4444', borderRadius: 3 }} />
-                                                        </div>
-                                                    </div>
+                                                    <span style={{ fontSize: 13, fontWeight: 700, color: PROGRESS_COLOR }}>{livePct}%</span>
                                                 </div>
 
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                                                    {[
-                                                        { label: 'Rang', target: target.targetRoastKg, actual: target.actualRoastKg },
-                                                        { label: 'QC', target: target.targetQcKg, actual: target.actualQcKg },
-                                                        { label: 'Dong goi', target: target.targetPackagedKg, actual: target.actualPackagedKg },
-                                                    ].map(row => (
-                                                        <div key={row.label} style={{ background: 'var(--bg-input)', borderRadius: 8, padding: '8px 12px' }}>
-                                                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{row.label}</div>
-                                                            <div style={{ fontSize: 13 }}>
-                                                                <span style={{ fontWeight: 700 }}>{(row.actual || 0).toLocaleString()} </span>
-                                                                <span style={{ color: 'var(--text-muted)' }}>/ {(row.target || 0).toLocaleString()} kg</span>
-                                                            </div>
+                                                <div style={{ background: 'var(--bg-input)', borderRadius: 8, padding: '10px 12px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, fontSize: 13 }}>
+                                                        <span style={{ color: 'var(--text-secondary)' }}>So luong hien tai:</span>
+                                                        <input
+                                                            type="number"
+                                                            min={0}
+                                                            max={targetQty}
+                                                            value={actualQty}
+                                                            onChange={e => updateField('actual', Math.max(0, Number(e.target.value) || 0))}
+                                                            disabled={target.isHoliday}
+                                                            style={{ width: 80, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', fontSize: 13, textAlign: 'right' }}
+                                                        />
+                                                        <span style={{ color: 'var(--text-secondary)' }}>/</span>
+                                                        <input
+                                                            type="number"
+                                                            min={0}
+                                                            value={targetQty}
+                                                            onChange={e => updateField('target', Math.max(0, Number(e.target.value) || 0))}
+                                                            disabled={target.isHoliday}
+                                                            style={{ width: 80, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', fontSize: 13, textAlign: 'right' }}
+                                                        />
+                                                        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{unit}</span>
+                                                    </div>
+
+                                                    <div style={{ position: 'relative', height: 18, marginTop: 10 }}>
+                                                        <div style={{ position: 'absolute', left: 0, right: 0, top: 7, height: 4, background: 'var(--border)', borderRadius: 2 }} />
+                                                        <div style={{ position: 'absolute', left: 0, top: 7, height: 4, width: `${livePct}%`, background: PROGRESS_COLOR, borderRadius: 2, transition: 'width 0.15s ease' }} />
+                                                        <input
+                                                            type="range"
+                                                            min={0}
+                                                            max={Math.max(targetQty, 1)}
+                                                            value={cappedActual}
+                                                            onChange={e => updateField('actual', Math.max(0, Number(e.target.value) || 0))}
+                                                            disabled={target.isHoliday}
+                                                            style={{ position: 'absolute', left: 0, right: 0, top: 0, width: '100%', height: 18, margin: 0, accentColor: PROGRESS_COLOR, cursor: target.isHoliday ? 'not-allowed' : 'pointer', background: 'transparent' }}
+                                                        />
+                                                    </div>
+
+                                                    {edit && !target.isHoliday && (
+                                                        <div style={{ marginTop: 10, textAlign: 'right' }}>
+                                                            <button onClick={() => handleSaveTarget(target)} disabled={savingTargetId === target.id} style={{
+                                                                padding: '6px 14px', borderRadius: 8, border: 'none',
+                                                                background: PROGRESS_COLOR, color: '#fff', fontSize: 12, fontWeight: 700,
+                                                                cursor: savingTargetId === target.id ? 'not-allowed' : 'pointer',
+                                                                opacity: savingTargetId === target.id ? 0.6 : 1
+                                                            }}>
+                                                                {savingTargetId === target.id ? 'Dang luu...' : 'Luu tien do'}
+                                                            </button>
                                                         </div>
-                                                    ))}
+                                                    )}
                                                 </div>
 
                                                 {target.notes && (

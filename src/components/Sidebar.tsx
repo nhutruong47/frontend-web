@@ -89,7 +89,6 @@ export default function Sidebar() {
         { path: '/admin?section=subscriptions', label: 'Gói dịch vụ', icon: 'receipt-outline' },
         { path: '/admin?section=billing', label: 'Thanh toán & chi phí', icon: 'card-outline' },
         { path: '/admin?section=ai', label: 'Sử dụng AI', icon: 'hardware-chip-outline' },
-        { path: '/admin?section=monitoring', label: 'Trạng thái hệ thống', icon: 'pulse-outline' },
         { path: '/admin?section=support', label: 'Trung tâm hỗ trợ', icon: 'help-buoy-outline' },
         { path: '/admin?section=notifications', label: 'Trung tâm thông báo', icon: 'notifications-outline' },
         { path: '/admin?section=audit', label: 'Nhật ký kiểm toán', icon: 'shield-checkmark-outline' },
