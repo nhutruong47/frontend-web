@@ -68,7 +68,7 @@ const resultToDraft = (result: AiParseResult): AiV2PlanDraft => ({
 function friendlyTaskError(error?: string) {
     const text = error || '';
     const lower = text.toLowerCase();
-    if (lower.includes('could not execute statement') || lower.includes('constraint') || lower.includes('public.') || lower.includes('sql')) {
+    if (lower.includes('could not execute statement') || (lower.includes('constraint') && lower.includes('sql'))) {
         return 'Không thể lưu kế hoạch do dữ liệu bị trùng hoặc không hợp lệ. Vui lòng bấm tạo lại.';
     }
     return text || 'Không thể tạo công việc, vui lòng thử lại';
