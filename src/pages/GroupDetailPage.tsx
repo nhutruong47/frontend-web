@@ -273,7 +273,7 @@ export default function GroupDetailPage() {
             
             const result = await attendanceService.checkIn(user.id, id, {
                 shiftType: 'NGAY',
-                stage: stage,
+                stage: stage as any,
                 breakMinutes: 0
             });
             setMyAttendance(result);
@@ -2599,14 +2599,14 @@ export default function GroupDetailPage() {
                                                     <td style={{ padding: '12px 8px', color: '#d4a574' }}>{new Date(item.date).toLocaleDateString('vi-VN')}</td>
                                                     <td style={{ padding: '12px 8px' }}>
                                                         {isEditing ? (
-                                                            <input type="datetime-local" value={editingAttendance.checkInTime} onChange={e => setEditingAttendance({...editingAttendance, checkInTime: e.target.value})} style={{ background: '#2c2c2e', color: '#fff', border: '1px solid #3a3a3c', borderRadius: 6, padding: '4px 8px', fontSize: 12 }} />
+                                                            <input type="datetime-local" value={editingAttendance?.checkInTime || ''} onChange={e => setEditingAttendance(prev => prev ? {...prev, checkInTime: e.target.value} : null)} style={{ background: '#2c2c2e', color: '#fff', border: '1px solid #3a3a3c', borderRadius: 6, padding: '4px 8px', fontSize: 12 }} />
                                                         ) : (
                                                             item.checkInTime ? new Date(item.checkInTime).toLocaleTimeString('vi-VN') : '--:--'
                                                         )}
                                                     </td>
                                                     <td style={{ padding: '12px 8px' }}>
                                                         {isEditing ? (
-                                                            <input type="datetime-local" value={editingAttendance.checkOutTime} onChange={e => setEditingAttendance({...editingAttendance, checkOutTime: e.target.value})} style={{ background: '#2c2c2e', color: '#fff', border: '1px solid #3a3a3c', borderRadius: 6, padding: '4px 8px', fontSize: 12 }} />
+                                                            <input type="datetime-local" value={editingAttendance?.checkOutTime || ''} onChange={e => setEditingAttendance(prev => prev ? {...prev, checkOutTime: e.target.value} : null)} style={{ background: '#2c2c2e', color: '#fff', border: '1px solid #3a3a3c', borderRadius: 6, padding: '4px 8px', fontSize: 12 }} />
                                                         ) : (
                                                             item.checkOutTime ? new Date(item.checkOutTime).toLocaleTimeString('vi-VN') : '--:--'
                                                         )}
@@ -2618,6 +2618,7 @@ export default function GroupDetailPage() {
                                                         {isEditing ? (
                                                             <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                                                                 <button onClick={async () => {
+                                                                    if (!editingAttendance) return;
                                                                     try {
                                                                         await attendanceService.updateAttendance(item.id, {
                                                                             checkInTime: editingAttendance.checkInTime ? new Date(editingAttendance.checkInTime).toISOString() : undefined,
