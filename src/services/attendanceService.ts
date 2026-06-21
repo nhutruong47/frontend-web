@@ -44,8 +44,14 @@ export const attendanceService = {
     getHistory: (userId: string, teamId: string) =>
         api.get<AttendanceDTO[]>(`/api/attendance/history/${userId}/${teamId}`).then(r => r.data),
 
+    getTeamHistory: (teamId: string) =>
+        api.get<AttendanceDTO[]>(`/api/attendance/team-history/${teamId}`).then(r => r.data),
+
     getTeamAttendanceToday: (teamId: string) =>
         api.get<AttendanceDTO[]>(`/api/attendance/team-today/${teamId}`).then(r => r.data),
+
+    updateAttendance: (attendanceId: string, payload: { checkInTime?: string, checkOutTime?: string }) =>
+        api.put<AttendanceDTO>(`/api/attendance/update/${attendanceId}`, payload).then(r => r.data),
 
     getProductionStages: () =>
         api.get<ProductionStage[]>('/api/attendance/stages').then(r => r.data),

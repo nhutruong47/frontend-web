@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { teamService, goalService, taskService, getTrialStatus, chatService } from '../services/groupService';
+import { attendanceService } from '../services/attendanceService';
 import type { Team, Goal, Task, ChatMsg, SalaryReport, AiChatLogMsg } from '../types/types';
 
 import SockJS from 'sockjs-client';
@@ -201,6 +202,102 @@ export default function GroupDetailPage() {
         // inventoryService.getByTeam(id).then(setanys).catch(() => { });
         getTrialStatus().then(s => { setTrialActive(s.aiTrialActive); setTrialDays(s.daysRemaining); }).catch(() => { });
     }, [id]);
+
+    // Attendance state
+    const [myAttendance, setMyAttendance] = useState<any>(null);
+    const [showAttendanceHistory, setShowAttendanceHistory] = useState(false);
+    const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
+    const [loadingAttendance, setLoadingAttendance] = useState(false);
+    
+    // Team Attendance
+    const [showTeamAttendance, setShowTeamAttendance] = useState(false);
+    const [teamAttendanceData, setTeamAttendanceData] = useState<any[]>([]);
+    const [editingAttendance, setEditingAttendance] = useState<{ id: string, checkInTime: string, checkOutTime: string } | null>(null);
+
+    const loadTodayAttendance = useCallback(async () => {
+        if (!id || !user?.id) return;
+        try {
+            const att = await attendanceService.getTodayAttendance(user.id, id);
+            setMyAttendance(att);
+        } catch (e) {
+            console.error('Lỗi tải thông tin chấm công hôm nay:', e);
+        }
+    }, [id, user?.id]);
+
+    const loadAttendanceHistory = useCallback(async () => {
+        if (!id || !user?.id) return;
+        try {
+            const history = await attendanceService.getHistory(user.id, id);
+            setAttendanceHistory(history || []);
+        } catch (e) {
+            console.error('Lỗi tải lịch sử chấm công:', e);
+        }
+    }, [id, user?.id]);
+
+    const loadTeamAttendance = useCallback(async () => {
+        if (!id) return;
+        try {
+            const data = await attendanceService.getTeamHistory(id);
+            setTeamAttendanceData(data || []);
+        } catch (e) {
+            console.error('Lỗi tải quản lý chấm công:', e);
+        }
+    }, [id]);
+
+    useEffect(() => {
+        if (id && user?.id) {
+            loadTodayAttendance();
+        }
+    }, [id, user?.id, loadTodayAttendance]);
+
+    const currentUserMember = team?.members?.find(m => m.userId === user?.id);
+    const userRoles = currentUserMember?.jobLabels?.filter(l => l.trim().length > 0) || [];
+    const hasRole = userRoles.length > 0;
+    const hasTasks = allTasks.some(t => t.memberId === user?.id);
+    const canCheckIn = hasRole && hasTasks;
+
+    const handleCheckIn = async () => {
+        if (!id || !user?.id) return;
+        if (!canCheckIn) {
+            alert('Bạn cần được phân vai trò và công việc trước khi vào ca!');
+            return;
+        }
+        setLoadingAttendance(true);
+        try {
+            const rawStage = userRoles.length > 0 ? userRoles[0].toUpperCase() : '';
+            let stage = 'RANG';
+            if (rawStage.includes('RANH') || rawStage.includes('CHỌN') || rawStage.includes('CHON')) stage = 'RANH_VA_CHON';
+            else if (rawStage.includes('XAY') || rawStage.includes('XÂY')) stage = 'XAY';
+            else if (rawStage.includes('DONG') || rawStage.includes('ĐÓNG') || rawStage.includes('GÓI') || rawStage.includes('GOI')) stage = 'DONG_GOI';
+            else if (rawStage.includes('QA') || rawStage.includes('QC') || rawStage.includes('KIỂM') || rawStage.includes('KIEM')) stage = 'QA';
+            
+            const result = await attendanceService.checkIn(user.id, id, {
+                shiftType: 'NGAY',
+                stage: stage,
+                breakMinutes: 0
+            });
+            setMyAttendance(result);
+            alert('Vào ca thành công!');
+        } catch (e: any) {
+            alert(e.response?.data?.error || e.message || 'Lỗi vào ca');
+        } finally {
+            setLoadingAttendance(false);
+        }
+    };
+
+    const handleCheckOut = async () => {
+        if (!id || !user?.id) return;
+        setLoadingAttendance(true);
+        try {
+            const result = await attendanceService.checkOut(user.id, id);
+            setMyAttendance(result);
+            alert('Tan ca thành công!');
+        } catch (e: any) {
+            alert(e.response?.data?.error || e.message || 'Lỗi tan ca');
+        } finally {
+            setLoadingAttendance(false);
+        }
+    };
 
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -668,6 +765,54 @@ export default function GroupDetailPage() {
                     )}
 
                     <button onClick={() => setShowStatsModal(true)} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }} id="btn-stats-modal"><ion-icon name="bar-chart-outline"></ion-icon> Thống kê</button>
+                    
+                    {/* Chức năng vào ca / tan ca */}
+                    {canCheckIn && (
+                        !myAttendance ? (
+                            <button
+                                onClick={handleCheckIn}
+                                disabled={loadingAttendance}
+                                style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: '#fff' }}
+                            >
+                                <ion-icon name="enter-outline"></ion-icon> Vào ca
+                            </button>
+                        ) : !myAttendance.checkOutTime ? (
+                            <button
+                                onClick={handleCheckOut}
+                                disabled={loadingAttendance}
+                                style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: '#fff' }}
+                            >
+                                <ion-icon name="exit-outline"></ion-icon> Tan ca
+                            </button>
+                        ) : (
+                            <span style={{ fontSize: 12, fontWeight: 700, color: '#10b981', padding: '6px 12px', background: 'rgba(16,185,129,0.1)', borderRadius: 8 }}>
+                                ✓ Đã hoàn thành ca
+                            </span>
+                        )
+                    )}
+
+                    <button
+                        onClick={() => {
+                            loadAttendanceHistory();
+                            setShowAttendanceHistory(true);
+                        }}
+                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }}
+                    >
+                        <ion-icon name="time-outline"></ion-icon> Lịch sử ca
+                    </button>
+
+                    {isAdmin && (
+                        <button
+                            onClick={() => {
+                                loadTeamAttendance();
+                                setShowTeamAttendance(true);
+                            }}
+                            style={{ background: '#e0e7ff', border: '1px solid #c7d2fe', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: '#4338ca' }}
+                        >
+                            <ion-icon name="people-circle-outline"></ion-icon> Quản lý chấm công
+                        </button>
+                    )}
+
                     <button onClick={() => setShowScheduleModal(true)} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }} id="btn-schedule-modal"><ion-icon name="calendar-outline"></ion-icon> Lịch sản xuất</button>
                     <button onClick={() => setShowChat(!showChat)} style={{ position: 'relative', background: unreadTotal > 0 ? '#fff7ed' : 'var(--bg-input)', border: unreadTotal > 0 ? '1px solid #fed7aa' : '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-primary)' }}><ion-icon name={unreadTotal > 0 ? 'chatbubbles' : 'chatbubbles-outline'}></ion-icon> Nhắn tin {renderUnreadBadge(unreadTotal)}</button>
                     {isAdmin && <button onClick={() => setShowMemberRoles(!showMemberRoles)} style={{ background: showMemberRoles ? '#fff7ed' : 'var(--bg-input)', border: showMemberRoles ? '1px solid #fed7aa' : '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: showMemberRoles ? '#d97706' : 'var(--text-secondary)' }}><ion-icon name="id-card-outline"></ion-icon> Phân vai trò</button>}
@@ -1233,7 +1378,9 @@ export default function GroupDetailPage() {
 
             {/* ===== BẢNG LƯƠNG ===== */}
             {isAdmin && (
-                <SalaryPanel teamId={id!} />
+                <SalaryPanel
+                    teamId={id!}
+                />
             )}
 
             {/* ===== BẢNG KHO HÀNG (INVENTORY) ===== */}
@@ -2382,6 +2529,135 @@ export default function GroupDetailPage() {
                     </div>
                 </div>
             )}
+
+            {/* Modal Lịch sử vào ra ca */}
+            {showAttendanceHistory && (
+                <div className="modal-overlay" onClick={() => setShowAttendanceHistory(false)} style={{ background: 'rgba(10, 10, 12, 0.85)', backdropFilter: 'blur(10px)', zIndex: 10000, position: 'fixed', inset: 0, display: 'grid', placeItems: 'center' }}>
+                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 900, minWidth: 'min(90vw, 750px)', width: '100%', background: '#121214', color: '#ffffff', borderRadius: 20, padding: '32px', border: '1px solid #232328', maxHeight: '80vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #232328', paddingBottom: 16 }}>
+                            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#ffffff' }}>Lịch sử vào/ra ca của bạn</h3>
+                            <button onClick={() => setShowAttendanceHistory(false)} style={{ background: 'rgba(255, 255, 255, 0.08)', border: 'none', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', color: '#fff', display: 'grid', placeItems: 'center' }}>✕</button>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {attendanceHistory.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '30px 0', color: '#8e8e93' }}>Chưa có lịch sử chấm công nào.</div>
+                            ) : (
+                                attendanceHistory.map((item, idx) => (
+                                    <div key={idx} style={{ background: '#1c1c1e', border: '1px solid #2d2d34', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontWeight: 700, color: '#d4a574' }}>Ngày {new Date(item.date).toLocaleDateString('vi-VN')}</span>
+                                            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: item.checkOutTime ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', color: item.checkOutTime ? '#10b981' : '#f59e0b', fontWeight: 700 }}>
+                                                {item.checkOutTime ? 'Đã hoàn thành' : 'Đang làm việc'}
+                                            </span>
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, fontSize: 14, color: '#8e8e93', marginTop: 8 }}>
+                                            <div>🕒 Vào ca: <strong style={{ color: '#fff' }}>{item.checkInTime ? new Date(item.checkInTime).toLocaleTimeString('vi-VN') : '--:--'}</strong></div>
+                                            <div>🕒 Tan ca: <strong style={{ color: '#fff' }}>{item.checkOutTime ? new Date(item.checkOutTime).toLocaleTimeString('vi-VN') : '--:--'}</strong></div>
+                                            <div>⏱️ Tổng giờ: <strong style={{ color: '#10b981' }}>{item.actualWorkHours !== undefined ? `${item.actualWorkHours} giờ` : '--'}</strong></div>
+                                            <div>💼 Vai trò: <strong style={{ color: '#fff' }}>{item.productionStage || 'Thường'}</strong></div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #232328', paddingTop: 16 }}>
+                            <button onClick={() => setShowAttendanceHistory(false)} style={{ background: 'rgba(255, 255, 255, 0.08)', color: '#ffffff', border: 'none', padding: '10px 24px', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Đóng</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Quản lý chấm công nhóm */}
+            {showTeamAttendance && (
+                <div className="modal-overlay" onClick={() => setShowTeamAttendance(false)} style={{ background: 'rgba(10, 10, 12, 0.85)', backdropFilter: 'blur(10px)', zIndex: 10000, position: 'fixed', inset: 0, display: 'grid', placeItems: 'center' }}>
+                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 1000, minWidth: 'min(90vw, 850px)', width: '100%', background: '#121214', color: '#ffffff', borderRadius: 20, padding: '32px', border: '1px solid #232328', maxHeight: '85vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #232328', paddingBottom: 16 }}>
+                            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#ffffff' }}>Quản lý chấm công toàn nhóm</h3>
+                            <button onClick={() => setShowTeamAttendance(false)} style={{ background: 'rgba(255, 255, 255, 0.08)', border: 'none', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', color: '#fff', display: 'grid', placeItems: 'center' }}>✕</button>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {teamAttendanceData.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '30px 0', color: '#8e8e93' }}>Chưa có lịch sử chấm công nào trong nhóm.</div>
+                            ) : (
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                                    <thead>
+                                        <tr style={{ background: '#1c1c1e', borderBottom: '1px solid #2d2d34' }}>
+                                            <th style={{ padding: '12px 8px', textAlign: 'left', color: '#8e8e93' }}>Nhân viên</th>
+                                            <th style={{ padding: '12px 8px', textAlign: 'left', color: '#8e8e93' }}>Ngày</th>
+                                            <th style={{ padding: '12px 8px', textAlign: 'left', color: '#8e8e93' }}>Vào ca</th>
+                                            <th style={{ padding: '12px 8px', textAlign: 'left', color: '#8e8e93' }}>Tan ca</th>
+                                            <th style={{ padding: '12px 8px', textAlign: 'left', color: '#8e8e93' }}>Giờ làm</th>
+                                            <th style={{ padding: '12px 8px', textAlign: 'right', color: '#8e8e93' }}>Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {teamAttendanceData.map((item, idx) => {
+                                            const isEditing = editingAttendance?.id === item.id;
+                                            return (
+                                                <tr key={idx} style={{ borderBottom: '1px solid #232328' }}>
+                                                    <td style={{ padding: '12px 8px', fontWeight: 600 }}>{item.userName || item.userId.substring(0,8)}</td>
+                                                    <td style={{ padding: '12px 8px', color: '#d4a574' }}>{new Date(item.date).toLocaleDateString('vi-VN')}</td>
+                                                    <td style={{ padding: '12px 8px' }}>
+                                                        {isEditing ? (
+                                                            <input type="datetime-local" value={editingAttendance.checkInTime} onChange={e => setEditingAttendance({...editingAttendance, checkInTime: e.target.value})} style={{ background: '#2c2c2e', color: '#fff', border: '1px solid #3a3a3c', borderRadius: 6, padding: '4px 8px', fontSize: 12 }} />
+                                                        ) : (
+                                                            item.checkInTime ? new Date(item.checkInTime).toLocaleTimeString('vi-VN') : '--:--'
+                                                        )}
+                                                    </td>
+                                                    <td style={{ padding: '12px 8px' }}>
+                                                        {isEditing ? (
+                                                            <input type="datetime-local" value={editingAttendance.checkOutTime} onChange={e => setEditingAttendance({...editingAttendance, checkOutTime: e.target.value})} style={{ background: '#2c2c2e', color: '#fff', border: '1px solid #3a3a3c', borderRadius: 6, padding: '4px 8px', fontSize: 12 }} />
+                                                        ) : (
+                                                            item.checkOutTime ? new Date(item.checkOutTime).toLocaleTimeString('vi-VN') : '--:--'
+                                                        )}
+                                                    </td>
+                                                    <td style={{ padding: '12px 8px', color: '#10b981', fontWeight: 700 }}>
+                                                        {item.actualWorkHours !== undefined ? `${item.actualWorkHours}h` : '--'}
+                                                    </td>
+                                                    <td style={{ padding: '12px 8px', textAlign: 'right' }}>
+                                                        {isEditing ? (
+                                                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                                                                <button onClick={async () => {
+                                                                    try {
+                                                                        await attendanceService.updateAttendance(item.id, {
+                                                                            checkInTime: editingAttendance.checkInTime ? new Date(editingAttendance.checkInTime).toISOString() : undefined,
+                                                                            checkOutTime: editingAttendance.checkOutTime ? new Date(editingAttendance.checkOutTime).toISOString() : undefined
+                                                                        });
+                                                                        setEditingAttendance(null);
+                                                                        loadTeamAttendance();
+                                                                    } catch(e) {
+                                                                        alert('Lỗi khi cập nhật chấm công');
+                                                                    }
+                                                                }} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>Lưu</button>
+                                                                <button onClick={() => setEditingAttendance(null)} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>Hủy</button>
+                                                            </div>
+                                                        ) : (
+                                                            <button onClick={() => {
+                                                                // Convert to format required by datetime-local: YYYY-MM-DDThh:mm
+                                                                const toLocalString = (dateStr: string) => {
+                                                                    if (!dateStr) return '';
+                                                                    const d = new Date(dateStr);
+                                                                    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                                                                    return d.toISOString().slice(0,16);
+                                                                };
+                                                                setEditingAttendance({
+                                                                    id: item.id,
+                                                                    checkInTime: toLocalString(item.checkInTime),
+                                                                    checkOutTime: toLocalString(item.checkOutTime)
+                                                                });
+                                                            }} style={{ background: 'transparent', color: '#60a5fa', border: '1px solid #60a5fa', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>Sửa</button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -2426,7 +2702,10 @@ function SalaryPanel({ teamId }: { teamId: string }) {
 
     const calculateSalary = (report: SalaryReport) => {
         const rate = getEffectiveRate(report.memberId, report.hourlyRate);
-        return Math.round(report.totalWorkload * rate);
+        const billableHours = (report.regularHours && report.regularHours > 0) ? report.regularHours : report.totalWorkload;
+        const overtimeHours = report.overtimeHours || 0;
+        const overtimeRate = report.overtimeRate || (rate * 1.5);
+        return Math.round((billableHours * rate) + (overtimeHours * overtimeRate));
     };
 
     const totalSalary = salaryData.reduce((sum, s) => sum + calculateSalary(s), 0);
@@ -2553,7 +2832,7 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                     background: '#f8fafc', borderRadius: '12px 12px 0 0',
                                     borderBottom: '1px solid #e2e8f0'
                                 }}>
-                                    {['Nhân viên', 'Tổng task', 'Hoàn thành', 'Giờ công', 'Đơn giá/giờ', 'Lương thực nhận'].map((h, i) => (
+                                    {['Nhân viên', 'Tổng task', 'Hoàn thành', 'Giờ công (Thường + Tăng ca)', 'Đơn giá/giờ', 'Lương thực nhận'].map((h, i) => (
                                         <div key={i} style={{
                                             fontSize: 11, fontWeight: 700, color: '#64748b',
                                             textTransform: 'uppercase', letterSpacing: '0.05em',
@@ -2609,8 +2888,12 @@ function SalaryPanel({ teamId }: { teamId: string }) {
 
                                             {/* Workload */}
                                             <div style={{ textAlign: 'center' }}>
-                                                <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>{s.totalWorkload.toFixed(1)}</div>
-                                                <div style={{ fontSize: 10, color: '#94a3b8' }}>giờ</div>
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>
+                                                    {(s.regularHours && s.regularHours > 0) ? s.regularHours.toFixed(1) : s.totalWorkload.toFixed(1)}h
+                                                </div>
+                                                {(s.overtimeHours && s.overtimeHours > 0) ? (
+                                                    <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>+ {s.overtimeHours.toFixed(1)}h TC</div>
+                                                ) : <div style={{ fontSize: 10, color: '#94a3b8' }}>giờ thường</div>}
                                             </div>
 
                                             {/* Hourly Rate */}
@@ -2684,11 +2967,39 @@ function SalaryPanel({ teamId }: { teamId: string }) {
 
                         {/* Action Buttons */}
                         <div style={{ padding: '16px 28px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: 12, background: '#f8fafc' }}>
-                            <button style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const res = await taskService.exportSalaryExcel(teamId);
+                                        const url = window.URL.createObjectURL(new Blob([res.data]));
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.setAttribute('download', `bang-luong-${teamId}-${selectedMonth}.xlsx`);
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        link.remove();
+                                    } catch (err) {
+                                        alert('Không thể xuất file Excel bảng lương.');
+                                    }
+                                }}
+                                style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                            >
                                 <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                 Xuất Excel
                             </button>
-                            <button style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <button
+                                onClick={async () => {
+                                    if (window.confirm(`Bạn có chắc chắn muốn thanh toán tổng cộng ${totalSalary.toLocaleString('vi-VN')} đ cho nhân viên?`)) {
+                                        try {
+                                            const res = await taskService.payoutSalary(teamId);
+                                            alert(res.message || 'Thanh toán lương thành công!');
+                                        } catch (err: any) {
+                                            alert(err.response?.data?.error || 'Thanh toán thất bại hoặc không có số dư.');
+                                        }
+                                    }
+                                }}
+                                style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                            >
                                 <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                                 Phát lương
                             </button>
@@ -2696,6 +3007,7 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                     </div>
                 </div>
             )}
+
 
             <style>{`
                 @keyframes spin { to { transform: rotate(360deg); } }

@@ -148,6 +148,7 @@ export interface Task {
     productionStage?: string;
     startTime?: string;
     dueTime?: string;
+    teamId?: string;
     estimatedDurationMinutes?: number;
     actualStart?: string;
     actualEnd?: string;
@@ -374,7 +375,10 @@ export interface SalaryReport {
     completedTasks: number;
     totalWorkload: number;
     totalActualWorkload: number;
+    regularHours?: number;
+    overtimeHours?: number;
     hourlyRate: number;
+    overtimeRate?: number;
     estimatedSalary: number;
 }
 

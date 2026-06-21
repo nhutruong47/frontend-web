@@ -252,7 +252,14 @@ export default function DashboardPage() {
 
                     {teams.length > 0 ? (
                         <div className="dashboard-team-list">
-                            {teams.slice(0, 3).map((team, index) => (
+                            {teams.slice(0, 3).map((team, index) => {
+                                const teamTasks = myTasks.filter(t => t.teamId === team.id);
+                                const totalTeamTasks = teamTasks.length;
+                                const completedTeamTasks = teamTasks.filter(t => t.status === 'COMPLETED').length;
+                                const isAllCompleted = totalTeamTasks > 0 && totalTeamTasks === completedTeamTasks;
+                                const hasTasks = totalTeamTasks > 0;
+
+                                return (
                                 <article
                                     className="dashboard-team-card"
                                     key={team.id}
@@ -266,7 +273,29 @@ export default function DashboardPage() {
                                         }
                                     }}
                                     aria-label={`Mở nơi làm việc của nhóm ${team.name}`}
+                                    style={{ position: 'relative' }}
                                 >
+                                    {hasTasks && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 10,
+                                            left: 10,
+                                            background: isAllCompleted ? '#10b981' : '#ef4444',
+                                            color: '#fff',
+                                            padding: '4px 10px',
+                                            borderRadius: 20,
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                                            zIndex: 2
+                                        }}>
+                                            <ClipboardList size={14} />
+                                            {totalTeamTasks} công việc: {isAllCompleted ? 'Đã xong' : 'Chưa xong'}
+                                        </div>
+                                    )}
                                     <img src={teamImages[index % teamImages.length]} alt={team.name} />
                                     <div className="dashboard-team-body">
                                         <div>
@@ -285,7 +314,8 @@ export default function DashboardPage() {
                                         </dl>
                                     </div>
                                 </article>
-                            ))}
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="dashboard-empty">
