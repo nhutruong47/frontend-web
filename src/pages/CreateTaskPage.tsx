@@ -109,9 +109,7 @@ export default function CreateTaskPage() {
     const [loading, setLoading] = useState(false);
     const [trialActive, setTrialActive] = useState(true);
     const [trialDays, setTrialDays] = useState(30);
-    const [usageCount, setUsageCount] = useState(0);
-    const [maxUsage, setMaxUsage] = useState(10);
-    const [planName, setPlanName] = useState('free');
+
     const [showTokens, setShowTokens] = useState(false);
     const totalTokens = messages.reduce((sum, message) => sum + estimateTokens(message.content), 0);
 
@@ -126,9 +124,6 @@ export default function CreateTaskPage() {
         getTrialStatus().then(s => { 
             setTrialActive(s.aiTrialActive); 
             setTrialDays(s.daysRemaining); 
-            setUsageCount(s.aiUsageCount);
-            setMaxUsage(s.aiMaxUsage);
-            setPlanName(s.aiPlan);
         }).catch(() => { });
     }, [teamId, navigate]);
 
