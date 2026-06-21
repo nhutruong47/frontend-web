@@ -40,10 +40,10 @@ const plans: Plan[] = [
     },
     {
         id: 'professional',
-        name: 'Chuyên nghiệp',
+        name: 'Plus',
         price: '129.000đ',
         priceNote: '/tháng',
-        subtitle: 'AI điều phối sản xuất',
+        subtitle: 'Dùng AI 100 lần',
         target: 'Dành cho xưởng đang tăng trưởng',
         featured: true,
         buttonText: 'Nâng cấp ngay',
@@ -61,7 +61,7 @@ const plans: Plan[] = [
         name: 'Doanh nghiệp',
         price: '249.000đ',
         priceNote: '/tháng',
-        subtitle: 'AI quản lý doanh nghiệp',
+        subtitle: 'Không giới hạn AI trong 30 ngày',
         target: 'Dành cho doanh nghiệp nhiều xưởng',
         buttonText: 'Nâng cấp ngay',
         features: [

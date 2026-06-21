@@ -205,7 +205,7 @@ export const aiPlanService = {
 
 // === Trial Status ===
 export const getTrialStatus = () =>
-    api.get<{ aiTrialActive: boolean; daysRemaining: number }>('/api/auth/trial-status').then(r => r.data);
+    api.get<{ aiTrialActive: boolean; daysRemaining: number; aiUsageCount: number; aiMaxUsage: number; aiPlan: string }>('/api/auth/trial-status').then(r => r.data);
 
 // === AI Service ===
 export interface AiParseResult {

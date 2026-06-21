@@ -11,16 +11,17 @@ export default function Sidebar() {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [pendingOrderCount, setPendingOrderCount] = useState(0);
     const displayName = user?.fullName || user?.username || 'Người dùng';
-    const displayPlan = user?.aiPlan && user.aiPlan !== 'free' ? user.aiPlan : 'Plus';
+    const displayPlan = user?.aiPlan || 'free';
     const userInitials = displayName.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase();
 
     const getPlanColor = (plan: string) => {
         switch (plan.toLowerCase()) {
-            case 'free': return { bg: '#6b7280', text: '#fff', label: 'Miễn phí' };
+            case 'free': return { bg: 'transparent', text: '#9ca3af', label: 'Miễn phí' };
+            case 'professional':
             case 'plus': return { bg: 'transparent', text: '#e7a766', label: 'Plus' };
-            case 'pro': return { bg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', text: '#fff', label: 'Pro' };
-            case 'enterprise': return { bg: 'linear-gradient(135deg, #ec4899, #db2777)', text: '#fff', label: 'Enterprise' };
-            default: return { bg: '#6b7280', text: '#fff', label: plan };
+            case 'pro': return { bg: 'transparent', text: '#8b5cf6', label: 'Pro' };
+            case 'enterprise': return { bg: 'transparent', text: '#ec4899', label: 'Doanh nghiệp' };
+            default: return { bg: 'transparent', text: '#9ca3af', label: plan };
         }
     };
     const planStyle = getPlanColor(displayPlan);
