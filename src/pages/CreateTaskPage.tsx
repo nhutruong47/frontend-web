@@ -115,10 +115,13 @@ export default function CreateTaskPage() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (!teamId) return;
+        if (!teamId || teamId === 'undefined') {
+            navigate('/groups');
+            return;
+        }
         teamService.getDetail(teamId).then(setTeam).catch(() => { });
         getTrialStatus().then(s => { setTrialActive(s.aiTrialActive); setTrialDays(s.daysRemaining); }).catch(() => { });
-    }, [teamId]);
+    }, [teamId, navigate]);
 
     useEffect(() => {
         document.body.classList.add('task-studio-mode');
