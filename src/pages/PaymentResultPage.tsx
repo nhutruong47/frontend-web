@@ -1,14 +1,23 @@
+import { useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, CircleAlert, ReceiptText } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import './PaymentResultPage.css';
 
 export default function PaymentResultPage() {
     const [searchParams] = useSearchParams();
+    const { fetchUser } = useAuth();
     const status = searchParams.get('status');
     const txnRef = searchParams.get('txnRef');
     const planId = searchParams.get('planId');
     const message = searchParams.get('message');
     const success = status === 'SUCCESS';
+
+    useEffect(() => {
+        if (success) {
+            fetchUser();
+        }
+    }, [success, fetchUser]);
 
     return (
         <div className="payment-result-page">

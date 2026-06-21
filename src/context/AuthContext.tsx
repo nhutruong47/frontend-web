@@ -11,6 +11,7 @@ interface AuthContextType {
     login: (data: LoginRequest) => Promise<void>;
     register: (data: RegisterRequest) => Promise<void>;
     logout: () => void;
+    fetchUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -75,10 +76,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
     }, []);
 
+    const fetchUser = useCallback(async () => {
+        try {
+            const userInfo = await authService.getMe();
+            setUser(userInfo);
+            sessionStorage.setItem('user', JSON.stringify(userInfo));
+        } catch (error) {
+            console.error('Failed to fetch user:', error);
+        }
+    }, []);
+
     const userId = user?.id ?? '';
 
     return (
-        <AuthContext.Provider value={{ user, userId, token, isAuthenticated, isLoading, login, register, logout }}>
+        <AuthContext.Provider value={{ user, userId, token, isAuthenticated, isLoading, login, register, logout, fetchUser }}>
             {children}
         </AuthContext.Provider>
     );

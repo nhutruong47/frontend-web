@@ -767,7 +767,7 @@ export default function GroupDetailPage() {
                     <button onClick={() => setShowStatsModal(true)} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }} id="btn-stats-modal"><ion-icon name="bar-chart-outline"></ion-icon> Thống kê</button>
                     
                     {/* Chức năng vào ca / tan ca */}
-                    {canCheckIn && (
+                    {!isAdmin && canCheckIn && (
                         !myAttendance ? (
                             <button
                                 onClick={handleCheckIn}
@@ -791,15 +791,17 @@ export default function GroupDetailPage() {
                         )
                     )}
 
-                    <button
-                        onClick={() => {
-                            loadAttendanceHistory();
-                            setShowAttendanceHistory(true);
-                        }}
-                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }}
-                    >
-                        <ion-icon name="time-outline"></ion-icon> Lịch sử ca
-                    </button>
+                    {!isAdmin && (
+                        <button
+                            onClick={() => {
+                                loadAttendanceHistory();
+                                setShowAttendanceHistory(true);
+                            }}
+                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }}
+                        >
+                            <ion-icon name="time-outline"></ion-icon> Lịch sử ca
+                        </button>
+                    )}
 
                     {isAdmin && (
                         <button
@@ -2990,6 +2992,10 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                             </button>
                             <button
                                 onClick={async () => {
+                                    if (totalSalary <= 0) {
+                                        alert('Hiện tại chưa thể phát lương do chưa có dữ liệu lương cần thanh toán.');
+                                        return;
+                                    }
                                     if (window.confirm(`Bạn có chắc chắn muốn thanh toán tổng cộng ${totalSalary.toLocaleString('vi-VN')} đ cho nhân viên?`)) {
                                         try {
                                             const res = await taskService.payoutSalary(teamId);

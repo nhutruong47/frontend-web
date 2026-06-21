@@ -654,32 +654,7 @@ export default function CreateTaskPage() {
                 </div>
             </header>
 
-            {!trialActive && (
-                <div style={{ background: '#fef2f2', borderBottom: '1px solid #fecaca', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#dc2626', fontWeight: 500, fontSize: 14 }}>
-                        <ion-icon name="warning" style={{ fontSize: 18 }}></ion-icon>
-                        Bạn đã sử dụng hết lượt giới hạn AI của gói hiện tại.
-                    </div>
-                    <button 
-                        onClick={() => navigate('/upgrade-plan')}
-                        style={{ background: '#dc2626', color: 'white', border: 'none', padding: '6px 16px', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
-                    >
-                        Nâng cấp gói
-                    </button>
-                </div>
-            )}
-            
-            {trialActive && planName !== 'enterprise' && (
-                <div style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '8px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, color: '#166534' }}>
-                    <span>Bạn đã dùng {usageCount} / {maxUsage} lượt tạo công việc bằng AI.</span>
-                    <button 
-                        onClick={() => navigate('/upgrade-plan')}
-                        style={{ background: 'transparent', color: '#16a34a', border: '1px solid #16a34a', padding: '4px 12px', borderRadius: 4, fontWeight: 600, cursor: 'pointer', fontSize: 12 }}
-                    >
-                        Nâng cấp
-                    </button>
-                </div>
-            )}
+
 
             <main className="task-gpt-chat">
                 <div className="task-gpt-inner">
@@ -769,8 +744,8 @@ export default function CreateTaskPage() {
                                 handleSend();
                             }
                         }}
-                        placeholder={trialActive ? (hasActiveDraft ? 'Nhập yêu cầu sửa draft, ví dụ: Rút gọn còn 2 task' : 'Nhập yêu cầu, ví dụ: Rang 120kg Arabica trước 17:00 hôm nay') : 'Bạn đã dùng hết lượt AI. Vui lòng nâng cấp.'}
-                        disabled={!trialActive || loading}
+                        placeholder={hasActiveDraft ? 'Nhập yêu cầu sửa draft, ví dụ: Rút gọn còn 2 task' : 'Nhập yêu cầu, ví dụ: Rang 120kg Arabica trước 17:00 hôm nay'}
+                        disabled={loading}
                         rows={1}
                     />
                     <button className="task-gpt-mode" type="button">
@@ -781,7 +756,7 @@ export default function CreateTaskPage() {
                         className="task-gpt-send"
                         type="button"
                         onClick={handleSend}
-                        disabled={!trialActive || loading || !input.trim()}
+                        disabled={loading || !input.trim()}
                         aria-label="Gửi"
                     >
                         <ion-icon name={loading ? 'hourglass-outline' : 'arrow-up-outline'}></ion-icon>
