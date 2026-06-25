@@ -263,7 +263,7 @@ const buildCapacityLabel = (team: Team) => {
 };
 
 const normalizeFactory = (team: Team): MarketplaceFactory => {
-    let meta = {};
+    let meta: any = {};
     if (team.metadata) {
         try {
             meta = JSON.parse(team.metadata);
@@ -292,7 +292,7 @@ const normalizeFactory = (team: Team): MarketplaceFactory => {
         availableCapacityMock: "1 Tấn",
         moqMock: team.moq || "50 kg",
         leadTimeMock: team.leadTime || "5 - 10 Ngày",
-        statusBadgeMock: team.statusBadge || "Đang nhận đơn",
+        statusBadgeMock: (team.statusBadge as 'Receiving Orders' | 'Nearly Full' | 'Temporarily Unavailable') || 'Receiving Orders',
         specializationsMock: splitMultiValue(team.specialty).length > 0 ? splitMultiValue(team.specialty) : ['Arabica Specialty', 'OEM Coffee'],
         yearsInOperationMock: team.yearsInOperation || 2,
         employeeCountMock: team.employeeCount || 10,
@@ -340,7 +340,7 @@ const availabilityCopy = (status?: AvailabilityStatus) => {
 };
 
 const emptyValue = <span className="mp-empty-value">Chưa cập nhật</span>;
-const REQUEST_STORAGE_KEY = 'orca_manufacturing_requests';
+
 
 const displayPercent = (value?: number) => (typeof value === 'number' ? `${value}%` : emptyValue);
 const displayText = (value?: any) => (value || value === 0 ? value : emptyValue);

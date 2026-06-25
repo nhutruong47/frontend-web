@@ -1051,7 +1051,7 @@ export default function GroupDetailPage() {
                                     <button onClick={() => {
                                         setActiveGoalTitle(latestGoal.title || '');
                                         try {
-                                            setActiveChatLog(JSON.parse(latestGoal.chatLog));
+                                            setActiveChatLog(JSON.parse(latestGoal.chatLog || '[]'));
                                             setShowChatHistory(true);
                                         } catch(e) {}
                                     }} style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>

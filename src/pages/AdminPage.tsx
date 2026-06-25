@@ -252,7 +252,6 @@ export default function AdminPage() {
   const [adminTasks, setAdminTasks] = useState<AdminTask[]>([]);
   const [adminPayments, setAdminPayments] = useState<AdminPayment[]>([]);
   const [plans, setPlans] = useState<any[]>(initialPlans);
-  const [aiConfigs, setAiConfigs] = useState<Record<string, string>>({});
   const [adminLoading, setAdminLoading] = useState(true);
   const [adminError, setAdminError] = useState('');
   const [query, setQuery] = useState('');
@@ -343,6 +342,7 @@ export default function AdminPage() {
     name: item.name,
     code: item.id.slice(0, 8),
     owner: item.ownerName || '-',
+    description: item.description || '',
     email: '-',
     phone: '-',
     employees: item.memberCount,
@@ -409,7 +409,7 @@ export default function AdminPage() {
     const email = window.prompt("Email:");
     const fullName = window.prompt("Họ tên:");
     try {
-      const created = await adminService.createUser({ username, email: email || '', fullName: fullName || '', role: 'USER' });
+      const created = await adminService.createUser({ username, email: email || '', fullName: fullName || '', role: 'MEMBER' });
       setAdminUsers(current => [created, ...current]);
       window.alert("Tạo thành công với mật khẩu mặc định là 123456");
     } catch { window.alert("Lỗi khi tạo user."); }
@@ -729,10 +729,10 @@ export default function AdminPage() {
         <section className="admin-card">
           <div className="admin-card-head"><div><h3>Quản lý gói dịch vụ SaaS</h3><p>Các gói Cơ bản, Tăng trưởng, Doanh nghiệp cùng giới hạn người dùng, đơn hàng, lô sản xuất, xưởng và điểm AI.</p></div><button className="admin-button admin-button-primary" onClick={handleCreatePlan}><Plus size={16} /> Tạo gói</button></div>
           <div className="admin-plan-grid">
-            {plans.map(item => <article className="admin-plan" key={item.name}><h4>{item.name}</h4><strong>{item.price ? money(item.price) : 'Liên hệ'}</strong><span>{item.period}</span><div className="admin-plan-limits"><p>{item.users} người dùng</p><p>{number(item.orders)} đơn hàng</p><p>{number(item.batches)} lô</p><p>{item.workshops} xưởng</p><p>{number(item.ai)} điểm AI</p></div><ul>{item.features.map(feature => <li key={feature}>{feature}</li>)}</ul><div className="admin-row-actions"><button onClick={() => handleUpdatePlan(item.id, item.name)} className="btn-edit">Sửa</button><button onClick={() => handleDeletePlan(item.id)} className="btn-delete">Xóa</button></div></article>)}
+            {plans.map(item => <article className="admin-plan" key={item.name}><h4>{item.name}</h4><strong>{item.price ? money(item.price) : 'Liên hệ'}</strong><span>{item.period}</span><div className="admin-plan-limits"><p>{item.users} người dùng</p><p>{number(item.orders)} đơn hàng</p><p>{number(item.batches)} lô</p><p>{item.workshops} xưởng</p><p>{number(item.ai)} điểm AI</p></div><ul>{item.features.map((feature: string) => <li key={feature}>{feature}</li>)}</ul><div className="admin-row-actions"><button onClick={() => handleUpdatePlan(item.id, item.name)} className="btn-edit">Sửa</button><button onClick={() => handleDeletePlan(item.id)} className="btn-delete">Xóa</button></div></article>)}
           </div>
           <div className="admin-feature-table">
-            <table className="admin-table"><thead><tr><th>Tính năng</th>{plans.map(item => <th key={item.name}>{item.name}</th>)}</tr></thead><tbody>{featureRows.map(feature => <tr key={feature}><td>{feature}</td>{plans.map((item, index) => <td key={`${item.name}-${feature}`}>{index === 0 && feature.includes('Custom') ? <XCircle size={16} /> : <CheckCircle2 size={16} />}</td>)}</tr>)}</tbody></table>
+            <table className="admin-table"><thead><tr><th>Tính năng</th>{plans.map(item => <th key={item.name}>{item.name}</th>)}</tr></thead><tbody>{featureRows.map((feature: string) => <tr key={feature}><td>{feature}</td>{plans.map((item, index) => <td key={`${item.name}-${feature}`}>{index === 0 && feature.includes('Custom') ? <XCircle size={16} /> : <CheckCircle2 size={16} />}</td>)}</tr>)}</tbody></table>
           </div>
         </section>
       )}

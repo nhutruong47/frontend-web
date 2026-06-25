@@ -13,7 +13,6 @@ export default function Sidebar() {
     const [pendingOrderCount, setPendingOrderCount] = useState(0);
     const displayName = user?.fullName || user?.username || 'Người dùng';
     const displayPlan = user?.aiPlan || 'free';
-    const userInitials = displayName.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase();
 
     const getPlanColor = (plan: string) => {
         switch (plan.toLowerCase()) {
