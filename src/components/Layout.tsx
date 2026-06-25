@@ -2,9 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from './Sidebar';
-import { Bell, MoreHorizontal, MessageCircle, Edit } from 'lucide-react';
+import { Bell, MoreHorizontal, MessageCircle, Edit, Sparkles } from 'lucide-react';
 import { teamService, notificationService } from '../services/groupService';
 import type { AppNotification } from '../types/types';
+import defaultAvatar from '../assets/default-avatar.png';
 
 export default function Layout() {
     const { user, logout } = useAuth();
@@ -17,6 +18,15 @@ export default function Layout() {
 
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [messageGroups, setMessageGroups] = useState<any[]>([]);
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+    useEffect(() => {
+        const handlePaymentRequired = () => {
+            setShowUpgradeModal(true);
+        };
+        window.addEventListener('payment-required', handlePaymentRequired);
+        return () => window.removeEventListener('payment-required', handlePaymentRequired);
+    }, []);
 
     useEffect(() => {
         if (user) {
@@ -199,8 +209,7 @@ export default function Layout() {
                             )}
                         </div>
 
-                        <div className="topbar-avatar" onClick={logout} title="Đăng xuất">
-                            <ion-icon name="person-circle-outline" aria-hidden="true"></ion-icon>
+                        <div className="topbar-avatar" onClick={() => navigate('/profile')} title="Hồ sơ nhân viên" style={{ cursor: 'pointer', backgroundImage: `url(${user?.avatar || defaultAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center', color: 'transparent' }}>
                         </div>
                         <button className="topbar-logout" onClick={logout}>
                             Đăng xuất
@@ -213,6 +222,37 @@ export default function Layout() {
                     <Outlet />
                 </main>
             </div>
+
+            {showUpgradeModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content upgrade-required-modal">
+                        <div style={{ color: '#7c3aed', marginBottom: '16px' }}>
+                            <Sparkles size={48} style={{ margin: '0 auto' }} />
+                        </div>
+                        <h3 style={{ marginBottom: '12px' }}>Nâng cấp để tiếp tục</h3>
+                        <p style={{ color: '#64748b', marginBottom: '24px', fontSize: '15px' }}>
+                            Chọn gói phù hợp để tiếp tục sử dụng trợ lý AI ORCA.
+                        </p>
+                        <div className="upgrade-required-actions">
+                            <button
+                                className="btn-secondary upgrade-required-button"
+                                onClick={() => setShowUpgradeModal(false)}
+                            >
+                                Đóng
+                            </button>
+                            <button
+                                className="btn-primary upgrade-required-button upgrade-required-primary"
+                                onClick={() => {
+                                    setShowUpgradeModal(false);
+                                    navigate('/nang-cap-goi');
+                                }}
+                            >
+                                Nâng cấp gói
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

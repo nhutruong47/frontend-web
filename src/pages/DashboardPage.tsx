@@ -15,8 +15,8 @@ import {
     Store,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { teamService, taskService } from '../services/groupService';
-import type { Task, Team } from '../types/types';
+import { teamService, taskService, goalService } from '../services/groupService';
+import type { Task, Team, Goal } from '../types/types';
 import './DashboardPage.css';
 
 const teamImages = [
@@ -53,6 +53,7 @@ export default function DashboardPage() {
     const navigate = useNavigate();
     const [teams, setTeams] = useState<Team[]>([]);
     const [myTasks, setMyTasks] = useState<Task[]>([]);
+    const [teamGoals, setTeamGoals] = useState<Record<string, Goal[]>>({});
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -62,6 +63,16 @@ export default function DashboardPage() {
         ]).then(([teamData, tasksData]) => {
             setTeams(teamData || []);
             setMyTasks(tasksData || []);
+            if (teamData && teamData.length > 0) {
+                Promise.all(teamData.map((t: Team) => goalService.getByTeam(t.id).catch(() => [])))
+                .then(goalsArray => {
+                    const allGoals: Record<string, Goal[]> = {};
+                    teamData.forEach((t: Team, i: number) => {
+                        allGoals[t.id] = goalsArray[i] || [];
+                    });
+                    setTeamGoals(allGoals);
+                });
+            }
         }).finally(() => setLoading(false));
     }, [user?.id]);
 
@@ -253,11 +264,10 @@ export default function DashboardPage() {
                     {teams.length > 0 ? (
                         <div className="dashboard-team-list">
                             {teams.slice(0, 3).map((team, index) => {
-                                const teamTasks = myTasks.filter(t => t.teamId === team.id);
-                                const totalTeamTasks = teamTasks.length;
-                                const completedTeamTasks = teamTasks.filter(t => t.status === 'COMPLETED').length;
-                                const isAllCompleted = totalTeamTasks > 0 && totalTeamTasks === completedTeamTasks;
-                                const hasTasks = totalTeamTasks > 0;
+                                const goals = teamGoals[team.id] || [];
+                                const totalGoals = goals.length;
+                                const completedGoals = goals.filter(g => g.status === 'COMPLETED').length;
+                                const isAllCompleted = totalGoals === 0 || totalGoals === completedGoals;
 
                                 return (
                                 <article
@@ -280,20 +290,18 @@ export default function DashboardPage() {
                                         <div>
                                             <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                                 {team.name}
-                                                {hasTasks && (
-                                                    <span
-                                                        style={{
-                                                            display: 'inline-block',
-                                                            width: 10,
-                                                            height: 10,
-                                                            borderRadius: '50%',
-                                                            backgroundColor: isAllCompleted ? '#10b981' : '#ef4444',
-                                                            boxShadow: `0 0 8px ${isAllCompleted ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
-                                                            flexShrink: 0
-                                                        }}
-                                                        title={isAllCompleted ? 'Tất cả công việc đã hoàn thành' : 'Có công việc chưa hoàn thành'}
-                                                    />
-                                                )}
+                                                <span
+                                                    style={{
+                                                        display: 'inline-block',
+                                                        width: 10,
+                                                        height: 10,
+                                                        borderRadius: '50%',
+                                                        backgroundColor: isAllCompleted ? '#10b981' : '#ef4444',
+                                                        boxShadow: `0 0 8px ${isAllCompleted ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+                                                        flexShrink: 0
+                                                    }}
+                                                    title={isAllCompleted ? 'Tất cả công việc đã hoàn thành' : 'Có công việc chưa hoàn thành'}
+                                                />
                                             </h3>
                                             <p>{team.description || team.specialty || 'Nhóm xưởng đang được quản lý trên ORCA.'}</p>
                                         </div>

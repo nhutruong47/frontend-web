@@ -22,6 +22,21 @@ function sanitizeApiError(error: any) {
     return error;
 }
 
+export function isPaymentRequiredError(error: any) {
+    const status = error?.response?.status;
+    const responseData = error?.response?.data;
+    const message = [
+        responseData?.error,
+        responseData?.message,
+        error?.message,
+        error?.code,
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    return status === 402
+        || message.includes('payment_required')
+        || message.includes('hết hạn gói miễn phí');
+}
+
 // Interceptor: tự động gắn JWT token vào mọi request
 api.interceptors.request.use(
     (config) => {
@@ -34,7 +49,6 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Interceptor: xử lý response errors
 api.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -47,6 +61,17 @@ api.interceptors.response.use(
                 window.location.href = '/login';
             }
         }
+
+        if (isPaymentRequiredError(error)) {
+            error.code = 'PAYMENT_REQUIRED';
+            if (error.response?.data) {
+                error.response.data.error = 'PAYMENT_REQUIRED';
+                error.response.data.message = 'Gói miễn phí đã hết hạn.';
+            }
+            window.dispatchEvent(new CustomEvent('payment-required'));
+            return Promise.reject(error);
+        }
+
         return Promise.reject(sanitizeApiError(error));
     }
 );

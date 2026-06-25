@@ -21,6 +21,7 @@ export interface UserInfo {
     username: string;
     fullName: string;
     email: string;
+    avatar?: string;
     role: string;
     chipId: string;
     aiPlan?: string;
@@ -82,6 +83,17 @@ export interface Team {
     cancelledOrders?: number;
     totalOrders?: number;
     trustScore?: number;
+    rating?: number;
+    reviewCount?: number;
+
+    // Detailed Factory Information
+    moq?: string;
+    leadTime?: string;
+    yearsInOperation?: number;
+    statusBadge?: string;
+    employeeCount?: number;
+    factorySize?: string;
+    metadata?: string;
 
     // Invite
     inviteCode?: string;
@@ -392,6 +404,16 @@ export interface InventoryItem {
     lowStockThreshold: number;
     status: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
     lastUpdated: string;
+
+    // Featured Product fields
+    price?: string;
+    description?: string;
+    imageUrl?: string;
+    origin?: string;
+    roastLevel?: string;
+    processing?: string;
+    tasteNotes?: string;
+    isFeatured?: boolean;
 }
 
 // === Admin ===

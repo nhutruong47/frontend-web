@@ -120,8 +120,8 @@ export default function GroupDetailPage() {
 
     // Chat History
     const [showChatHistory, setShowChatHistory] = useState(false);
-    const [activeChatLog] = useState<AiChatLogMsg[]>([]);
-    const [activeGoalTitle] = useState('');
+    const [activeChatLog, setActiveChatLog] = useState<AiChatLogMsg[]>([]);
+    const [activeGoalTitle, setActiveGoalTitle] = useState('');
 
     // Job Labels
     const [showMemberRoles, setShowMemberRoles] = useState(false);
@@ -1046,9 +1046,22 @@ export default function GroupDetailPage() {
                             CÔNG VIỆC
                         </h3>
                         {isAdmin && (
-                            <button onClick={() => { if (!selectedGoalId && goals.length > 0) setSelectedGoalId(goals[0].id); setShowAddTask(!showAddTask); }} style={{ background: '#d4a574', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <ion-icon name="add"></ion-icon> Thêm mới
-                            </button>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                {latestGoal && latestGoal.chatLog && (
+                                    <button onClick={() => {
+                                        setActiveGoalTitle(latestGoal.title || '');
+                                        try {
+                                            setActiveChatLog(JSON.parse(latestGoal.chatLog));
+                                            setShowChatHistory(true);
+                                        } catch(e) {}
+                                    }} style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        <ion-icon name="time-outline"></ion-icon> Lịch sử xác nhận
+                                    </button>
+                                )}
+                                <button onClick={() => { if (!selectedGoalId && goals.length > 0) setSelectedGoalId(goals[0].id); setShowAddTask(!showAddTask); }} style={{ background: '#d4a574', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <ion-icon name="add"></ion-icon> Thêm mới
+                                </button>
+                            </div>
                         )}
                     </div>
 

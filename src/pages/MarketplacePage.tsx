@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { teamService } from '../services/groupService';
-import { interGroupOrderService, reviewService } from '../services/interGroupOrderService';
-import type { Team, InterGroupOrder, Review, ReviewSummary } from '../types/types';
+import type { SyntheticEvent } from 'react';
+import { inventoryService, teamService } from '../services/groupService';
+import { interGroupOrderService, reviewService, manufacturingRequestService } from '../services/interGroupOrderService';
+import type { Team, InterGroupOrder, InventoryItem, Review, ReviewSummary } from '../types/types';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
@@ -224,6 +225,18 @@ const getFactoryImageSeed = (factory: any) => {
     return (factory.name?.length || 0) + (factory.completedOrders || 0) + (factory.completedOrdersMock || 0);
 };
 
+const getFactoryCardImage = (factory: any) =>
+    factory?.factoryImageUrl
+    || factory?.factoryImages?.[0]
+    || fallbackFactoryImages[getFactoryImageSeed(factory) % fallbackFactoryImages.length];
+
+const handleFactoryImageError = (event: SyntheticEvent<HTMLImageElement>) => {
+    const target = event.currentTarget;
+    if (target.dataset.localFallback === 'true') return;
+    target.dataset.localFallback = 'true';
+    target.src = '/coffee-hero.png';
+};
+
 const marketplaceCategories = [
     { label: 'Tất cả', icon: 'all_inclusive' },
     { label: 'Nguyên liệu', icon: 'eco' },
@@ -233,66 +246,7 @@ const marketplaceCategories = [
     { label: 'Đăng nhu cầu', icon: 'assignment' },
 ];
 
-const featuredProducts = [
-    {
-        title: 'Ethiopia Yirgacheffe G1',
-        badge: 'Mới về',
-        description: 'Sơ chế Natural với nốt hương hoa nhài và trà đen đặc trưng. Được thu hoạch từ vùng trồng Yirgacheffe danh tiếng, mang lại trải nghiệm hương vị tinh tế, nhẹ nhàng và hậu vị ngọt kéo dài.',
-        price: '450.000đ',
-        unit: '/kg',
-        image: '/coffee-hero.png',
-        origin: 'Yirgacheffe, Ethiopia',
-        roastLevel: 'Light - Medium',
-        processing: 'Natural',
-        tasteNotes: ['Hoa nhài', 'Trà đen', 'Cam chanh', 'Mật ong'],
-        stock: 'Có sẵn (100+ kg)'
-    },
-    {
-        title: 'Colombia Supremo',
-        badge: 'Bán chạy',
-        description: 'Vị đậm đà, body mượt mà với hương chocolate và hạt dẻ.',
-        price: '380.000đ',
-        unit: '/kg',
-        image: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=720&q=85',
-        origin: 'Huila, Colombia',
-        roastLevel: 'Medium',
-        processing: 'Washed',
-        tasteNotes: ['Chocolate', 'Caramel', 'Hạt dẻ'],
-        stock: 'Có sẵn (50+ kg)'
-    },
-    {
-        title: 'Kenya AA Top',
-        description: 'Độ chua sáng, nốt hương trái cây nhiệt đới rõ nét.',
-        price: '550.000đ',
-        unit: '/kg',
-        image: 'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?auto=format&fit=crop&w=720&q=85',
-        origin: 'Nyeri, Kenya',
-        roastLevel: 'Light',
-        processing: 'Washed',
-        tasteNotes: ['Blackberry', 'Chanh vàng', 'Mía đường'],
-        stock: 'Có sẵn (20+ kg)'
-    },
-    {
-        title: 'Máy đo độ ẩm S3',
-        description: 'Thiết bị cầm tay độ chính xác cao cho hạt xanh. Giúp kiểm soát chất lượng cà phê nhân xanh trước khi rang một cách dễ dàng và nhanh chóng.',
-        price: '2.100.000đ',
-        unit: '/chiếc',
-        image: 'https://images.unsplash.com/photo-1510707577719-ae7c14805e3a?auto=format&fit=crop&w=720&q=85',
-        origin: 'Đài Loan',
-        stock: 'Còn 5 chiếc',
-        tasteNotes: []
-    },
-    {
-        title: 'Dịch vụ Rang Test',
-        description: 'Gói 5 mẫu profile khác nhau cho 1kg hạt. Phù hợp cho khách hàng muốn tìm ra profile rang tối ưu nhất cho dòng hạt mới trước khi sản xuất số lượng lớn.',
-        price: '350.000đ',
-        unit: '/lần',
-        image: 'https://images.unsplash.com/photo-1580933073521-dc49ac0d4e6a?auto=format&fit=crop&w=720&q=85',
-        stock: 'Nhận yêu cầu liên tục',
-        tasteNotes: []
-    },
-];
-
+// Removed static featuredProducts array
 const splitMultiValue = (value?: string | string[]) => {
     if (Array.isArray(value)) return value.filter(Boolean).map(item => item.trim()).filter(Boolean);
     if (!value) return [];
@@ -309,14 +263,14 @@ const buildCapacityLabel = (team: Team) => {
 };
 
 const normalizeFactory = (team: Team): MarketplaceFactory => {
-    // Generate deterministic mock data based on team name length
-    const seed = team.name.length + (team.completedOrders || 0);
-    const mockTrustScore = 85 + (seed % 15);
-    const mockRating = 4.2 + (seed % 9) / 10;
-    const mockReviewCount = 10 + (seed % 50);
-    const mockOnTimeRate = 90 + (seed % 10);
-    const mockAvailableCap = (1 + (seed % 5)) + " Tấn";
-    const statusBadges: ('Receiving Orders' | 'Nearly Full' | 'Temporarily Unavailable')[] = ['Receiving Orders', 'Nearly Full', 'Temporarily Unavailable'];
+    let meta = {};
+    if (team.metadata) {
+        try {
+            meta = JSON.parse(team.metadata);
+        } catch (e) {
+            console.warn('Failed to parse metadata for team', team.id);
+        }
+    }
 
     return {
         ...team,
@@ -329,48 +283,35 @@ const normalizeFactory = (team: Team): MarketplaceFactory => {
         verifiedCertification: team.verificationStatus === 'APPROVED' && Boolean(team.certificationDocument || team.certificates?.length),
         certifications: team.certificates?.length ? team.certificates : splitMultiValue(team.certificationDocument),
 
-        // Mock B2B assignments
-        trustScoreMock: mockTrustScore,
-        ratingMock: mockRating,
-        reviewCountMock: mockReviewCount,
-        completedOrdersMock: team.completedOrders || (20 + seed % 100),
-        onTimeRateMock: mockOnTimeRate,
+        trustScoreMock: team.trustScore || 85,
+        ratingMock: team.rating || 4.5,
+        reviewCountMock: team.reviewCount || 10,
+        completedOrdersMock: team.completedOrders || 20,
+        onTimeRateMock: team.completedOrders ? Math.round(((team.totalOrders || 0) - (team.cancelledOrders || 0)) / team.completedOrders * 100) : 90,
         currentCapacityMock: team.capacityValue ? `${team.capacityValue} ${team.capacityUnit}` : '5 Tấn / Tháng',
-        availableCapacityMock: mockAvailableCap,
-        moqMock: (50 + (seed % 5) * 50) + " kg",
-        leadTimeMock: (5 + seed % 10) + " - " + (10 + seed % 10) + " Ngày",
-        statusBadgeMock: statusBadges[seed % 3],
+        availableCapacityMock: "1 Tấn",
+        moqMock: team.moq || "50 kg",
+        leadTimeMock: team.leadTime || "5 - 10 Ngày",
+        statusBadgeMock: team.statusBadge || "Đang nhận đơn",
         specializationsMock: splitMultiValue(team.specialty).length > 0 ? splitMultiValue(team.specialty) : ['Arabica Specialty', 'OEM Coffee'],
-        yearsInOperationMock: 2 + (seed % 10),
-        employeeCountMock: 10 + (seed % 40),
-        factorySizeMock: (500 + (seed % 10) * 100) + " m2",
+        yearsInOperationMock: team.yearsInOperation || 2,
+        employeeCountMock: team.employeeCount || 10,
+        factorySizeMock: team.factorySize || "500 m2",
 
-        capabilitiesMock: {
+        capabilitiesMock: meta.capabilitiesMock || {
             services: splitMultiValue(team.specialty).length > 0 ? splitMultiValue(team.specialty) : ['Rang cà phê', 'Đóng gói', 'Gia công OEM'],
             coffeeTypes: COFFEE_TYPE_OPTIONS.slice(0, 16).map(option => option.label),
             packagingFormats: PACKAGING_FORMAT_OPTIONS.map(option => option.label)
         },
-        equipmentMock: {
-            roasters: [
-                { model: 'Probat P25', capacity: '25kg/mẻ', year: '2021' },
-                { model: 'Bühler Infinity', capacity: '120kg/mẻ', year: '2019' }
-            ],
-            packaging: ['Máy đóng gói tự động', 'Máy hút chân không công nghiệp'],
-            grinders: ['Mahlkönig EK43', 'Ditting KR804'],
-            qc: ['Máy đo màu rang', 'Máy đo độ ẩm', 'Khúc xạ kế']
+        equipmentMock: meta.equipmentMock || {
+            roasters: [],
+            packaging: [],
+            grinders: [],
+            qc: []
         },
-        certificatesMock: [
-            { name: 'ISO 22000:2018', issueDate: '12/05/2022', expDate: '12/05/2025', status: 'Verified' },
-            { name: 'HACCP', issueDate: '10/08/2023', expDate: '10/08/2026', status: 'Verified' }
-        ],
-        portfolioMock: [
-            { name: 'Dự án OEM Chuỗi Cafe', type: 'OEM', image: fallbackFactoryImages[2] },
-            { name: 'Gia công xuất khẩu', type: 'Export', image: fallbackFactoryImages[3] }
-        ],
-        reviewsMock: [
-            { author: 'Nguyen Van A', company: 'The Coffee Shop', rating: 5, date: '10/06/2026', content: 'Chất lượng rang ổn định, giao hàng đúng hẹn.' },
-            { author: 'Tran Thi B', company: 'Daily Roast', rating: 4, date: '02/05/2026', content: 'Máy móc hiện đại, làm việc chuyên nghiệp, hỗ trợ tốt.' }
-        ]
+        certificatesMock: meta.certificatesMock || [],
+        portfolioMock: meta.portfolioMock || [],
+        reviewsMock: meta.reviewsMock || []
     };
 };
 
@@ -404,10 +345,10 @@ const REQUEST_STORAGE_KEY = 'orca_manufacturing_requests';
 const displayPercent = (value?: number) => (typeof value === 'number' ? `${value}%` : emptyValue);
 const displayText = (value?: any) => (value || value === 0 ? value : emptyValue);
 
-const loadRequests = (): ManufacturingRequest[] => {
+const loadRequests = async (): Promise<ManufacturingRequest[]> => {
     try {
-        const raw = localStorage.getItem(REQUEST_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
+        const data = await manufacturingRequestService.getAll();
+        return data as ManufacturingRequest[];
     } catch {
         return [];
     }
@@ -554,13 +495,25 @@ export default function MarketplacePage() {
     const selectedPublishTeam = myTeams.find(team => team.id === publishTeamId);
     const publishVerificationStatus = selectedPublishTeam?.verificationStatus || 'NOT_SUBMITTED';
 
+    const [featuredProducts, setFeaturedProducts] = useState<InventoryItem[]>([]);
+
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [teamsAll, teamsMine] = await Promise.all([
+                setError('');
+                const [teamsAllResult, teamsMineResult] = await Promise.allSettled([
                     teamService.getAllTeams(),
-                    teamService.getMyTeams(),
+                    teamService.getMyTeams()
                 ]);
+                if (teamsAllResult.status === 'rejected') {
+                    throw teamsAllResult.reason;
+                }
+
+                const teamsAll = teamsAllResult.value;
+                const teamsMine = teamsMineResult.status === 'fulfilled' ? teamsMineResult.value : [];
+                if (teamsMineResult.status === 'rejected') {
+                    console.warn('Owned marketplace teams are unavailable', teamsMineResult.reason);
+                }
                 const publishedTeams = teamsAll.filter(t => t.isPublished);
                 const ownedTeams = teamsMine.filter(t => t.ownerId === user?.id);
                 setAllTeams(publishedTeams);
@@ -569,7 +522,16 @@ export default function MarketplacePage() {
                     setBuyerTeamId(ownedTeams[0].id);
                     setPublishTeamId(ownedTeams[0].id);
                 }
-                setManufacturingRequests(loadRequests());
+
+                const [featuredItems, reqs] = await Promise.all([
+                    inventoryService.getFeaturedProducts().catch(error => {
+                        console.warn('Featured marketplace products are unavailable', error);
+                        return [];
+                    }),
+                    loadRequests()
+                ]);
+                setFeaturedProducts(featuredItems);
+                setManufacturingRequests(reqs);
             } catch (err) {
                 console.error('Failed to load marketplace', err);
                 setError('Không thể tải dữ liệu thị trường.');
@@ -856,8 +818,7 @@ export default function MarketplacePage() {
                         };
                         await interGroupOrderService.placeOrder(dto);
                     }
-                    const request: ManufacturingRequest = {
-                        id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`,
+                    const request = {
                         type: rfqRequestType as ManufacturingRequest['type'],
                         title: rfqTitle,
                         coffeeType: rfqProductName,
@@ -865,11 +826,10 @@ export default function MarketplacePage() {
                         deadline: rfqDeadline,
                         region: selectedSeller?.region || 'Toàn quốc',
                         details: detailLines,
-                        createdAt: new Date().toISOString(),
+                        buyerTeamId: buyerTeamId || undefined,
                     };
-                    const next = [request, ...manufacturingRequests];
-                    setManufacturingRequests(next);
-                    localStorage.setItem(REQUEST_STORAGE_KEY, JSON.stringify(next));
+                    const savedRequest = await manufacturingRequestService.create(request);
+                    setManufacturingRequests(prev => [savedRequest, ...prev]);
                 } catch {
                     alert('Gửi RFQ qua API thất bại. (Chế độ mock vẫn hoạt động)');
                 } finally {
@@ -1497,30 +1457,16 @@ export default function MarketplacePage() {
                         <div className="mp-factory-grid">
                             {featuredFactories.map((factory) => {
                                 const isOwnFactory = factory.ownerId === user?.id;
-                                const hasImage = Boolean(factory.factoryImageUrl || (factory.factoryImages && factory.factoryImages.length > 0));
-                                const image = factory.factoryImageUrl || factory.factoryImages?.[0];
+                                const image = getFactoryCardImage(factory);
                                 return (
                                     <article key={factory.id} className="mp-factory-card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                         <div className="mp-factory-image">
-                                            {hasImage ? (
-                                                <img
-                                                    src={image}
-                                                    alt={`Ảnh xưởng ${factory.name}`}
-                                                    referrerPolicy="no-referrer"
-                                                    onError={(e) => {
-                                                        const target = e.currentTarget;
-                                                        target.style.display = 'none';
-                                                        const placeholder = document.createElement('div');
-                                                        placeholder.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background-color:#212836;color:var(--text-muted);font-size:13px;font-style:italic;min-height:160px;';
-                                                        placeholder.textContent = 'Chưa đăng tải sản phẩm';
-                                                        target.parentNode?.insertBefore(placeholder, target);
-                                                    }}
-                                                />
-                                            ) : (
-                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#212836', color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic', minHeight: '160px' }}>
-                                                    Chưa đăng tải sản phẩm
-                                                </div>
-                                            )}
+                                            <img
+                                                src={image}
+                                                alt={`Ảnh xưởng ${factory.name}`}
+                                                referrerPolicy="no-referrer"
+                                                onError={handleFactoryImageError}
+                                            />
                                             <span className="mp-card-ribbon">{t[factory.statusBadgeMock?.replace(' ', '_') || ''] || factory.statusBadgeMock}</span>
                                         </div>
                                         <div className="mp-factory-card-body" style={{padding: '16px 20px', display: 'flex', flexDirection: 'column', flexGrow: 1}}>
@@ -1606,12 +1552,12 @@ export default function MarketplacePage() {
                     <div className="mp-marquee-container">
                         <div className="mp-marquee-track">
                             {[...featuredProducts, ...featuredProducts].map((product, index) => (
-                                <article className="mp-clean-product-card" key={product.title + index}>
+                                <article className="mp-clean-product-card" key={product.name + index}>
                                     <div className="mp-cpc-image" onClick={() => { setSelectedProduct({ ...product, factories: featuredFactories.slice((index % featuredProducts.length) % featuredFactories.length, ((index % featuredProducts.length) % featuredFactories.length) + 2) }); setShowProductFactories(false); }}>
-                                        <img src={product.image} alt={product.title} />
+                                        <img src={product.imageUrl} alt={product.name} />
                                     </div>
                                     <div className="mp-cpc-info">
-                                        <h3>{product.title.toUpperCase()}</h3>
+                                        <h3>{product.name.toUpperCase()}</h3>
                                         <p>{product.origin || product.description}</p>
                                         <strong>{product.price}</strong>
                                     </div>
@@ -1713,34 +1659,34 @@ export default function MarketplacePage() {
                             <>
                                 <div style={{ display: 'flex', gap: 32, marginBottom: 24, marginTop: 10 }}>
                                     <div style={{ flex: '0 0 300px' }}>
-                                        <img src={selectedProduct.image} alt={selectedProduct.title} style={{ width: '100%', height: 300, objectFit: 'cover', borderRadius: 12, background: '#171a1b', border: '1px solid rgba(255,255,255,0.1)' }} />
+                                        <img src={selectedProduct.imageUrl} alt={selectedProduct.name} style={{ width: '100%', height: 300, objectFit: 'cover', borderRadius: 12, background: '#171a1b', border: '1px solid rgba(255,255,255,0.1)' }} />
                                     </div>
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                                            <h3 style={{ margin: 0, fontSize: 26, color: '#fff7ef' }}>{selectedProduct.title}</h3>
-                                            {selectedProduct.badge && <span style={{ background: '#d4a574', color: '#171a1b', padding: '4px 10px', borderRadius: 6, fontSize: 13, fontWeight: 700 }}>{selectedProduct.badge}</span>}
+                                            <h3 style={{ margin: 0, fontSize: 26, color: '#fff7ef' }}>{selectedProduct.name}</h3>
+                                            {selectedProduct.status && <span style={{ background: '#d4a574', color: '#171a1b', padding: '4px 10px', borderRadius: 6, fontSize: 13, fontWeight: 700 }}>{selectedProduct.status}</span>}
                                         </div>
                                         <p style={{ margin: '0 0 20px', color: '#a79d94', fontSize: 15, lineHeight: 1.6 }}>{selectedProduct.description}</p>
 
                                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px 20px', borderRadius: 12, marginBottom: 20 }}>
                                             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, marginBottom: 16 }}>
                                                 <strong style={{ fontSize: 28, color: '#ffd9bd', lineHeight: 1 }}>{selectedProduct.price}</strong>
-                                                <small style={{ color: '#a79d94', fontSize: 15, marginBottom: 2 }}>{selectedProduct.unit}</small>
+                                                <small style={{ color: '#a79d94', fontSize: 15, marginBottom: 2 }}>/{selectedProduct.unit}</small>
                                             </div>
 
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 24px', fontSize: 14 }}>
                                                 {selectedProduct.origin && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#8f8580' }}>Xuất xứ:</span> <strong style={{ color: '#ece8e1', textAlign: 'right' }}>{selectedProduct.origin}</strong></div>}
                                                 {selectedProduct.processing && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#8f8580' }}>Sơ chế:</span> <strong style={{ color: '#ece8e1', textAlign: 'right' }}>{selectedProduct.processing}</strong></div>}
                                                 {selectedProduct.roastLevel && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#8f8580' }}>Mức rang:</span> <strong style={{ color: '#ece8e1', textAlign: 'right' }}>{selectedProduct.roastLevel}</strong></div>}
-                                                {selectedProduct.stock && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#8f8580' }}>Tình trạng:</span> <strong style={{ color: '#5cb85c', textAlign: 'right' }}>{selectedProduct.stock}</strong></div>}
+                                                {selectedProduct.quantity > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#8f8580' }}>Tình trạng:</span> <strong style={{ color: '#5cb85c', textAlign: 'right' }}>Có sẵn ({selectedProduct.quantity}+ {selectedProduct.unit})</strong></div>}
                                             </div>
                                         </div>
 
-                                        {selectedProduct.tasteNotes && selectedProduct.tasteNotes.length > 0 && (
+                                        {selectedProduct.tasteNotes && selectedProduct.tasteNotes.trim() !== '' && (
                                             <div style={{ marginBottom: 20 }}>
                                                 <strong style={{ display: 'block', marginBottom: 12, color: '#ece8e1', fontSize: 14 }}>Hương vị nổi bật (Taste Notes):</strong>
                                                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                                    {selectedProduct.tasteNotes.map((note: string) => (
+                                                    {selectedProduct.tasteNotes.split(',').map((note: string) => note.trim()).map((note: string) => (
                                                         <span key={note} style={{ background: 'rgba(212, 165, 116, 0.1)', color: '#d4a574', padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 500, border: '1px solid rgba(212, 165, 116, 0.2)' }}>{note}</span>
                                                     ))}
                                                 </div>
@@ -1759,7 +1705,7 @@ export default function MarketplacePage() {
                         ) : (
                             <>
                                 <p style={{ margin: '10px 0 20px', color: '#a79d94', fontSize: 13, lineHeight: 1.5 }}>
-                                    Các xưởng sau có năng lực và sẵn sàng gia công <strong>{selectedProduct.title}</strong>.
+                                    Các xưởng sau có năng lực và sẵn sàng gia công <strong>{selectedProduct.name}</strong>.
                                 </p>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 300, overflowY: 'auto', marginBottom: 24, paddingRight: 8 }}>
                                     {selectedProduct.factories?.length > 0 ? selectedProduct.factories.map((factory: MarketplaceFactory) => (
@@ -1806,31 +1752,19 @@ export default function MarketplacePage() {
                                             src={img}
                                             alt={`Ảnh ${i}`}
                                             style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }}
-                                            onError={(e) => {
-                                                const target = e.target as HTMLImageElement;
-                                                if (!target.dataset.fallback) {
-                                                    target.dataset.fallback = 'true';
-                                                    target.src = fallbackFactoryImages[(getFactoryImageSeed(selectedFactory) + i) % fallbackFactoryImages.length];
-                                                }
-                                            }}
+                                            onError={handleFactoryImageError}
                                         />
                                     ))}
                                 </div>
-                            ) : selectedFactory.factoryImageUrl ? (
+                            ) : (
                                 <div className="mp-profile-image">
                                     <img
-                                        src={selectedFactory.factoryImageUrl}
+                                        src={getFactoryCardImage(selectedFactory)}
                                         alt={`Ảnh xưởng ${selectedFactory.name}`}
-                                        onError={(e) => {
-                                            const target = e.target as HTMLImageElement;
-                                            if (!target.dataset.fallback) {
-                                                target.dataset.fallback = 'true';
-                                                target.src = fallbackFactoryImages[getFactoryImageSeed(selectedFactory) % fallbackFactoryImages.length];
-                                            }
-                                        }}
+                                        onError={handleFactoryImageError}
                                     />
                                 </div>
-                            ) : null}
+                            )}
                             <h2>{selectedFactory.name}</h2>
                             <p>{displayText(selectedFactory.region)}</p>
                             <div className="mp-profile-side-metrics">

@@ -2936,6 +2936,48 @@
   margin-top: 24px;
 }
 
+.upgrade-required-modal {
+  width: min(92vw, 440px);
+  max-width: 440px;
+  text-align: center;
+  overflow: visible;
+}
+
+.upgrade-required-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.upgrade-required-button {
+  min-width: 132px;
+  min-height: 46px;
+  padding: 11px 20px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.upgrade-required-primary {
+  border-color: transparent;
+}
+
+@media (max-width: 420px) {
+  .upgrade-required-actions {
+    flex-direction: column-reverse;
+  }
+
+  .upgrade-required-button {
+    width: 100%;
+  }
+}
+
 /* Form Row */
 .form-row {
   display: grid;

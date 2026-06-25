@@ -289,3 +289,19 @@ export const notificationService = {
     markAllRead: () =>
         api.patch('/api/notifications/read-all').then(r => r.data),
 };
+
+// === Inventory Service ===
+import type { InventoryItem } from '../types/types';
+
+export const inventoryService = {
+    getByTeam: (teamId: string) =>
+        api.get<InventoryItem[]>(`/api/inventory?teamId=${teamId}`).then(r => r.data),
+    create: (data: Partial<InventoryItem>) =>
+        api.post<InventoryItem>('/api/inventory', data).then(r => r.data),
+    updateQuantity: (id: string, quantity: number) =>
+        api.patch<InventoryItem>(`/api/inventory/${id}/quantity`, { quantity }).then(r => r.data),
+    delete: (id: string) =>
+        api.delete(`/api/inventory/${id}`).then(r => r.data),
+    getFeaturedProducts: () =>
+        api.get<InventoryItem[]>('/api/inventory/featured').then(r => r.data),
+};

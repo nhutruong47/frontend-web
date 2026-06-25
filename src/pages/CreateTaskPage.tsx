@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useParams, useNavigate } from 'react-router-dom';
 import { teamService, aiWorkflowService, goalService, getTrialStatus } from '../services/groupService';
+import { isPaymentRequiredError } from '../services/api';
 import type { AiParseResult, AiV2PlanDraft } from '../services/groupService';
 import type { Team, TeamMemberInfo } from '../types/types';
 import { estimateTokens, formatTokenCount } from '../utils/tokenUsage';
@@ -13,6 +14,9 @@ interface ChatMessage {
     content: string;
     result?: AiParseResult;
     timestamp: Date;
+    isConfirmed?: boolean;
+    isCancelled?: boolean;
+    isArchived?: boolean;
 }
 
 const priorityLabel = (priority: number) => {
@@ -65,9 +69,131 @@ const resultToDraft = (result: AiParseResult): AiV2PlanDraft => ({
     })),
 });
 
+const normalizeVietnameseText = (value: string) =>
+    value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+const getRequestedAddedTaskTitle = (instruction: string) => {
+    const normalized = normalizeVietnameseText(instruction);
+    const match = normalized.match(
+        /\bthem(?:\s+\d+)?\s+(?:muc|task|cong viec)(?:\s+nua)?(?:\s+(?:la|ve|cho))?\s*[:\-]?\s*(.+)$/
+    );
+    if (!match) return null;
+
+    const title = match[1]
+        .replace(/^(?:muc|task|cong viec)\s*(?:so)?\s*\d+\s*(?:la|:|-)?\s*/, '')
+        .replace(/^[\s.,:;-]+|[\s.,:;-]+$/g, '');
+    if (!title) return null;
+
+    const knownTitles: Record<string, string> = {
+        'van chuyen': 'Vận chuyển',
+        'giao hang': 'Giao hàng',
+        'giao hang thanh pham': 'Giao hàng thành phẩm',
+        'ban giao': 'Bàn giao',
+        'dong goi': 'Đóng gói',
+        'kiem tra chat luong': 'Kiểm tra chất lượng',
+    };
+    return knownTitles[title] || `${title.charAt(0).toUpperCase()}${title.slice(1)}`;
+};
+
+const getRequestedRemovedTaskIndex = (instruction: string, taskCount: number) => {
+    const normalized = normalizeVietnameseText(instruction);
+    if (!/\b(xoa|bo|loai bo)\b/.test(normalized)) return null;
+
+    const numberMatch = normalized.match(
+        /\b(?:xoa|bo|loai bo)(?:\s+di)?\s+(?:muc|task|cong viec)?\s*(?:so)?\s*(\d+)\b/
+    );
+    if (numberMatch) {
+        const index = Number(numberMatch[1]) - 1;
+        return index >= 0 && index < taskCount ? index : null;
+    }
+
+    if (/\b(?:muc|task|cong viec)?\s*cuoi\b/.test(normalized)) {
+        return taskCount > 0 ? taskCount - 1 : null;
+    }
+    return null;
+};
+
+const applyDeterministicRevision = (
+    instruction: string,
+    original: AiV2PlanDraft
+): AiV2PlanDraft | null => {
+    const removedTaskIndex = getRequestedRemovedTaskIndex(instruction, original.tasks.length);
+    if (removedTaskIndex !== null) {
+        return {
+            ...original,
+            tasks: original.tasks.filter((_, index) => index !== removedTaskIndex),
+        };
+    }
+
+    const addedTaskTitle = getRequestedAddedTaskTitle(instruction);
+    if (addedTaskTitle) {
+        return {
+            ...original,
+            tasks: [
+                ...original.tasks,
+                {
+                    title: addedTaskTitle,
+                    description: `Thực hiện công việc ${addedTaskTitle.toLowerCase()} theo yêu cầu của kế hoạch.`,
+                    priority: 3,
+                    workload: 1,
+                    suggestedAssigneeId: null,
+                    suggestedAssigneeName: null,
+                    suggestedReason: 'Chưa tìm thấy người phụ trách phù hợp. Bạn có thể chọn thủ công.',
+                },
+            ],
+        };
+    }
+
+    return null;
+};
+
+const ensureRequestedRevision = (
+    instruction: string,
+    original: AiV2PlanDraft,
+    revised: AiV2PlanDraft
+) => {
+    const addedTaskTitle = getRequestedAddedTaskTitle(instruction);
+    if (addedTaskTitle && revised.tasks.length <= original.tasks.length) {
+        return {
+            ...revised,
+            tasks: [
+                ...original.tasks,
+                {
+                    title: addedTaskTitle,
+                    description: `Thực hiện công việc ${addedTaskTitle.toLowerCase()} theo yêu cầu của kế hoạch.`,
+                    priority: 3,
+                    workload: 1,
+                    suggestedAssigneeId: null,
+                    suggestedAssigneeName: null,
+                    suggestedReason: 'Chưa tìm thấy người phụ trách phù hợp. Bạn có thể chọn thủ công.',
+                },
+            ],
+        };
+    }
+
+    const removedTaskIndex = getRequestedRemovedTaskIndex(instruction, original.tasks.length);
+    if (removedTaskIndex !== null && revised.tasks.length >= original.tasks.length) {
+        return {
+            ...revised,
+            tasks: original.tasks.filter((_, index) => index !== removedTaskIndex),
+        };
+    }
+
+    return revised;
+};
+
 function friendlyTaskError(error?: string) {
     const text = error || '';
     const lower = text.toLowerCase();
+    if (lower.includes('payment_required') || lower.includes('hết hạn gói miễn phí')) {
+        return 'Gói miễn phí đã hết hạn.';
+    }
     if (lower.includes('could not execute statement') || (lower.includes('constraint') && lower.includes('sql'))) {
         return 'Không thể lưu kế hoạch do dữ liệu bị trùng hoặc không hợp lệ. Vui lòng bấm tạo lại.';
     }
@@ -111,6 +237,8 @@ export default function CreateTaskPage() {
     const [trialDays, setTrialDays] = useState(30);
 
     const [showTokens, setShowTokens] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
+    const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
     const totalTokens = messages.reduce((sum, message) => sum + estimateTokens(message.content), 0);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -172,7 +300,16 @@ export default function CreateTaskPage() {
     };
 
     const findActiveDraftMessage = (items: ChatMessage[]) =>
-        [...items].reverse().find(msg => msg.result && !msg.result.needsClarification);
+        [...items].reverse().find(msg =>
+            msg.result
+            && !msg.result.needsClarification
+            && !msg.isConfirmed
+            && !msg.isCancelled
+            && !msg.isArchived
+        );
+
+    const isStoredDraft = (message: ChatMessage) =>
+        Boolean(message.result && !message.result.needsClarification);
 
     const handleSend = async () => {
         if (!input.trim() || !trialActive || loading) return;
@@ -186,25 +323,38 @@ export default function CreateTaskPage() {
             timestamp: new Date()
         };
 
-        setMessages(prev => [
-            ...(activeDraft ? prev.map(m => m.result ? { ...m, result: undefined } : m) : prev),
-            userMsg
-        ]);
+        setMessages(prev => [...prev, userMsg]);
         setInput('');
         setLoading(true);
 
         try {
             if (activeDraft) {
-                const revisedDraft = await aiWorkflowService.revise(teamId || '', userMsg.content, resultToDraft(activeDraft));
+                const currentDraft = resultToDraft(activeDraft);
+                const localRevision = applyDeterministicRevision(userMsg.content, currentDraft);
+                const apiDraft = localRevision
+                    || await aiWorkflowService.revise(teamId || '', userMsg.content, currentDraft);
+                const revisedDraft = localRevision
+                    || ensureRequestedRevision(userMsg.content, currentDraft, apiDraft);
                 const res = draftToResult(revisedDraft);
+                const removedTaskIndex = getRequestedRemovedTaskIndex(userMsg.content, currentDraft.tasks.length);
+                const changeSummary = removedTaskIndex !== null
+                    ? `Đã xóa công việc số ${removedTaskIndex + 1}.`
+                    : 'Tôi đã sửa draft theo yêu cầu.';
                 const aiMsg: ChatMessage = {
                     id: Date.now().toString() + '-ai',
                     role: 'assistant',
-                    content: 'Tôi đã sửa draft theo yêu cầu của bạn. Vui lòng xem lại bên dưới.',
+                    content: `${changeSummary} Bản mới có ${revisedDraft.tasks.length} công việc.`,
                     result: res,
                     timestamp: new Date()
                 };
-                setMessages(prev => [...prev, aiMsg]);
+                setMessages(prev => [
+                    ...prev.map(message =>
+                        message.id === activeDraftMessage?.id
+                            ? { ...message, isArchived: true }
+                            : message
+                    ),
+                    aiMsg
+                ]);
                 return;
             }
 
@@ -233,10 +383,16 @@ export default function CreateTaskPage() {
             };
             setMessages(prev => [...prev, aiMsg]);
         } catch (e: any) {
+            const msgStr = e?.response?.data?.message || e?.response?.data?.error || e.message || 'Lỗi kết nối AI. Hãy thử lại!';
+            if (isPaymentRequiredError(e)) {
+                setTrialActive(false);
+                window.dispatchEvent(new CustomEvent('payment-required'));
+                return;
+            }
             const errorMsg: ChatMessage = {
                 id: Date.now().toString() + '-err',
                 role: 'assistant',
-                content: e?.response?.data?.message || 'Lỗi kết nối AI. Hãy thử lại!',
+                content: msgStr,
                 timestamp: new Date()
             };
             setMessages(prev => [...prev, errorMsg]);
@@ -246,7 +402,7 @@ export default function CreateTaskPage() {
     };
 
     const handleCreateGoal = async (result: AiParseResult) => {
-        if (!teamId || !trialActive) return;
+        if (!teamId) return;
         setLoading(true);
         try {
             await goalService.create({
@@ -268,13 +424,29 @@ export default function CreateTaskPage() {
                 content: '🎉 **Tuyệt vời!** Công việc đã được phân bổ thành công vào nhóm. Vui lòng bấm vào "Quay lại tổng quan" để xem chi tiết, hoặc bạn có thể tiếp tục tạo mục tiêu mới ở đây.',
                 timestamp: new Date()
             };
-            setMessages(prev => [...prev.map(m => m.result ? { ...m, result: undefined } : m), successMsg]);
+            setMessages(prev => {
+                const activeMessage = findActiveDraftMessage(prev);
+                return [
+                    ...prev.map(message =>
+                        message.id === activeMessage?.id
+                            ? { ...message, isConfirmed: true }
+                            : message
+                    ),
+                    successMsg
+                ];
+            });
 
         } catch (e: any) {
+            const msgStr = e?.response?.data?.error || e?.response?.data?.message || e.message || 'Không thể tạo công việc, vui lòng thử lại';
+            if (isPaymentRequiredError(e)) {
+                setTrialActive(false);
+                window.dispatchEvent(new CustomEvent('payment-required'));
+                return;
+            }
             const errorMsg: ChatMessage = {
                 id: Date.now().toString() + '-err',
                 role: 'assistant',
-                content: e?.response?.data?.error || 'Không thể tạo công việc, vui lòng thử lại',
+                content: msgStr,
                 timestamp: new Date()
             };
             setMessages(prev => [...prev, errorMsg]);
@@ -283,7 +455,36 @@ export default function CreateTaskPage() {
         }
     };
 
+    const handleCancelDraft = (msgId: string) => {
+        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, isCancelled: true } : m));
+    };
+
+    const handleRevertDraft = (result: AiParseResult) => {
+        const revertMsg: ChatMessage = {
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: 'Dưới đây là bản nháp bạn muốn khôi phục. Bạn có thể chỉnh sửa và xác nhận lại:',
+            result: { ...result },
+            timestamp: new Date()
+        };
+        setMessages(prev => {
+            const activeMessage = findActiveDraftMessage(prev);
+            return [
+                ...prev.map(message =>
+                    message.id === activeMessage?.id
+                        ? { ...message, isArchived: true }
+                        : message
+                ),
+                revertMsg
+            ];
+        });
+        setShowHistory(false);
+        setSelectedHistoryId(null);
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    };
+
     const hasActiveDraft = Boolean(findActiveDraftMessage(messages)?.result);
+    const draftMessages = messages.filter(isStoredDraft).slice().reverse();
 
     if (!team) {
         return (
@@ -633,16 +834,93 @@ export default function CreateTaskPage() {
                 }
             `}</style>
 
+            {showHistory && (
+                <div className="modal-overlay" onClick={() => setShowHistory(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }}>
+                    <div className="history-panel" onClick={e => e.stopPropagation()} style={{ width: 400, maxWidth: '100%', background: '#fff', height: '100%', padding: '20px', display: 'flex', flexDirection: 'column', boxShadow: '-5px 0 20px rgba(0,0,0,0.1)', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
+                                Lịch sử bản nháp ({draftMessages.length})
+                            </h2>
+                            <button onClick={() => setShowHistory(false)} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#64748b' }}>
+                                <ion-icon name="close-outline"></ion-icon>
+                            </button>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {draftMessages.length === 0 ? (
+                                <p style={{ color: '#94a3b8', fontSize: 14, textAlign: 'center', marginTop: 40 }}>Chưa có bản nháp nào.</p>
+                            ) : (
+                                draftMessages.map(msg => (
+                                    <div key={msg.id} style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, cursor: 'pointer', background: selectedHistoryId === msg.id ? '#f8fafc' : '#fff' }} onClick={() => setSelectedHistoryId(selectedHistoryId === msg.id ? null : msg.id)}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                                            <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>{msg.result?.title || 'Mục tiêu không tên'}</div>
+                                            <span style={{
+                                                fontSize: 11,
+                                                padding: '2px 8px',
+                                                borderRadius: 12,
+                                                background: msg.isConfirmed ? '#dcfce7' : msg.isCancelled ? '#fee2e2' : msg.isArchived ? '#ede9fe' : '#dbeafe',
+                                                color: msg.isConfirmed ? '#166534' : msg.isCancelled ? '#991b1b' : msg.isArchived ? '#6d28d9' : '#1d4ed8',
+                                                fontWeight: 600
+                                            }}>
+                                                {msg.isConfirmed ? 'Đã xác nhận' : msg.isCancelled ? 'Đã hủy' : msg.isArchived ? 'Bản trước' : 'Hiện tại'}
+                                            </span>
+                                        </div>
+                                        <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>{new Date(msg.timestamp).toLocaleString()}</div>
+                                        <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
+                                            {msg.result?.tasks?.length || 0} công việc
+                                        </div>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                            {(msg.result?.tasks || []).map((task, index) => (
+                                                <span
+                                                    key={`${msg.id}-task-${index}`}
+                                                    style={{
+                                                        padding: '4px 8px',
+                                                        borderRadius: 999,
+                                                        background: '#f1f5f9',
+                                                        color: '#475569',
+                                                        fontSize: 11,
+                                                        lineHeight: 1.2
+                                                    }}
+                                                >
+                                                    {index + 1}. {task.title || task.description}
+                                                </span>
+                                            ))}
+                                        </div>
+
+                                        {selectedHistoryId === msg.id && (
+                                            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 12, marginTop: 4 }}>
+                                                <div style={{ fontSize: 12, color: '#475569', marginBottom: 12 }}>
+                                                    <strong>Mô tả:</strong> {msg.result?.description || msg.content}
+                                                </div>
+                                                {msg.isArchived || msg.isConfirmed || msg.isCancelled ? (
+                                                    <button onClick={(e) => { e.stopPropagation(); handleRevertDraft(msg.result!); }} style={{ width: '100%', padding: '8px', background: '#d4a574', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                                                        Tạo lại từ bản này
+                                                    </button>
+                                                ) : (
+                                                    <div style={{ width: '100%', padding: '8px', background: '#dbeafe', color: '#1d4ed8', borderRadius: 8, fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
+                                                        Đây là bản đang sử dụng
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <header className="task-gpt-topbar">
                 <button className="task-gpt-action" type="button" onClick={() => navigate(`/groups/${teamId}`)}>
                     <ion-icon name="chevron-back-outline"></ion-icon>
                     ORCA
                 </button>
                 <div className="task-gpt-actions">
-                    <button className="task-gpt-action" type="button">
-                        <ion-icon name="share-outline"></ion-icon>
-                        Chia sẻ
+                    <button className="task-gpt-action" type="button" onClick={() => setShowHistory(true)}>
+                        <ion-icon name="time-outline"></ion-icon>
+                        Lịch sử
                     </button>
+
                     <button className="task-gpt-action" type="button" onClick={() => setShowTokens(prev => !prev)}>
                         <ion-icon name="ellipsis-horizontal"></ion-icon>
                     </button>
@@ -687,7 +965,7 @@ export default function CreateTaskPage() {
                                         <div className="markdown-content">
                                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{friendlyTaskError(msg.content)}</ReactMarkdown>
                                         </div>
-                                        {msg.result && !msg.result.needsClarification && (
+                                        {msg.result && !msg.result.needsClarification && !msg.isArchived && (
                                             <div className="task-gpt-result">
                                                 <AiResultRefinementForm
                                                     result={msg.result}
@@ -697,7 +975,24 @@ export default function CreateTaskPage() {
                                                         setInput(question);
                                                         chatInputRef.current?.focus();
                                                     }}
+                                                    isConfirmed={msg.isConfirmed}
+                                                    isCancelled={msg.isCancelled}
+                                                    isArchived={msg.isArchived}
+                                                    onCancel={() => handleCancelDraft(msg.id)}
                                                 />
+                                            </div>
+                                        )}
+                                        {msg.result && msg.isArchived && (
+                                            <div style={{
+                                                marginTop: 12,
+                                                padding: '10px 12px',
+                                                borderRadius: 10,
+                                                background: '#f5f3ff',
+                                                color: '#6d28d9',
+                                                fontSize: 13,
+                                                fontWeight: 600
+                                            }}>
+                                                Bản trước gồm {msg.result.tasks?.length || 0} công việc đã được chuyển vào lịch sử.
                                             </div>
                                         )}
                                         {msg.role === 'assistant' && (
@@ -1101,7 +1396,18 @@ export default function CreateTaskPage() {
                 <section className="task-studio-card" aria-label="Trợ lý AI ORCA">
                     <div className="task-studio-card-head">
                         <span>✦ Trợ lý AI ORCA</span>
-                        <span className="task-studio-status">{trialActive ? 'Sẵn sàng' : 'Hết hạn'}</span>
+                        {trialActive ? (
+                            <span className="task-studio-status">Sẵn sàng</span>
+                        ) : (
+                            <button
+                                type="button"
+                                className="task-studio-status"
+                                onClick={() => navigate('/upgrade')}
+                                style={{ cursor: 'pointer', border: 0 }}
+                            >
+                                Nâng cấp gói
+                            </button>
+                        )}
                     </div>
                     <textarea
                         ref={chatInputRef}
@@ -1703,7 +2009,7 @@ export default function CreateTaskPage() {
  * Component to refine and edit the AI parse result before creation.
  * Matches the design in the user's screenshot.
  */
-function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result: AiParseResult, members: TeamMemberInfo[], onConfirm: (data: AiParseResult) => void, onAsk: (q: string) => void }) {
+function AiResultRefinementForm({ result, members, onConfirm, onAsk, isConfirmed, isCancelled, isArchived, onCancel }: { result: AiParseResult, members: TeamMemberInfo[], onConfirm: (data: AiParseResult) => void, onAsk: (q: string) => void, isConfirmed?: boolean, isCancelled?: boolean, isArchived?: boolean, onCancel?: () => void }) {
     const [editedResult, setEditedResult] = useState<AiParseResult>({
         ...result,
         tasks: result.tasks ? [...result.tasks] : []
@@ -2141,19 +2447,32 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk }: { result:
                 )}
 
                 {/* Footer Buttons */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
-                    <button
-                        style={{ padding: '12px 32px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}
-                    >
-                        Hủy
-                    </button>
-                    <button
-                        onClick={() => onConfirm(editedResult)}
-                        style={{ padding: '12px 32px', borderRadius: '12px', border: 'none', background: '#d4a574', color: '#fff', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(212,165,116,0.3)' }}
-                    >
-                        Lưu thay đổi
-                    </button>
-                </div>
+                {!isConfirmed && !isCancelled && !isArchived && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
+                        <button
+                            onClick={onCancel}
+                            style={{ padding: '12px 32px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                            Hủy
+                        </button>
+                        <button
+                            onClick={() => onConfirm(editedResult)}
+                            style={{ padding: '12px 32px', borderRadius: '12px', border: 'none', background: '#d4a574', color: '#fff', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(212,165,116,0.3)' }}
+                        >
+                            Lưu thay đổi
+                        </button>
+                    </div>
+                )}
+                {isCancelled && (
+                    <div style={{ marginTop: 20, textAlign: 'center', color: '#dc2626', fontWeight: 600, fontSize: 13, background: '#fef2f2', padding: '10px', borderRadius: '8px' }}>
+                        Bản nháp này đã bị hủy.
+                    </div>
+                )}
+                {isArchived && (
+                    <div style={{ marginTop: 20, textAlign: 'center', color: '#6d28d9', fontWeight: 600, fontSize: 13, background: '#f5f3ff', padding: '10px', borderRadius: '8px' }}>
+                        Đây là bản trước và đã được lưu trong lịch sử.
+                    </div>
+                )}
             </div>
         </div>
     );

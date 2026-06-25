@@ -167,7 +167,7 @@ const buildKpis = (overview: AdminOverview): KpiItem[] => [
   { label: 'Batch sản xuất', value: number(overview.totalBatches), detail: `${number(overview.activeBatches)} batch đang chạy`, icon: GitBranch, tone: 'green' }
 ];
 
-const plans = [
+const initialPlans = [
   { name: 'Cơ bản', price: 499000, period: 'Tháng', users: 5, orders: 100, batches: 300, workshops: 1, ai: 5000, features: ['Bảng đơn hàng', 'Theo dõi lô sản xuất', 'Báo cáo cơ bản'] },
   { name: 'Tăng trưởng', price: 1499000, period: 'Tháng', users: 30, orders: 1000, batches: 5000, workshops: 5, ai: 40000, features: ['Quy trình QC', 'Trợ lý AI', 'Xuất dữ liệu thanh toán'] },
   { name: 'Doanh nghiệp', price: 0, period: 'Năm', users: 500, orders: 99999, batches: 99999, workshops: 50, ai: 500000, features: ['Cam kết dịch vụ', 'Quy trình tùy chỉnh', 'Giới hạn AI riêng'] }
@@ -251,6 +251,8 @@ export default function AdminPage() {
   const [adminOrders, setAdminOrders] = useState<AdminOrder[]>([]);
   const [adminTasks, setAdminTasks] = useState<AdminTask[]>([]);
   const [adminPayments, setAdminPayments] = useState<AdminPayment[]>([]);
+  const [plans, setPlans] = useState<any[]>(initialPlans);
+  const [aiConfigs, setAiConfigs] = useState<Record<string, string>>({});
   const [adminLoading, setAdminLoading] = useState(true);
   const [adminError, setAdminError] = useState('');
   const [query, setQuery] = useState('');
@@ -383,6 +385,90 @@ export default function AdminPage() {
     }
   };
 
+  const handleEditTeam = async (teamId: string, currentName: string, currentDesc: string) => {
+    const newName = window.prompt("Tên doanh nghiệp mới:", currentName);
+    if (newName === null) return;
+    const newDesc = window.prompt("Mô tả mới:", currentDesc) || "";
+    try {
+      const updated = await adminService.updateTeam(teamId, { name: newName, description: newDesc });
+      setAdminTeams(current => current.map(item => item.id === teamId ? { ...item, ...updated } : item));
+    } catch { window.alert("Lỗi khi cập nhật doanh nghiệp."); }
+  };
+
+  const handleDeleteTeam = async (teamId: string) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa doanh nghiệp này? (Sẽ chỉ ẩn khỏi hệ thống)")) return;
+    try {
+      await adminService.deleteTeam(teamId);
+      setAdminTeams(current => current.map(item => item.id === teamId ? { ...item, published: false } : item));
+    } catch { window.alert("Lỗi khi xóa doanh nghiệp."); }
+  };
+
+  const handleCreateUser = async () => {
+    const username = window.prompt("Tên đăng nhập mới:");
+    if (!username) return;
+    const email = window.prompt("Email:");
+    const fullName = window.prompt("Họ tên:");
+    try {
+      const created = await adminService.createUser({ username, email: email || '', fullName: fullName || '', role: 'USER' });
+      setAdminUsers(current => [created, ...current]);
+      window.alert("Tạo thành công với mật khẩu mặc định là 123456");
+    } catch { window.alert("Lỗi khi tạo user."); }
+  };
+
+  const handleEditUser = async (userId: string, currentName: string, currentEmail: string) => {
+    const fullName = window.prompt("Họ tên mới:", currentName);
+    if (fullName === null) return;
+    const email = window.prompt("Email mới:", currentEmail || "");
+    try {
+      const updated = await adminService.updateUser(userId, { fullName, email: email || '' });
+      setAdminUsers(current => current.map(item => item.id === userId ? { ...item, ...updated } : item));
+    } catch { window.alert("Lỗi khi sửa user."); }
+  };
+
+  const handleResetPassword = async (userId: string) => {
+    if (!window.confirm("Đặt lại mật khẩu cho user này?")) return;
+    try {
+      const res = await adminService.resetUserPassword(userId);
+      window.alert(`Mật khẩu mới là: ${res.password}`);
+    } catch { window.alert("Lỗi đặt lại mật khẩu."); }
+  };
+
+  const handleCreatePlan = async () => {
+    const name = window.prompt("Tên gói dịch vụ:");
+    if (!name) return;
+    const price = window.prompt("Giá (VNĐ):", "0");
+    try {
+      const plan = await adminService.createPlan({ name, price: Number(price), period: "Tháng", users: 1, orders: 10, batches: 10, workshops: 1, ai: 100, features: [] });
+      setPlans(current => [...current, plan]);
+    } catch { window.alert("Lỗi tạo gói."); }
+  };
+
+  const handleUpdatePlan = async (planId: string, currentName: string) => {
+    const name = window.prompt("Tên mới:", currentName);
+    if (!name) return;
+    try {
+      await adminService.updatePlan(planId, { name });
+      setPlans(current => current.map(p => p.id === planId ? { ...p, name } : p));
+    } catch { window.alert("Lỗi sửa gói."); }
+  };
+
+  const handleDeletePlan = async (planId: string) => {
+    if (!window.confirm("Xóa gói này?")) return;
+    try {
+      await adminService.deletePlan(planId);
+      setPlans(current => current.filter(p => p.id !== planId));
+    } catch { window.alert("Lỗi xóa gói."); }
+  };
+
+  const handleAiConfig = async () => {
+    const limit = window.prompt("Nhập giới hạn điểm AI mặc định:");
+    if (!limit) return;
+    try {
+      await adminService.updateAiConfigs({ "default_limit": limit });
+      window.alert("Đã cập nhật cấu hình AI.");
+    } catch { window.alert("Lỗi cập nhật AI."); }
+  };
+
   const revenueReport = useMemo(() => {
     const fromDate = parseDateInput(revenueFrom);
     const toDate = parseDateInput(revenueTo, true);
@@ -498,8 +584,8 @@ export default function AdminPage() {
           <p>Trung tâm điều hành cho Coffee Production Management Platform: doanh nghiệp, user, billing, AI, audit và báo cáo điều hành.</p>
         </div>
         <div className="admin-hero-actions">
-          <button type="button" className="admin-button admin-button-soft"><CalendarDays size={16} /> 30 ngày</button>
-          <button type="button" className="admin-button admin-button-primary"><Download size={16} /> Xuất báo cáo</button>
+          <button type="button" className="admin-button admin-button-soft" onClick={handleNotImplemented}><CalendarDays size={16} /> 30 ngày</button>
+          <button type="button" className="admin-button admin-button-primary" onClick={handleNotImplemented}><Download size={16} /> Xuất báo cáo</button>
         </div>
       </header>
 
@@ -595,13 +681,13 @@ export default function AdminPage() {
                     </td>
                     <td>
                       <div className="admin-row-actions">
-                        <button onClick={handleNotImplemented} className="btn-edit">Sửa</button>
+                        <button onClick={() => handleEditTeam(item.id, item.name, item.description)} className="btn-edit">Sửa</button>
                         {item.verificationStatus === 'PENDING' && <>
                           <button onClick={() => updateTeamVerification(item.id, 'APPROVED')} className="btn-approve"><CheckCircle2 size={14} /> Duyệt</button>
                           <button onClick={() => updateTeamVerification(item.id, 'REJECTED')} className="btn-reject"><XCircle size={14} /> Từ chối</button>
                         </>}
                         <button onClick={handleNotImplemented} className="btn-lock"><Lock size={14} /> Khóa</button>
-                        <button onClick={handleNotImplemented} className="btn-delete">Xóa</button>
+                        <button onClick={() => handleDeleteTeam(item.id)} className="btn-delete">Xóa</button>
                       </div>
                     </td>
                   </tr>
@@ -616,7 +702,7 @@ export default function AdminPage() {
         <section className="admin-card">
           <div className="admin-card-head">
             <div><h3>Quản lý người dùng toàn hệ thống</h3><p>Tạo người dùng, đặt lại mật khẩu, gán vai trò và chuyển doanh nghiệp.</p></div>
-            <button type="button" className="admin-button admin-button-primary" onClick={handleNotImplemented}><Plus size={16} /> Tạo người dùng</button>
+            <button type="button" className="admin-button admin-button-primary" onClick={handleCreateUser}><Plus size={16} /> Tạo người dùng</button>
           </div>
           <div className="admin-toolbar">
             <label><Search size={16} /><input value={query} onChange={event => { setQuery(event.target.value); setUserPage(1); }} placeholder="Tìm người dùng, email, doanh nghiệp..." /></label>
@@ -629,7 +715,7 @@ export default function AdminPage() {
                 {userRows.map((item, index) => (
                   <tr key={`${item.email}-${index}`}>
                     <td><div className="admin-user-cell"><span>{item.name.charAt(0)}</span><strong>{item.name}</strong></div></td><td>{item.email}</td><td>{item.phone}</td><td>{item.company}</td><td>{item.role}</td><td><StatusBadge value={item.status} /></td><td>{item.lastLogin}</td>
-                    <td><div className="admin-row-actions"><button onClick={handleNotImplemented} className="btn-edit">Sửa</button><button onClick={handleNotImplemented} className="btn-reset"><RotateCcw size={14} /> Đặt lại</button><button onClick={handleNotImplemented} className="btn-lock">{item.status === 'Locked' ? <Unlock size={14} /> : <Lock size={14} />} {item.status === 'Locked' ? 'Kích hoạt' : 'Khóa'}</button></div></td>
+                    <td><div className="admin-row-actions"><button onClick={() => handleEditUser(item.id, item.name, item.email)} className="btn-edit">Sửa</button><button onClick={() => handleResetPassword(item.id)} className="btn-reset"><RotateCcw size={14} /> Đặt lại</button><button onClick={handleNotImplemented} className="btn-lock">{item.status === 'Locked' ? <Unlock size={14} /> : <Lock size={14} />} {item.status === 'Locked' ? 'Kích hoạt' : 'Khóa'}</button></div></td>
                   </tr>
                 ))}
               </tbody>
@@ -641,9 +727,9 @@ export default function AdminPage() {
 
       {active === 'subscriptions' && (
         <section className="admin-card">
-          <div className="admin-card-head"><div><h3>Quản lý gói dịch vụ SaaS</h3><p>Các gói Cơ bản, Tăng trưởng, Doanh nghiệp cùng giới hạn người dùng, đơn hàng, lô sản xuất, xưởng và điểm AI.</p></div><button className="admin-button admin-button-primary" onClick={handleNotImplemented}><Plus size={16} /> Tạo gói</button></div>
+          <div className="admin-card-head"><div><h3>Quản lý gói dịch vụ SaaS</h3><p>Các gói Cơ bản, Tăng trưởng, Doanh nghiệp cùng giới hạn người dùng, đơn hàng, lô sản xuất, xưởng và điểm AI.</p></div><button className="admin-button admin-button-primary" onClick={handleCreatePlan}><Plus size={16} /> Tạo gói</button></div>
           <div className="admin-plan-grid">
-            {plans.map(item => <article className="admin-plan" key={item.name}><h4>{item.name}</h4><strong>{item.price ? money(item.price) : 'Liên hệ'}</strong><span>{item.period}</span><div className="admin-plan-limits"><p>{item.users} người dùng</p><p>{number(item.orders)} đơn hàng</p><p>{number(item.batches)} lô</p><p>{item.workshops} xưởng</p><p>{number(item.ai)} điểm AI</p></div><ul>{item.features.map(feature => <li key={feature}>{feature}</li>)}</ul><div className="admin-row-actions"><button onClick={handleNotImplemented} className="btn-edit">Sửa</button><button onClick={handleNotImplemented} className="btn-delete">Xóa</button></div></article>)}
+            {plans.map(item => <article className="admin-plan" key={item.name}><h4>{item.name}</h4><strong>{item.price ? money(item.price) : 'Liên hệ'}</strong><span>{item.period}</span><div className="admin-plan-limits"><p>{item.users} người dùng</p><p>{number(item.orders)} đơn hàng</p><p>{number(item.batches)} lô</p><p>{item.workshops} xưởng</p><p>{number(item.ai)} điểm AI</p></div><ul>{item.features.map(feature => <li key={feature}>{feature}</li>)}</ul><div className="admin-row-actions"><button onClick={() => handleUpdatePlan(item.id, item.name)} className="btn-edit">Sửa</button><button onClick={() => handleDeletePlan(item.id)} className="btn-delete">Xóa</button></div></article>)}
           </div>
           <div className="admin-feature-table">
             <table className="admin-table"><thead><tr><th>Tính năng</th>{plans.map(item => <th key={item.name}>{item.name}</th>)}</tr></thead><tbody>{featureRows.map(feature => <tr key={feature}><td>{feature}</td>{plans.map((item, index) => <td key={`${item.name}-${feature}`}>{index === 0 && feature.includes('Custom') ? <XCircle size={16} /> : <CheckCircle2 size={16} />}</td>)}</tr>)}</tbody></table>
@@ -692,7 +778,7 @@ export default function AdminPage() {
         <>
           <section className="admin-mini-grid">{aiUsage.map(item => <MiniMetric key={item.label} label={item.label} value={item.value} icon={item.icon} />)}</section>
           <section className="admin-card">
-            <div className="admin-card-head"><div><h3>Quản lý AI</h3><p>Giới hạn sử dụng AI, bật/tắt AI, quản lý điểm và lịch sử AI.</p></div><button className="admin-button admin-button-primary" onClick={handleNotImplemented}><Settings size={16} /> Cấu hình AI</button></div>
+            <div className="admin-card-head"><div><h3>Quản lý AI</h3><p>Giới hạn sử dụng AI, bật/tắt AI, quản lý điểm và lịch sử AI.</p></div><button className="admin-button admin-button-primary" onClick={handleAiConfig}><Settings size={16} /> Cấu hình AI</button></div>
             <div className="admin-ai-controls"><label><input type="checkbox" defaultChecked /> Bật AI toàn hệ thống</label><label><input type="checkbox" defaultChecked /> Giới hạn theo gói</label><label><input type="checkbox" /> Chặn khi vượt chi phí</label></div>
             <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>User</th><th>Email</th><th>Gói AI</th><th>Hết hạn</th></tr></thead><tbody>{adminUsers.length === 0 ? <tr><td colSpan={4} style={{ textAlign: 'center', padding: 24, color: 'var(--text-secondary)' }}>Chưa có user trong hệ thống.</td></tr> : adminUsers.slice(0, 6).map(item => <tr key={item.id}><td>{item.fullName || item.username}</td><td>{item.email || '-'}</td><td>{item.aiPlan || 'free'}</td><td>{item.aiPlanExpiresAt ? formatShortDate(item.aiPlanExpiresAt) : '-'}</td></tr>)}</tbody></table></div>
           </section>

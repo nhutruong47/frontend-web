@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { aiService } from '../services/groupService';
+import { isPaymentRequiredError } from '../services/api';
 import type { AiParseResult } from '../services/groupService';
 import { estimateTokens, formatTokenCount } from '../utils/tokenUsage';
 
@@ -87,6 +88,10 @@ export default function AiAssistantPanel({ onCreateGoal, trialActive, trialDays,
             };
             setMessages(prev => [...prev, aiMsg]);
         } catch (e: any) {
+            if (isPaymentRequiredError(e)) {
+                window.dispatchEvent(new CustomEvent('payment-required'));
+                return;
+            }
             const errorMsg: ChatMessage = {
                 id: Date.now().toString() + '-err',
                 role: 'assistant',

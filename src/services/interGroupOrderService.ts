@@ -61,3 +61,10 @@ export const reviewService = {
     remove: (reviewId: string) =>
         api.delete(`/api/reviews/${reviewId}`).then(r => r.data),
 };
+
+export const manufacturingRequestService = {
+    getAll: () =>
+        api.get<any[]>('/api/manufacturing-requests').then(r => r.data),
+    create: (data: any) =>
+        api.post<any>('/api/manufacturing-requests', data).then(r => r.data),
+};
