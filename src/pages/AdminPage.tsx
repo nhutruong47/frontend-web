@@ -1,37 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import {
   Activity,
   AlertTriangle,
   Building2,
-  CalendarDays,
-  CheckCircle2,
   CreditCard,
   DollarSign,
   Download,
   FileText,
-  Gauge,
   Lock,
   MoreHorizontal,
   Plus,
-  ReceiptText,
   RotateCcw,
   Search,
   ServerCrash,
   ShieldCheck,
-  UserCheck,
-  Users,
-  XCircle
+  Users
 } from 'lucide-react';
 import {
   Area,
   AreaChart,
   CartesianGrid,
-  Cell,
   Line,
   LineChart,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -40,7 +30,7 @@ import {
 
 import { useAuth } from '../context/AuthContext';
 import { adminService } from '../services/adminService';
-import type { AdminOrder, AdminOverview, AdminPayment, AdminTask, AdminTeam, AdminUser } from '../types/types';
+import type { AdminOverview, AdminPayment, AdminTeam, AdminUser } from '../types/types';
 import './AdminPage.css';
 
 type AdminSection =
@@ -63,7 +53,6 @@ const parseDateInput = (value: string, endOfDay = false) => {
   return Number.isNaN(date.getTime()) ? new Date() : date;
 };
 
-const formatInputDate = (date: Date) => date.toISOString().slice(0, 10);
 
 const sidebarModules: Array<{ id: AdminSection; label: string; icon: React.ElementType }> = [
   { id: 'overview', label: 'Tổng quan & Phân tích', icon: Activity },
@@ -222,16 +211,15 @@ export default function AdminPage() {
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [adminTeams, setAdminTeams] = useState<AdminTeam[]>([]);
   const [adminPayments, setAdminPayments] = useState<AdminPayment[]>([]);
-  const [plans, setPlans] = useState<any[]>(initialPlans);
+  const [plans] = useState<any[]>(initialPlans);
   
   const [adminLoading, setAdminLoading] = useState(true);
   const [adminError, setAdminError] = useState('');
   
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('All');
-  const [plan, setPlan] = useState('All');
-  const [revenueFrom, setRevenueFrom] = useState('2026-06-01');
-  const [revenueTo, setRevenueTo] = useState('2026-06-30');
+  const [revenueFrom] = useState('2026-06-01');
+  const [revenueTo] = useState('2026-06-30');
 
   const handleNotImplemented = () => {
     alert('Tính năng này đang được bảo trì hoặc đang trong quá trình phát triển.');
@@ -263,9 +251,7 @@ export default function AdminPage() {
       .finally(() => setAdminLoading(false));
   }, [user?.role]);
 
-  const handleNavClick = (id: AdminSection) => {
-    setSearchParams({ section: id });
-  };
+
 
   const revenueReport = useMemo(() => {
     const fromDate = parseDateInput(revenueFrom);

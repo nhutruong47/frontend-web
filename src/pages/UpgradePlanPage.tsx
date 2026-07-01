@@ -1,10 +1,7 @@
-import { useState } from 'react';
 import {
     CheckCircle2,
-    Smartphone,
-    QrCode,
 } from 'lucide-react';
-import { paymentService, type PaymentMethod } from '../services/paymentService';
+import { paymentService } from '../services/paymentService';
 import './UpgradePlanPage.css';
 
 interface Plan {
