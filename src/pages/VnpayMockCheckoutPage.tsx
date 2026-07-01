@@ -132,12 +132,14 @@ export default function VnpayMockCheckoutPage() {
         setError('');
         try {
             const response = await paymentService.confirmVirtualQrPayment(qrPayment.txnRef);
-            localStorage.setItem('orca-ai-plan', response.planId);
+            if (response.status === 'SUCCESS' || response.status === 'PAID') {
+                localStorage.setItem('orca-ai-plan', response.planId);
+            }
             const params = new URLSearchParams({
                 status: response.status,
                 txnRef: response.txnRef,
                 planId: response.planId,
-                message: `Thanh toán qua ${config.shortLabel} thành công`,
+                message: response.message || `Thanh toán qua ${config.shortLabel} thành công`,
             });
             navigate(`/payment-result?${params.toString()}`);
         } catch (err) {

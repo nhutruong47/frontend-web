@@ -66,14 +66,14 @@ const parseDateInput = (value: string, endOfDay = false) => {
 const formatInputDate = (date: Date) => date.toISOString().slice(0, 10);
 
 const sidebarModules: Array<{ id: AdminSection; label: string; icon: React.ElementType }> = [
-  { id: 'overview', label: 'Dashboard & Analytics', icon: Gauge },
-  { id: 'workspace_requests', label: 'Workspace Requests', icon: UserCheck },
-  { id: 'companies', label: 'Company Management', icon: Building2 },
-  { id: 'users', label: 'User Management', icon: Users },
-  { id: 'subscriptions', label: 'Subscriptions', icon: ReceiptText },
-  { id: 'payments', label: 'Payments', icon: CreditCard },
-  { id: 'reports', label: 'Reports', icon: FileText },
-  { id: 'logs', label: 'System Logs', icon: ServerCrash },
+  { id: 'overview', label: 'Tổng quan & Phân tích', icon: Activity },
+  { id: 'workspace_requests', label: 'Yêu cầu mở xưởng', icon: ShieldCheck },
+  { id: 'companies', label: 'Quản lý doanh nghiệp', icon: Building2 },
+  { id: 'users', label: 'Quản lý người dùng', icon: Users },
+  { id: 'subscriptions', label: 'Gói dịch vụ', icon: CreditCard },
+  { id: 'payments', label: 'Thanh toán & doanh thu', icon: DollarSign },
+  { id: 'reports', label: 'Báo cáo thống kê', icon: FileText },
+  { id: 'logs', label: 'Nhật ký hệ thống', icon: ServerCrash },
 ];
 
 type KpiTone = 'blue' | 'green' | 'amber' | 'violet' | 'rose';
@@ -193,10 +193,10 @@ function StatusBadge({ value }: { value: string }) {
   const lower = value.toLowerCase().replaceAll(' ', '-');
   let type = 'neutral';
   
-  if (['active', 'paid', 'approved', 'published', 'completed'].includes(lower)) type = 'success';
+  if (['active', 'paid', 'approved', 'published', 'completed', 'success'].includes(lower)) type = 'success';
   if (['pending', 'trial', 'processing'].includes(lower)) type = 'warning';
   if (['locked', 'failed', 'rejected', 'suspended', 'canceled', 'rejected_order'].includes(lower)) type = 'danger';
-  if (['admin', 'professional', 'enterprise'].includes(lower)) type = 'info';
+  if (['admin', 'professional', 'enterprise', 'factory_owner'].includes(lower)) type = 'info';
 
   const labels: Record<string, string> = {
     Active: 'Đang hoạt động', Trial: 'Dùng thử', Locked: 'Đã khóa',
@@ -204,8 +204,9 @@ function StatusBadge({ value }: { value: string }) {
     Suspended: 'Tạm đình chỉ',
     PAID: 'Đã thanh toán', FAILED: 'Thất bại', REFUNDED: 'Hoàn tiền',
     Published: 'Công khai', Private: 'Nội bộ',
-    ADMIN: 'Admin', MEMBER: 'Member',
-    free: 'Miễn phí', professional: 'Chuyên nghiệp', enterprise: 'Doanh nghiệp'
+    ADMIN: 'Admin Nền Tảng', MEMBER: 'Thành viên', FACTORY_OWNER: 'Chủ xưởng',
+    free: 'Miễn phí', professional: 'Chuyên nghiệp', enterprise: 'Doanh nghiệp',
+    SUCCESS: 'Thành công'
   };
 
   return <span className={`admin-badge ${type}`}>{labels[value] || value}</span>;
@@ -231,6 +232,10 @@ export default function AdminPage() {
   const [plan, setPlan] = useState('All');
   const [revenueFrom, setRevenueFrom] = useState('2026-06-01');
   const [revenueTo, setRevenueTo] = useState('2026-06-30');
+
+  const handleNotImplemented = () => {
+    alert('Tính năng này đang được bảo trì hoặc đang trong quá trình phát triển.');
+  };
 
   useEffect(() => {
     if (user?.role !== 'ADMIN') {
@@ -307,10 +312,10 @@ export default function AdminPage() {
   }, [adminPayments, revenueFrom, revenueTo]);
 
   const dashboardKpis: KpiItem[] = [
-    { label: 'Total Companies', value: number(adminTeams.length), detail: `+${number(overview.newTeamsThisMonth)} this month`, icon: Building2, tone: 'blue', trend: 'up' },
-    { label: 'Total Users', value: number(adminUsers.length), detail: `+${number(overview.newUsersThisMonth)} this month`, icon: Users, tone: 'violet', trend: 'up' },
-    { label: 'Monthly Revenue', value: money(overview.revenueThisMonth), detail: 'vs last month', icon: DollarSign, tone: 'green', trend: 'up' },
-    { label: 'Pending Workspaces', value: number(adminTeams.filter(t => t.verificationStatus === 'PENDING').length), detail: 'Requires action', icon: AlertTriangle, tone: 'amber' },
+    { label: 'Tổng số doanh nghiệp', value: number(adminTeams.length), detail: `+${number(overview.newTeamsThisMonth)} tháng này`, icon: Building2, tone: 'blue', trend: 'up' },
+    { label: 'Tổng số người dùng', value: number(adminUsers.length), detail: `+${number(overview.newUsersThisMonth)} tháng này`, icon: Users, tone: 'violet', trend: 'up' },
+    { label: 'Doanh thu tháng này', value: money(overview.revenueThisMonth), detail: 'so với tháng trước', icon: DollarSign, tone: 'green', trend: 'up' },
+    { label: 'Xưởng chờ duyệt', value: number(adminTeams.filter(t => t.verificationStatus === 'PENDING').length), detail: 'Cần xử lý', icon: AlertTriangle, tone: 'amber' },
   ];
 
   const systemTrendData = [
@@ -347,8 +352,8 @@ export default function AdminPage() {
     return (
       <div className="admin-access">
         <ShieldCheck size={40} />
-        <h1>Access Denied</h1>
-        <p>You need administrator privileges to view this console.</p>
+        <h1>Từ chối truy cập</h1>
+        <p>Bạn cần quyền Quản trị viên để xem bảng điều khiển này.</p>
       </div>
     );
   }
@@ -357,8 +362,8 @@ export default function AdminPage() {
     return (
       <div className="admin-access">
         <Activity size={40} />
-        <h1>Loading Platform Statistics</h1>
-        <p>Connecting to secure database...</p>
+        <h1>Đang tải thống kê nền tảng</h1>
+        <p>Đang kết nối tới cơ sở dữ liệu bảo mật...</p>
       </div>
     );
   }
@@ -367,7 +372,7 @@ export default function AdminPage() {
     return (
       <div className="admin-access">
         <AlertTriangle size={40} />
-        <h1>Error Loading Dashboard</h1>
+        <h1>Lỗi tải bảng điều khiển</h1>
         <p>{adminError}</p>
       </div>
     );
@@ -375,43 +380,16 @@ export default function AdminPage() {
 
   return (
     <div className="admin-app">
-      <aside className="admin-sidebar">
-        <div className="admin-sidebar-header">
-          <h2>ORCA Admin</h2>
-          <p>Platform Management</p>
-        </div>
-        <nav className="admin-nav">
-          <div className="admin-nav-section">Main Menu</div>
-          {sidebarModules.slice(0, 6).map(tab => {
-            const Icon = tab.icon;
-            return (
-              <button key={tab.id} className={active === tab.id ? 'active' : ''} onClick={() => handleNavClick(tab.id)}>
-                <Icon size={16} /> <span>{tab.label}</span>
-              </button>
-            );
-          })}
-          <div className="admin-nav-section">System</div>
-          {sidebarModules.slice(6).map(tab => {
-            const Icon = tab.icon;
-            return (
-              <button key={tab.id} className={active === tab.id ? 'active' : ''} onClick={() => handleNavClick(tab.id)}>
-                <Icon size={16} /> <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
-
       <main className="admin-main">
         <div className="admin-main-inner">
           <header className="admin-hero">
             <div>
               <h1>{sidebarModules.find(m => m.id === active)?.label || 'Dashboard'}</h1>
-              <p>Manage platform configurations, monitor activity, and support your customers.</p>
+              <p>Quản lý cấu hình nền tảng, theo dõi hoạt động và hỗ trợ khách hàng của bạn.</p>
             </div>
             <div className="admin-hero-actions">
-              {active === 'users' && <button className="admin-button admin-button-primary" onClick={handleCreateUser}><Plus size={16} /> Add User</button>}
-              {active === 'overview' && <button className="admin-button admin-button-secondary"><Download size={16} /> Export Data</button>}
+              {active === 'users' && <button className="admin-button admin-button-primary" onClick={handleCreateUser}><Plus size={16} /> Thêm người dùng</button>}
+              {active === 'overview' && <button className="admin-button admin-button-secondary"><Download size={16} /> Xuất dữ liệu</button>}
             </div>
           </header>
 
@@ -421,7 +399,7 @@ export default function AdminPage() {
                 {dashboardKpis.map(item => <KpiCard key={item.label} item={item} />)}
               </section>
               <section className="admin-grid-2">
-                <ChartPanel title="Revenue Growth (Monthly)">
+                <ChartPanel title="Tăng trưởng doanh thu (Hàng tháng)">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={systemTrendData}>
                       <defs>
@@ -438,7 +416,7 @@ export default function AdminPage() {
                     </AreaChart>
                   </ResponsiveContainer>
                 </ChartPanel>
-                <ChartPanel title="Platform Users & Companies">
+                <ChartPanel title="Người dùng & Công ty">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={systemTrendData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
@@ -458,30 +436,30 @@ export default function AdminPage() {
           {active === 'workspace_requests' && (
             <section className="admin-card">
               <div className="admin-card-head">
-                <div><h3>Pending Approvals</h3><p>Review and verify new company registrations.</p></div>
+                <div><h3>Yêu cầu chờ duyệt</h3><p>Xem xét và xác minh đăng ký công ty mới.</p></div>
               </div>
               <div className="admin-table-wrap">
                 <table className="admin-table">
-                  <thead><tr><th>Company Name</th><th>Owner</th><th>Business Info</th><th>Registration Date</th><th>Status</th><th>Actions</th></tr></thead>
+                  <thead><tr><th>Tên công ty</th><th>Chủ sở hữu</th><th>Thông tin kinh doanh</th><th>Ngày đăng ký</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
                   <tbody>
                     {pendingRequests.length === 0 ? (
-                      <tr><td colSpan={6} style={{textAlign:'center', padding:'32px', color:'#6b7280'}}>No pending requests.</td></tr>
+                      <tr><td colSpan={6} style={{textAlign:'center', padding:'32px', color:'#6b7280'}}>Không có yêu cầu chờ duyệt.</td></tr>
                     ) : pendingRequests.map(item => (
                       <tr key={item.id}>
                         <td><strong>{item.name}</strong></td>
                         <td>{item.ownerName || '-'}</td>
                         <td>
                           <div style={{fontSize:'12px', color:'#6b7280'}}>
-                            <div>License: {item.businessLicense || '-'}</div>
-                            <div>Address: {item.businessAddress || '-'}</div>
+                            <div>GPKD: {item.businessLicense || '-'}</div>
+                            <div>Địa chỉ: {item.businessAddress || '-'}</div>
                           </div>
                         </td>
                         <td>{item.createdAt ? formatShortDate(item.createdAt) : '-'}</td>
                         <td><StatusBadge value={item.verificationStatus || 'PENDING'} /></td>
                         <td>
                           <div className="admin-row-actions">
-                            <button className="admin-button admin-button-primary" onClick={() => updateTeamVerification(item.id, 'APPROVED')} style={{padding:'4px 10px', fontSize:'12px'}}>Approve</button>
-                            <button className="admin-button admin-button-secondary" onClick={() => updateTeamVerification(item.id, 'REJECTED')} style={{padding:'4px 10px', fontSize:'12px'}}>Reject</button>
+                            <button className="admin-button admin-button-primary" onClick={() => updateTeamVerification(item.id, 'APPROVED')} style={{padding:'4px 10px', fontSize:'12px'}}>Duyệt</button>
+                            <button className="admin-button admin-button-secondary" onClick={() => updateTeamVerification(item.id, 'REJECTED')} style={{padding:'4px 10px', fontSize:'12px'}}>Từ chối</button>
                           </div>
                         </td>
                       </tr>
@@ -495,26 +473,26 @@ export default function AdminPage() {
           {active === 'companies' && (
             <section className="admin-card">
               <div className="admin-card-head">
-                <div><h3>Approved Companies</h3><p>Manage all active organizations on the platform.</p></div>
+                <div><h3>Công ty đã duyệt</h3><p>Quản lý tất cả các tổ chức đang hoạt động trên nền tảng.</p></div>
               </div>
               <div className="admin-toolbar">
-                <div className="admin-search-input"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search companies..." /></div>
+                <div className="admin-search-input"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Tìm kiếm công ty..." /></div>
               </div>
               <div className="admin-table-wrap">
                 <table className="admin-table">
-                  <thead><tr><th>Company</th><th>Workspace Code</th><th>Owner</th><th>Members</th><th>Status</th><th>Actions</th></tr></thead>
+                  <thead><tr><th>Công ty</th><th>Mã Workspace</th><th>Chủ sở hữu</th><th>Thành viên</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
                   <tbody>
                     {approvedCompanies.filter(c => c.name.toLowerCase().includes(query.toLowerCase())).map(item => (
                       <tr key={item.id}>
                         <td><strong>{item.name}</strong></td>
-                        <td><code style={{background:'#f3f4f6', padding:'2px 6px', borderRadius:'4px', fontSize:'12px'}}>{item.id.slice(0,8)}</code></td>
+                        <td><code style={{background:'rgba(255,255,255,0.1)', color: 'inherit', padding:'4px 8px', borderRadius:'6px', fontSize:'12px', fontWeight: 600, letterSpacing: '0.5px'}}>{item.id.slice(0,8)}</code></td>
                         <td>{item.ownerName || '-'}</td>
                         <td>{item.memberCount} users</td>
                         <td><StatusBadge value="Active" /></td>
                         <td>
                           <div className="admin-row-actions">
-                            <button className="btn-icon" title="View"><FileText size={16}/></button>
-                            <button className="btn-icon danger" title="Suspend"><Lock size={16}/></button>
+                            <button className="btn-icon" title="Xem" onClick={handleNotImplemented}><FileText size={16}/></button>
+                            <button className="btn-icon danger" title="Đình chỉ" onClick={handleNotImplemented}><Lock size={16}/></button>
                           </div>
                         </td>
                       </tr>
@@ -528,17 +506,22 @@ export default function AdminPage() {
           {active === 'users' && (
             <section className="admin-card">
               <div className="admin-card-head">
-                <div><h3>Platform Users</h3><p>Manage all registered accounts across all companies.</p></div>
+                <div><h3>Người dùng nền tảng</h3><p>Quản lý tất cả tài khoản đã đăng ký trên hệ thống.</p></div>
               </div>
               <div className="admin-toolbar">
-                <div className="admin-search-input"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by name, email..." /></div>
-                <select className="admin-select" value={status} onChange={e=>setStatus(e.target.value)}><option value="All">All Roles</option><option value="ADMIN">Admin</option><option value="MEMBER">Member</option></select>
+                <div className="admin-search-input"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Tìm kiếm tên, email..." /></div>
+                <select className="admin-select" value={status} onChange={e=>setStatus(e.target.value)}>
+                  <option value="All">Tất cả vai trò</option>
+                  <option value="ADMIN">Quản trị viên</option>
+                  <option value="FACTORY_OWNER">Chủ xưởng</option>
+                  <option value="MEMBER">Thành viên</option>
+                </select>
               </div>
               <div className="admin-table-wrap">
                 <table className="admin-table">
-                  <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr></thead>
+                  <thead><tr><th>Người dùng</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
                   <tbody>
-                    {adminUsers.filter(u => `${u.fullName} ${u.email}`.toLowerCase().includes(query.toLowerCase())).slice(0,10).map(item => (
+                    {adminUsers.filter(u => `${u.fullName} ${u.email}`.toLowerCase().includes(query.toLowerCase()) && (status === 'All' || u.role === status)).slice(0,10).map(item => (
                       <tr key={item.id}>
                         <td><div className="admin-user-cell"><div className="admin-user-avatar">{(item.fullName || item.username || '?').charAt(0)}</div><strong>{item.fullName || item.username}</strong></div></td>
                         <td>{item.email}</td>
@@ -547,8 +530,8 @@ export default function AdminPage() {
                         <td>{item.createdAt ? formatShortDate(item.createdAt) : '-'}</td>
                         <td>
                           <div className="admin-row-actions">
-                            <button className="btn-icon" title="Reset Password"><RotateCcw size={16}/></button>
-                            <button className="btn-icon danger" title="Lock Account"><Lock size={16}/></button>
+                            <button className="btn-icon" title="Cấp lại mật khẩu" onClick={handleNotImplemented}><RotateCcw size={16}/></button>
+                            <button className="btn-icon danger" title="Khóa tài khoản" onClick={handleNotImplemented}><Lock size={16}/></button>
                           </div>
                         </td>
                       </tr>
@@ -557,7 +540,7 @@ export default function AdminPage() {
                 </table>
               </div>
               <div className="admin-pagination">
-                <span>Showing 10 records</span>
+                <span>Đang hiển thị 10 bản ghi</span>
                 <div className="admin-pagination-buttons">
                   <button disabled>&lt;</button>
                   <button className="active">1</button>
@@ -571,22 +554,22 @@ export default function AdminPage() {
           {active === 'subscriptions' && (
             <>
               <div className="admin-hero" style={{marginBottom: 16}}>
-                <div><h3>Subscription Plans</h3><p>Manage SaaS pricing tiers, limits, and features.</p></div>
-                <button className="admin-button admin-button-primary"><Plus size={16} /> Create Plan</button>
+                <div><h3>Gói dịch vụ</h3><p>Quản lý các mức giá, giới hạn và tính năng.</p></div>
+                <button className="admin-button admin-button-primary" onClick={handleNotImplemented}><Plus size={16} /> Tạo gói mới</button>
               </div>
               <section className="admin-plan-grid">
                 {plans.map(item => (
                   <article className="admin-plan" key={item.name}>
                     <h4>{item.name}</h4>
-                    <div className="price">{item.price ? money(item.price) : 'Custom'} <span style={{fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)'}}>/ {item.period}</span></div>
+                    <div className="price">{item.price ? money(item.price) : 'Liên hệ'} <span style={{fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)'}}>/ {item.period}</span></div>
                     <div className="admin-plan-limits">
-                      <div className="admin-plan-limit-item"><span>Max Users</span><strong>{number(item.users)}</strong></div>
-                      <div className="admin-plan-limit-item"><span>Max Orders</span><strong>{number(item.orders)}</strong></div>
-                      <div className="admin-plan-limit-item"><span>Workshops</span><strong>{item.workshops}</strong></div>
-                      <div className="admin-plan-limit-item"><span>AI Points</span><strong>{number(item.ai)}</strong></div>
+                      <div className="admin-plan-limit-item"><span>Tối đa người dùng</span><strong>{number(item.users)}</strong></div>
+                      <div className="admin-plan-limit-item"><span>Tối đa đơn hàng</span><strong>{number(item.orders)}</strong></div>
+                      <div className="admin-plan-limit-item"><span>Số xưởng con</span><strong>{item.workshops}</strong></div>
+                      <div className="admin-plan-limit-item"><span>Điểm AI</span><strong>{number(item.ai)}</strong></div>
                     </div>
                     <div className="admin-row-actions" style={{marginTop: 20}}>
-                      <button className="admin-button admin-button-secondary" style={{flex:1}}>Edit Plan</button>
+                      <button className="admin-button admin-button-secondary" style={{width:'100%'}} onClick={handleNotImplemented}>Chỉnh sửa</button>
                     </div>
                   </article>
                 ))}
@@ -597,16 +580,16 @@ export default function AdminPage() {
           {active === 'payments' && (
             <>
               <section className="admin-mini-grid">
-                <MiniMetric label="Total Revenue" value={money(revenueReport.total)} icon={DollarSign} />
-                <MiniMetric label="Pending Transactions" value={money(revenueReport.pending)} icon={AlertTriangle} />
+                <MiniMetric label="Tổng doanh thu" value={money(revenueReport.total)} icon={DollarSign} />
+                <MiniMetric label="Đang chờ xử lý" value={money(revenueReport.pending)} icon={AlertTriangle} />
               </section>
               <section className="admin-card">
                 <div className="admin-card-head">
-                  <div><h3>Payment History</h3><p>View all transactions across the platform.</p></div>
+                  <div><h3>Lịch sử giao dịch</h3><p>Xem tất cả các thanh toán trên toàn hệ thống.</p></div>
                 </div>
                 <div className="admin-table-wrap">
                   <table className="admin-table">
-                    <thead><tr><th>Txn ID</th><th>Company/User</th><th>Plan</th><th>Amount</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+                    <thead><tr><th>Mã GD</th><th>Công ty/Người dùng</th><th>Gói</th><th>Số tiền</th><th>Ngày tháng</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
                     <tbody>
                       {revenueReport.rangeInvoices.slice(0,10).map(item => (
                         <tr key={item.id}>
@@ -616,7 +599,7 @@ export default function AdminPage() {
                           <td>{money(Number(item.amount))}</td>
                           <td>{formatShortDate(paymentDate(item))}</td>
                           <td><StatusBadge value={String(item.status)} /></td>
-                          <td><button className="admin-button admin-button-secondary" style={{padding:'4px 8px', fontSize:12}}>Receipt</button></td>
+                          <td><button className="admin-button admin-button-secondary" style={{padding:'4px 8px', fontSize:12}}>Biên lai</button></td>
                         </tr>
                       ))}
                     </tbody>
@@ -629,15 +612,15 @@ export default function AdminPage() {
           {active === 'reports' && (
             <section className="admin-card">
               <div className="admin-card-head">
-                <div><h3>Data Export & Reports</h3><p>Generate analytical reports for platform performance.</p></div>
+                <div><h3>Xuất dữ liệu & Báo cáo</h3><p>Tạo các báo cáo phân tích hiệu suất của nền tảng.</p></div>
               </div>
               <div className="admin-table-wrap">
                 <table className="admin-table">
-                  <thead><tr><th>Report Type</th><th>Description</th><th>Last Generated</th><th>Action</th></tr></thead>
+                  <thead><tr><th>Loại báo cáo</th><th>Mô tả</th><th>Tạo lần cuối</th><th>Thao tác</th></tr></thead>
                   <tbody>
-                    <tr><td><strong>Revenue Report</strong></td><td>Monthly breakdown of all SaaS payments</td><td>Today, 10:30 AM</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> CSV</button></td></tr>
-                    <tr><td><strong>Company Growth</strong></td><td>New company registrations and churn rate</td><td>Yesterday, 14:00 PM</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> Excel</button></td></tr>
-                    <tr><td><strong>Platform Usage</strong></td><td>Storage, AI tokens, and API requests usage</td><td>2 days ago</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> PDF</button></td></tr>
+                    <tr><td><strong>Báo cáo doanh thu</strong></td><td>Thống kê doanh thu thanh toán SaaS hàng tháng</td><td>Hôm nay, 10:30 AM</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> CSV</button></td></tr>
+                    <tr><td><strong>Tăng trưởng công ty</strong></td><td>Lượt đăng ký công ty mới và tỷ lệ rời bỏ</td><td>Hôm qua, 14:00 PM</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> Excel</button></td></tr>
+                    <tr><td><strong>Mức độ sử dụng</strong></td><td>Sử dụng bộ nhớ, điểm AI và yêu cầu API</td><td>2 ngày trước</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> PDF</button></td></tr>
                   </tbody>
                 </table>
               </div>
@@ -647,18 +630,18 @@ export default function AdminPage() {
           {active === 'logs' && (
             <section className="admin-card">
               <div className="admin-card-head">
-                <div><h3>System & Security Logs</h3><p>Monitor platform activity and security events.</p></div>
+                <div><h3>Nhật ký hệ thống</h3><p>Theo dõi hoạt động và bảo mật của nền tảng.</p></div>
                 <div className="admin-toolbar" style={{margin:0}}>
-                  <select className="admin-select"><option>All Event Types</option><option>Login</option><option>Payment</option><option>Security</option></select>
+                  <select className="admin-select"><option>Tất cả sự kiện</option><option>Đăng nhập</option><option>Thanh toán</option><option>Bảo mật</option></select>
                 </div>
               </div>
               <div className="admin-table-wrap">
                 <table className="admin-table">
-                  <thead><tr><th>Timestamp</th><th>Event Type</th><th>Actor</th><th>IP Address</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Thời gian</th><th>Loại sự kiện</th><th>Người thực hiện</th><th>Địa chỉ IP</th><th>Trạng thái</th></tr></thead>
                   <tbody>
-                    <tr><td>{formatShortDate(new Date())} {formatTime(new Date().toISOString())}</td><td><strong>Admin Login</strong></td><td>john.admin</td><td>192.168.1.1</td><td><StatusBadge value="Active" /></td></tr>
-                    <tr><td>{formatShortDate(new Date())} {formatTime(new Date(Date.now() - 3600000).toISOString())}</td><td><strong>Payment Refund</strong></td><td>system</td><td>-</td><td><StatusBadge value="Active" /></td></tr>
-                    <tr><td>{formatShortDate(new Date())} {formatTime(new Date(Date.now() - 7200000).toISOString())}</td><td><strong>Failed Login</strong></td><td>unknown</td><td>10.0.0.45</td><td><StatusBadge value="Failed" /></td></tr>
+                    <tr><td>{formatShortDate(new Date())} {formatTime(new Date().toISOString())}</td><td><strong>Đăng nhập Admin</strong></td><td>john.admin</td><td>192.168.1.1</td><td><StatusBadge value="SUCCESS" /></td></tr>
+                    <tr><td>{formatShortDate(new Date())} {formatTime(new Date(Date.now() - 3600000).toISOString())}</td><td><strong>Hoàn tiền</strong></td><td>system</td><td>-</td><td><StatusBadge value="SUCCESS" /></td></tr>
+                    <tr><td>{formatShortDate(new Date())} {formatTime(new Date(Date.now() - 7200000).toISOString())}</td><td><strong>Đăng nhập thất bại</strong></td><td>unknown</td><td>10.0.0.45</td><td><StatusBadge value="FAILED" /></td></tr>
                   </tbody>
                 </table>
               </div>

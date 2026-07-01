@@ -76,28 +76,20 @@ const plans: Plan[] = [
 ];
 
 export default function UpgradePlanPage() {
-    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(() => {
-        const saved = localStorage.getItem('orca-payment-method');
-        return saved === 'MB_BANK' || saved === 'VNPAY' || saved === 'PAYOS' ? (saved as PaymentMethod) : 'PAYOS';
-    });
 
     const handleSelectPlan = async (plan: Plan) => {
         if (plan.id === 'starter') {
             return;
         }
         localStorage.setItem('orca-ai-plan-pending', plan.id);
-        localStorage.setItem('orca-payment-method', paymentMethod);
+        localStorage.setItem('orca-payment-method', 'PAYOS');
         
-        if (paymentMethod === 'PAYOS') {
-            try {
-                const res = await paymentService.createPayosPayment(plan.id);
-                window.location.href = res.checkoutUrl;
-            } catch (err) {
-                console.error(err);
-                alert('Có lỗi xảy ra khi tạo link thanh toán PayOS. Vui lòng thử lại.');
-            }
-        } else {
-            window.location.href = `/vnpay-mock-checkout?planId=${plan.id}&method=${paymentMethod}`;
+        try {
+            const res = await paymentService.createPayosPayment(plan.id);
+            window.location.href = res.checkoutUrl;
+        } catch (err) {
+            console.error(err);
+            alert('Có lỗi xảy ra khi tạo link thanh toán PayOS. Vui lòng thử lại.');
         }
     };
 
@@ -108,32 +100,7 @@ export default function UpgradePlanPage() {
                 <p>Chọn gói phù hợp để tối ưu quy trình và nâng cao năng suất nhà máy của bạn.</p>
             </section>
 
-            <section className="pricing-payment-methods" aria-label="Phương thức thanh toán">
-                <button
-                    type="button"
-                    className={paymentMethod === 'PAYOS' ? 'active payos' : 'payos'}
-                    onClick={() => setPaymentMethod('PAYOS')}
-                >
-                    <QrCode size={18} />
-                    <span>PayOS (VietQR)</span>
-                </button>
-                <button
-                    type="button"
-                    className={paymentMethod === 'MB_BANK' ? 'active mb-bank' : 'mb-bank'}
-                    onClick={() => setPaymentMethod('MB_BANK')}
-                >
-                    <Smartphone size={18} />
-                    <span>MB Bank</span>
-                </button>
-                <button
-                    type="button"
-                    className={paymentMethod === 'VNPAY' ? 'active vnpay' : 'vnpay'}
-                    onClick={() => setPaymentMethod('VNPAY')}
-                >
-                    <QrCode size={18} />
-                    <span>VNPay QR</span>
-                </button>
-            </section>
+
 
             <section className="pricing-grid">
                 {plans.map((plan) => {

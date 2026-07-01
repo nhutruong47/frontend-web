@@ -15,6 +15,9 @@ export default function Sidebar() {
     const displayPlan = user?.aiPlan || 'free';
 
     const getPlanColor = (plan: string) => {
+        if (user?.role === 'ADMIN') {
+            return { bg: 'transparent', text: '#8b5cf6', label: 'Platform Admin' };
+        }
         switch (plan.toLowerCase()) {
             case 'free': return { bg: 'transparent', text: '#9ca3af', label: 'Miễn phí' };
             case 'professional':
@@ -84,15 +87,14 @@ export default function Sidebar() {
     }, [user]);
 
     const adminNavItems = [
-        { path: '/admin?section=overview', label: 'Tổng quan', icon: 'speedometer-outline' },
-        { path: '/admin?section=businesses', label: 'Doanh nghiệp', icon: 'business-outline' },
-        { path: '/admin?section=users', label: 'Người dùng', icon: 'people-outline' },
+        { path: '/admin?section=overview', label: 'Tổng quan & Phân tích', icon: 'speedometer-outline' },
+        { path: '/admin?section=workspace_requests', label: 'Yêu cầu mở xưởng', icon: 'person-add-outline' },
+        { path: '/admin?section=companies', label: 'Quản lý doanh nghiệp', icon: 'business-outline' },
+        { path: '/admin?section=users', label: 'Quản lý người dùng', icon: 'people-outline' },
         { path: '/admin?section=subscriptions', label: 'Gói dịch vụ', icon: 'receipt-outline' },
-        { path: '/admin?section=billing', label: 'Thanh toán & chi phí', icon: 'card-outline' },
-        { path: '/admin?section=ai', label: 'Sử dụng AI', icon: 'hardware-chip-outline' },
-        { path: '/admin?section=support', label: 'Trung tâm hỗ trợ', icon: 'help-buoy-outline' },
-        { path: '/admin?section=notifications', label: 'Trung tâm thông báo', icon: 'notifications-outline' },
-        { path: '/admin?section=audit', label: 'Nhật ký kiểm toán', icon: 'shield-checkmark-outline' },
+        { path: '/admin?section=payments', label: 'Thanh toán & doanh thu', icon: 'card-outline' },
+        { path: '/admin?section=reports', label: 'Báo cáo thống kê', icon: 'document-text-outline' },
+        { path: '/admin?section=logs', label: 'Nhật ký hệ thống', icon: 'shield-checkmark-outline' },
     ];
 
     const navItems = user?.role === 'ADMIN' ? adminNavItems : [

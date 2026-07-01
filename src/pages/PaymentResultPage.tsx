@@ -8,16 +8,23 @@ export default function PaymentResultPage() {
     const [searchParams] = useSearchParams();
     const { fetchUser } = useAuth();
     const status = searchParams.get('status');
-    const txnRef = searchParams.get('txnRef');
-    const planId = searchParams.get('planId');
+    const txnRef = searchParams.get('txnRef') || searchParams.get('orderCode');
+    const planId = searchParams.get('planId') || localStorage.getItem('orca-ai-plan-pending') || localStorage.getItem('orca-ai-plan');
     const message = searchParams.get('message');
-    const success = status === 'SUCCESS';
+    const cancel = searchParams.get('cancel');
+    const code = searchParams.get('code');
+    
+    const success = status === 'SUCCESS' || status === 'PAID' || (code === '00' && cancel !== 'true');
 
     useEffect(() => {
         if (success) {
             fetchUser();
+            if (!sessionStorage.getItem(`payment_alert_${txnRef}`)) {
+                alert('🎉 Thanh toán thành công! Gói AI của bạn đã được kích hoạt.');
+                sessionStorage.setItem(`payment_alert_${txnRef}`, 'true');
+            }
         }
-    }, [success, fetchUser]);
+    }, [success, fetchUser, txnRef]);
 
     return (
         <div className="payment-result-page">
@@ -25,7 +32,7 @@ export default function PaymentResultPage() {
                 <div className="payment-result-icon">
                     {success ? <CheckCircle2 size={34} /> : <CircleAlert size={34} />}
                 </div>
-                <span className="payment-result-kicker">VNPAY</span>
+                <span className="payment-result-kicker">PAYOS</span>
                 <h1>{success ? 'Thanh toán thành công' : 'Thanh toán chưa hoàn tất'}</h1>
                 <p>{message || (success ? 'Gói AI của bạn đã được kích hoạt.' : 'Giao dịch bị hủy hoặc không hợp lệ.')}</p>
 
