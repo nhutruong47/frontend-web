@@ -3,38 +3,29 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Activity,
   AlertTriangle,
-  BellRing,
-  Brain,
   Building2,
   CalendarDays,
   CheckCircle2,
   CreditCard,
   DollarSign,
   Download,
-  
-  Filter,
+  FileText,
   Gauge,
-  GitBranch,
-  
   Lock,
   MoreHorizontal,
   Plus,
   ReceiptText,
   RotateCcw,
   Search,
-  Settings,
+  ServerCrash,
   ShieldCheck,
-  ShoppingCart,
-  Unlock,
+  UserCheck,
   Users,
-  
   XCircle
 } from 'lucide-react';
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
   CartesianGrid,
   Cell,
   Line,
@@ -54,14 +45,13 @@ import './AdminPage.css';
 
 type AdminSection =
   | 'overview'
-  | 'businesses'
+  | 'workspace_requests'
+  | 'companies'
   | 'users'
   | 'subscriptions'
-  | 'billing'
-  | 'ai'
-  | 'support';
-
-
+  | 'payments'
+  | 'reports'
+  | 'logs';
 
 const money = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
@@ -75,17 +65,18 @@ const parseDateInput = (value: string, endOfDay = false) => {
 
 const formatInputDate = (date: Date) => date.toISOString().slice(0, 10);
 
-const tabs: Array<{ id: AdminSection; label: string; icon: React.ElementType }> = [
-  { id: 'overview', label: 'Tổng quan', icon: Gauge },
-  { id: 'businesses', label: 'Doanh nghiệp', icon: Building2 },
-  { id: 'users', label: 'Người dùng', icon: Users },
-  { id: 'subscriptions', label: 'Gói dịch vụ', icon: ReceiptText },
-  { id: 'billing', label: 'Thanh toán', icon: CreditCard },
-  { id: 'ai', label: 'Sử dụng AI', icon: Brain },
-  { id: 'support', label: 'Hỗ trợ', icon: BellRing }
+const sidebarModules: Array<{ id: AdminSection; label: string; icon: React.ElementType }> = [
+  { id: 'overview', label: 'Dashboard & Analytics', icon: Gauge },
+  { id: 'workspace_requests', label: 'Workspace Requests', icon: UserCheck },
+  { id: 'companies', label: 'Company Management', icon: Building2 },
+  { id: 'users', label: 'User Management', icon: Users },
+  { id: 'subscriptions', label: 'Subscriptions', icon: ReceiptText },
+  { id: 'payments', label: 'Payments', icon: CreditCard },
+  { id: 'reports', label: 'Reports', icon: FileText },
+  { id: 'logs', label: 'System Logs', icon: ServerCrash },
 ];
 
-type KpiTone = 'coffee' | 'blue' | 'amber' | 'green' | 'violet';
+type KpiTone = 'blue' | 'green' | 'amber' | 'violet' | 'rose';
 
 type KpiItem = {
   label: string;
@@ -93,6 +84,7 @@ type KpiItem = {
   detail: string;
   icon: React.ElementType;
   tone: KpiTone;
+  trend?: 'up' | 'down';
 };
 
 const emptyOverview: AdminOverview = {
@@ -133,21 +125,10 @@ const emptyOverview: AdminOverview = {
   recentTeams: [],
 };
 
-const realDataNote = 'Từ dữ liệu hệ thống';
-
-
-
-
-
 const getDate = (value: string | null | undefined) => {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
-};
-
-const sameMonth = (value: string | null | undefined, monthDate: Date) => {
-  const date = getDate(value);
-  return Boolean(date && date.getFullYear() === monthDate.getFullYear() && date.getMonth() === monthDate.getMonth());
 };
 
 const paymentDate = (payment: AdminPayment) => getDate(payment.paidAt || payment.createdAt);
@@ -157,40 +138,28 @@ const formatShortDate = (value: Date | string | null | undefined) => {
   return date ? date.toLocaleDateString('vi-VN') : '-';
 };
 
+const formatTime = (value: string | null | undefined) => {
+  const date = getDate(value);
+  return date ? date.toLocaleTimeString('vi-VN') : '-';
+};
+
 const paymentCustomerName = (payment: AdminPayment) =>
   payment.fullName || payment.username || payment.email || 'Không rõ người dùng';
-
-const buildKpis = (overview: AdminOverview): KpiItem[] => [
-  { label: 'Doanh nghiệp / xưởng', value: number(overview.totalTeams), detail: realDataNote, icon: Building2, tone: 'coffee' },
-  { label: 'Tổng người dùng', value: number(overview.totalUsers), detail: realDataNote, icon: Users, tone: 'blue' },
-  { label: 'Đơn đang xử lý', value: number(overview.activeOrders + overview.activeProductionOrders), detail: 'Đơn liên xưởng + đơn sản xuất', icon: ShoppingCart, tone: 'amber' },
-  { label: 'Batch sản xuất', value: number(overview.totalBatches), detail: `${number(overview.activeBatches)} batch đang chạy`, icon: GitBranch, tone: 'green' }
-];
 
 const initialPlans = [
   { name: 'Chuyên nghiệp', price: 129000, period: 'Tháng', users: 30, orders: 1000, batches: 5000, workshops: 5, ai: 40000, features: ['Cảnh báo công việc', 'Cảnh báo nguyên liệu', 'Phân tích hiệu suất', 'Phát hiện điểm nghẽn'] },
   { name: 'Doanh nghiệp', price: 249000, period: 'Tháng', users: 500, orders: 99999, batches: 99999, workshops: 50, ai: 500000, features: ['Kế hoạch dài hạn', 'Dự báo nhu cầu', 'Mô phỏng kịch bản', 'Quản lý nhiều xưởng'] }
 ];
 
-const featureRows = [
-  'Quản lý đơn hàng',
-  'Theo dõi lô sản xuất',
-  'Cảnh báo công việc',
-  'Cảnh báo nguyên liệu',
-  'Kế hoạch dài hạn',
-  'Mô phỏng kịch bản',
-  'Trợ lý AI'
-];
-
 function KpiCard({ item }: { item: KpiItem }) {
   const Icon = item.icon;
   return (
     <article className={`admin-kpi admin-kpi-${item.tone}`}>
-      <div className="admin-kpi-icon"><Icon size={20} /></div>
-      <div>
+      <div className="admin-kpi-icon"><Icon size={22} /></div>
+      <div className="admin-kpi-content">
         <span>{item.label}</span>
         <strong>{item.value}</strong>
-        <small>{item.detail}</small>
+        <small className={item.trend === 'up' ? 'positive' : item.trend === 'down' ? 'negative' : ''}>{item.detail}</small>
       </div>
     </article>
   );
@@ -200,8 +169,10 @@ function MiniMetric({ label, value, icon: Icon }: { label: string; value: string
   return (
     <article className="admin-mini-metric">
       <Icon size={18} />
-      <span>{label}</span>
-      <strong>{value}</strong>
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
     </article>
   );
 }
@@ -211,7 +182,7 @@ function ChartPanel({ title, children }: { title: string; children: React.ReactN
     <section className="admin-card admin-chart-card">
       <div className="admin-card-head">
         <h3>{title}</h3>
-        <button type="button" className="admin-icon-button"><MoreHorizontal size={16} /></button>
+        <button type="button" className="btn-icon"><MoreHorizontal size={16} /></button>
       </div>
       <div className="admin-chart">{children}</div>
     </section>
@@ -219,48 +190,47 @@ function ChartPanel({ title, children }: { title: string; children: React.ReactN
 }
 
 function StatusBadge({ value }: { value: string }) {
+  const lower = value.toLowerCase().replaceAll(' ', '-');
+  let type = 'neutral';
+  
+  if (['active', 'paid', 'approved', 'published', 'completed'].includes(lower)) type = 'success';
+  if (['pending', 'trial', 'processing'].includes(lower)) type = 'warning';
+  if (['locked', 'failed', 'rejected', 'suspended', 'canceled', 'rejected_order'].includes(lower)) type = 'danger';
+  if (['admin', 'professional', 'enterprise'].includes(lower)) type = 'info';
+
   const labels: Record<string, string> = {
-    Critical: 'Nghiêm trọng',
-    High: 'Cao',
-    Medium: 'Trung bình',
-    Low: 'Thấp',
-    Active: 'Đang hoạt động',
-    Trial: 'Dùng thử',
-    Locked: 'Đã khóa',
-    APPROVED: 'Đã duyệt',
-    PENDING: 'Chờ duyệt',
-    REJECTED: 'Từ chối',
-    ACCEPTED: 'Đã nhận',
-    COMPLETED: 'Hoàn thành',
-    CANCELED: 'Đã hủy',
-    REJECTED_ORDER: 'Từ chối',
-    free: 'Miễn phí',
+    Active: 'Đang hoạt động', Trial: 'Dùng thử', Locked: 'Đã khóa',
+    APPROVED: 'Đã duyệt', PENDING: 'Chờ duyệt', REJECTED: 'Từ chối',
+    Suspended: 'Tạm đình chỉ',
+    PAID: 'Đã thanh toán', FAILED: 'Thất bại', REFUNDED: 'Hoàn tiền',
+    Published: 'Công khai', Private: 'Nội bộ',
+    ADMIN: 'Admin', MEMBER: 'Member',
+    free: 'Miễn phí', professional: 'Chuyên nghiệp', enterprise: 'Doanh nghiệp'
   };
-  return <span className={`admin-badge admin-badge-${value.toLowerCase().replaceAll(' ', '-')}`}>{labels[value] || value}</span>;
+
+  return <span className={`admin-badge ${type}`}>{labels[value] || value}</span>;
 }
 
 export default function AdminPage() {
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const sectionParam = searchParams.get('section') as AdminSection | null;
-  const active: AdminSection = tabs.some(tab => tab.id === sectionParam) ? sectionParam! : 'overview';
+  const active: AdminSection = sidebarModules.some(tab => tab.id === sectionParam) ? sectionParam! : 'overview';
+  
   const [overview, setOverview] = useState<AdminOverview>(emptyOverview);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [adminTeams, setAdminTeams] = useState<AdminTeam[]>([]);
-  const [adminOrders, setAdminOrders] = useState<AdminOrder[]>([]);
-  const [adminTasks, setAdminTasks] = useState<AdminTask[]>([]);
   const [adminPayments, setAdminPayments] = useState<AdminPayment[]>([]);
   const [plans, setPlans] = useState<any[]>(initialPlans);
+  
   const [adminLoading, setAdminLoading] = useState(true);
   const [adminError, setAdminError] = useState('');
+  
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('All');
   const [plan, setPlan] = useState('All');
-  const [revenueFrom, setRevenueFrom] = useState('2026-05-01');
+  const [revenueFrom, setRevenueFrom] = useState('2026-06-01');
   const [revenueTo, setRevenueTo] = useState('2026-06-30');
-  const [userPage, setUserPage] = useState(1);
-  
-  
 
   useEffect(() => {
     if (user?.role !== 'ADMIN') {
@@ -274,16 +244,12 @@ export default function AdminPage() {
       adminService.getOverview(),
       adminService.getUsers(),
       adminService.getTeams(),
-      adminService.getOrders(),
-      adminService.getTasks(),
       adminService.getPayments(),
     ])
-      .then(([overviewData, userData, teamData, orderData, taskData, paymentData]) => {
+      .then(([overviewData, userData, teamData, paymentData]) => {
         setOverview({ ...emptyOverview, ...overviewData });
         setAdminUsers(userData || []);
         setAdminTeams(teamData || []);
-        setAdminOrders(orderData || []);
-        setAdminTasks(taskData || []);
         setAdminPayments(paymentData || []);
       })
       .catch(() => {
@@ -292,180 +258,8 @@ export default function AdminPage() {
       .finally(() => setAdminLoading(false));
   }, [user?.role]);
 
-  const kpis = useMemo(() => buildKpis(overview), [overview]);
-
-  const systemTrendData = useMemo(() => {
-    const now = new Date();
-    return Array.from({ length: 6 }, (_, offset) => {
-      const monthDate = new Date(now.getFullYear(), now.getMonth() - (5 - offset), 1);
-      return {
-        month: `T${monthDate.getMonth() + 1}`,
-        users: adminUsers.filter(item => sameMonth(item.createdAt, monthDate)).length,
-        teams: adminTeams.filter(item => sameMonth(item.createdAt, monthDate)).length,
-        orders: adminOrders.filter(item => sameMonth(item.createdAt, monthDate)).length,
-        tasks: adminTasks.filter(item => sameMonth(item.createdAt, monthDate)).length,
-      };
-    });
-  }, [adminUsers, adminTeams, adminOrders, adminTasks]);
-
-  const aiUsage = useMemo(() => {
-    const paidUsers = adminUsers.filter(item => item.aiPlan && item.aiPlan !== 'free');
-    const freeUsers = adminUsers.filter(item => !item.aiPlan || item.aiPlan === 'free');
-    const planCount = new Set(adminUsers.map(item => item.aiPlan || 'free')).size;
-    return [
-      { label: 'Tổng user', value: number(adminUsers.length), icon: Users },
-      { label: 'User có gói AI', value: number(paidUsers.length), icon: Brain },
-      { label: 'User gói free', value: number(freeUsers.length), icon: Gauge },
-      { label: 'Loại gói đang có', value: number(planCount), icon: ReceiptText },
-    ];
-  }, [adminUsers]);
-
-  const userRows = useMemo(() => {
-    return adminUsers
-      .map(item => ({
-        id: item.id,
-        name: item.fullName || item.username,
-        email: item.email,
-        phone: item.chipId || '-',
-        company: '-',
-        role: item.role,
-        status: item.aiPlan || 'free',
-        lastLogin: item.createdAt ? formatShortDate(item.createdAt) : '-'
-      }))
-      .filter(item => `${item.name} ${item.email} ${item.role}`.toLowerCase().includes(query.toLowerCase()))
-      .slice((userPage - 1) * 6, userPage * 6);
-  }, [adminUsers, query, userPage]);
-
-  const businessRows = adminTeams.map(item => ({
-    id: item.id,
-    name: item.name,
-    code: item.id.slice(0, 8),
-    owner: item.ownerName || '-',
-    description: item.description || '',
-    email: '-',
-    phone: '-',
-    employees: item.memberCount,
-    orders: item.totalOrders,
-    batches: 0,
-    plan: '-',
-    date: item.createdAt ? formatShortDate(item.createdAt) : '-',
-    status: item.published ? 'Published' : 'Private',
-    verificationStatus: item.verificationStatus || 'NOT_SUBMITTED',
-    businessLicense: item.businessLicense || '',
-    businessAddress: item.businessAddress || '',
-    websiteUrl: item.websiteUrl || '',
-    certificationDocument: item.certificationDocument || '',
-    verificationRejectReason: item.verificationRejectReason || ''
-  })).filter(item => {
-    const matchesText = `${item.name} ${item.code} ${item.owner}`.toLowerCase().includes(query.toLowerCase());
-    const matchesStatus = status === 'All' || item.status === status;
-    const matchesPlan = plan === 'All' || item.plan === plan;
-    return matchesText && matchesStatus && matchesPlan;
-  });
-
-  const handleNotImplemented = () => {
-    const el = document.createElement('div');
-    el.textContent = '🚧 Chức năng đang được phát triển';
-    Object.assign(el.style, { position:'fixed',top:'20px',left:'50%',transform:'translateX(-50%)',background:'#333',color:'#fff',padding:'12px 24px',borderRadius:'10px',zIndex:'9999',fontSize:'14px',fontWeight:'500',boxShadow:'0 4px 12px rgba(0,0,0,0.3)',transition:'opacity 0.3s' });
-    document.body.appendChild(el);
-    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2000);
-  };
-
-  const updateTeamVerification = async (teamId: string, nextStatus: 'APPROVED' | 'REJECTED') => {
-    const rejectReason = nextStatus === 'REJECTED'
-      ? window.prompt('Lý do từ chối hồ sơ xác minh?', 'Hồ sơ chưa đủ thông tin.')
-      : '';
-    if (nextStatus === 'REJECTED' && rejectReason === null) return;
-    try {
-      const updated = await adminService.updateTeamVerification(teamId, nextStatus, rejectReason || '');
-      setAdminTeams(current => current.map(item => item.id === teamId ? { ...item, ...updated } : item));
-    } catch {
-      window.alert('Không thể cập nhật trạng thái xác minh.');
-    }
-  };
-
-  const handleEditTeam = async (teamId: string, currentName: string, currentDesc: string) => {
-    const newName = window.prompt("Tên doanh nghiệp mới:", currentName);
-    if (newName === null) return;
-    const newDesc = window.prompt("Mô tả mới:", currentDesc) || "";
-    try {
-      const updated = await adminService.updateTeam(teamId, { name: newName, description: newDesc });
-      setAdminTeams(current => current.map(item => item.id === teamId ? { ...item, ...updated } : item));
-    } catch { window.alert("Lỗi khi cập nhật doanh nghiệp."); }
-  };
-
-  const handleDeleteTeam = async (teamId: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa doanh nghiệp này? (Sẽ chỉ ẩn khỏi hệ thống)")) return;
-    try {
-      await adminService.deleteTeam(teamId);
-      setAdminTeams(current => current.map(item => item.id === teamId ? { ...item, published: false } : item));
-    } catch { window.alert("Lỗi khi xóa doanh nghiệp."); }
-  };
-
-  const handleCreateUser = async () => {
-    const username = window.prompt("Tên đăng nhập mới:");
-    if (!username) return;
-    const email = window.prompt("Email:");
-    const fullName = window.prompt("Họ tên:");
-    try {
-      const created = await adminService.createUser({ username, email: email || '', fullName: fullName || '', role: 'MEMBER' });
-      setAdminUsers(current => [created, ...current]);
-      window.alert("Tạo thành công với mật khẩu mặc định là 123456");
-    } catch { window.alert("Lỗi khi tạo user."); }
-  };
-
-  const handleEditUser = async (userId: string, currentName: string, currentEmail: string) => {
-    const fullName = window.prompt("Họ tên mới:", currentName);
-    if (fullName === null) return;
-    const email = window.prompt("Email mới:", currentEmail || "");
-    try {
-      const updated = await adminService.updateUser(userId, { fullName, email: email || '' });
-      setAdminUsers(current => current.map(item => item.id === userId ? { ...item, ...updated } : item));
-    } catch { window.alert("Lỗi khi sửa user."); }
-  };
-
-  const handleResetPassword = async (userId: string) => {
-    if (!window.confirm("Đặt lại mật khẩu cho user này?")) return;
-    try {
-      const res = await adminService.resetUserPassword(userId);
-      window.alert(`Mật khẩu mới là: ${res.password}`);
-    } catch { window.alert("Lỗi đặt lại mật khẩu."); }
-  };
-
-  const handleCreatePlan = async () => {
-    const name = window.prompt("Tên gói dịch vụ:");
-    if (!name) return;
-    const price = window.prompt("Giá (VNĐ):", "0");
-    try {
-      const plan = await adminService.createPlan({ name, price: Number(price), period: "Tháng", users: 1, orders: 10, batches: 10, workshops: 1, ai: 100, features: [] });
-      setPlans(current => [...current, plan]);
-    } catch { window.alert("Lỗi tạo gói."); }
-  };
-
-  const handleUpdatePlan = async (planId: string, currentName: string) => {
-    const name = window.prompt("Tên mới:", currentName);
-    if (!name) return;
-    try {
-      await adminService.updatePlan(planId, { name });
-      setPlans(current => current.map(p => p.id === planId ? { ...p, name } : p));
-    } catch { window.alert("Lỗi sửa gói."); }
-  };
-
-  const handleDeletePlan = async (planId: string) => {
-    if (!window.confirm("Xóa gói này?")) return;
-    try {
-      await adminService.deletePlan(planId);
-      setPlans(current => current.filter(p => p.id !== planId));
-    } catch { window.alert("Lỗi xóa gói."); }
-  };
-
-  const handleAiConfig = async () => {
-    const limit = window.prompt("Nhập giới hạn điểm AI mặc định:");
-    if (!limit) return;
-    try {
-      await adminService.updateAiConfigs({ "default_limit": limit });
-      window.alert("Đã cập nhật cấu hình AI.");
-    } catch { window.alert("Lỗi cập nhật AI."); }
+  const handleNavClick = (id: AdminSection) => {
+    setSearchParams({ section: id });
   };
 
   const revenueReport = useMemo(() => {
@@ -479,12 +273,8 @@ export default function AdminPage() {
     });
     const paidPayments = rangePayments.filter(item => item.status === 'PAID');
     const total = paidPayments.reduce((sum, item) => sum + Number(item.amount), 0);
-    const pending = rangePayments
-      .filter(item => item.status === 'PENDING')
-      .reduce((sum, item) => sum + Number(item.amount), 0);
-    const failed = rangePayments
-      .filter(item => item.status === 'FAILED')
-      .reduce((sum, item) => sum + Number(item.amount), 0);
+    const pending = rangePayments.filter(item => item.status === 'PENDING').reduce((sum, item) => sum + Number(item.amount), 0);
+    
     const dailyMap = paidPayments.reduce<Record<string, { amount: number; time: number }>>((acc, item) => {
       const date = paymentDate(item);
       const dateKey = formatShortDate(date);
@@ -492,79 +282,73 @@ export default function AdminPage() {
       acc[dateKey] = { amount: current.amount + Number(item.amount), time: current.time };
       return acc;
     }, {});
+    
     const timeline = Object.entries(dailyMap)
       .map(([date, data]) => ({ date, revenue: Math.round(data.amount / 1000000), time: data.time }))
       .sort((a, b) => a.time - b.time);
+      
+    const planMap = paidPayments.reduce<Record<string, number>>((acc, item) => {
+      const planName = !item.planId || item.planId === 'free' ? 'Dùng thử' : item.planId === 'professional' ? 'Chuyên nghiệp' : item.planId === 'enterprise' ? 'Doanh nghiệp' : item.planId;
+      acc[planName] = (acc[planName] || 0) + Number(item.amount);
+      return acc;
+    }, {});
+    
+    const revenueByPlan = Object.entries(planMap).map(([name, value]) => ({ name, value: Math.round(value / 1000000), amount: value })).sort((a, b) => b.amount - a.amount);
+    
     const customerMap = paidPayments.reduce<Record<string, number>>((acc, item) => {
       const name = paymentCustomerName(item);
       acc[name] = (acc[name] || 0) + Number(item.amount);
       return acc;
     }, {});
-    const topCustomers = Object.entries(customerMap)
-      .map(([name, value]) => ({ name, value: Math.round(value / 1000000), amount: value }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5);
-    const getPlanName = (id: string) => {
-      if (!id || id.toLowerCase() === 'free') return 'Dùng thử';
-      if (id.toLowerCase() === 'professional') return 'Chuyên nghiệp';
-      if (id.toLowerCase() === 'enterprise') return 'Doanh nghiệp';
-      return id;
-    };
-    const planMap = paidPayments.reduce<Record<string, number>>((acc, item) => {
-      const planName = getPlanName(item.planId);
-      acc[planName] = (acc[planName] || 0) + Number(item.amount);
-      return acc;
-    }, {});
-    const revenueByPlan = Object.entries(planMap)
-      .map(([name, value]) => ({ name, value: Math.round(value / 1000000), amount: value }))
-      .sort((a, b) => b.amount - a.amount);
-    const rangeDays = Math.max(1, Math.ceil((safeTo.getTime() - safeFrom.getTime()) / 86400000));
+    
+    const topCustomers = Object.entries(customerMap).map(([name, value]) => ({ name, value: Math.round(value / 1000000) })).sort((a, b) => b.value - a.value).slice(0, 5);
 
-    return {
-      fromDate: safeFrom,
-      toDate: safeTo,
-      rangeInvoices: rangePayments,
-      paidInvoices: paidPayments,
-      total,
-      pending,
-      failed,
-      rangeDays,
-      averagePerDay: Math.round(total / rangeDays),
-      topCustomers,
-      revenueByPlan,
-      timeline: timeline.length > 0 ? timeline : [{ date: 'Không có', revenue: 0 }],
-    };
+    return { total, pending, rangeInvoices: rangePayments, timeline, revenueByPlan, topCustomers };
   }, [adminPayments, revenueFrom, revenueTo]);
 
-  const exportRevenueReport = () => {
-    const lines = [
-      'ORCA - Bao cao doanh thu',
-      `Tu ngay: ${formatInputDate(revenueReport.fromDate)}`,
-      `Den ngay: ${formatInputDate(revenueReport.toDate)}`,
-      `Doanh thu da thu: ${money(revenueReport.total)}`,
-      `Dang cho thanh toan: ${money(revenueReport.pending)}`,
-      `That bai: ${money(revenueReport.failed)}`,
-      '',
-      'Hoa don:',
-      ...revenueReport.rangeInvoices.map(item => `${item.txnRef}, ${paymentCustomerName(item)}, ${item.planId}, ${money(Number(item.amount))}, ${formatShortDate(paymentDate(item))}, ${item.bankCode || '-'}, ${item.status}`),
-    ];
-    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `orca-revenue-${revenueFrom}-${revenueTo}.txt`;
-    link.click();
-    URL.revokeObjectURL(url);
+  const dashboardKpis: KpiItem[] = [
+    { label: 'Total Companies', value: number(adminTeams.length), detail: `+${number(overview.newTeamsThisMonth)} this month`, icon: Building2, tone: 'blue', trend: 'up' },
+    { label: 'Total Users', value: number(adminUsers.length), detail: `+${number(overview.newUsersThisMonth)} this month`, icon: Users, tone: 'violet', trend: 'up' },
+    { label: 'Monthly Revenue', value: money(overview.revenueThisMonth), detail: 'vs last month', icon: DollarSign, tone: 'green', trend: 'up' },
+    { label: 'Pending Workspaces', value: number(adminTeams.filter(t => t.verificationStatus === 'PENDING').length), detail: 'Requires action', icon: AlertTriangle, tone: 'amber' },
+  ];
+
+  const systemTrendData = [
+    { month: 'Jan', revenue: 120, companies: 45, users: 1200 },
+    { month: 'Feb', revenue: 150, companies: 52, users: 1450 },
+    { month: 'Mar', revenue: 180, companies: 61, users: 1680 },
+    { month: 'Apr', revenue: 210, companies: 75, users: 1900 },
+    { month: 'May', revenue: 250, companies: 88, users: 2200 },
+    { month: 'Jun', revenue: 310, companies: 105, users: 2600 },
+  ];
+
+  const pendingRequests = adminTeams.filter(t => t.verificationStatus === 'PENDING');
+  const approvedCompanies = adminTeams.filter(t => t.verificationStatus !== 'PENDING');
+
+  const updateTeamVerification = async (teamId: string, nextStatus: 'APPROVED' | 'REJECTED') => {
+    const rejectReason = nextStatus === 'REJECTED' ? window.prompt('Reject reason?') : '';
+    if (nextStatus === 'REJECTED' && rejectReason === null) return;
+    try {
+      const updated = await adminService.updateTeamVerification(teamId, nextStatus, rejectReason || '');
+      setAdminTeams(current => current.map(item => item.id === teamId ? { ...item, ...updated } : item));
+    } catch { window.alert('Error updating status.'); }
   };
 
-  
+  const handleCreateUser = async () => {
+    const username = window.prompt("Username:");
+    if (!username) return;
+    try {
+      const created = await adminService.createUser({ username, email: '', fullName: '', role: 'MEMBER' });
+      setAdminUsers(current => [created, ...current]);
+    } catch { window.alert("Error creating user."); }
+  };
 
   if (user?.role !== 'ADMIN') {
     return (
       <div className="admin-access">
         <ShieldCheck size={40} />
-        <h1>Không có quyền truy cập bảng quản trị</h1>
-        <p>Tài khoản hiện tại cần vai trò quản trị viên để xem dữ liệu toàn nền tảng.</p>
+        <h1>Access Denied</h1>
+        <p>You need administrator privileges to view this console.</p>
       </div>
     );
   }
@@ -573,8 +357,8 @@ export default function AdminPage() {
     return (
       <div className="admin-access">
         <Activity size={40} />
-        <h1>Đang tải thống kê hệ thống</h1>
-        <p>ORCA đang lấy số liệu thật từ cơ sở dữ liệu.</p>
+        <h1>Loading Platform Statistics</h1>
+        <p>Connecting to secure database...</p>
       </div>
     );
   }
@@ -583,240 +367,306 @@ export default function AdminPage() {
     return (
       <div className="admin-access">
         <AlertTriangle size={40} />
-        <h1>Không tải được thống kê</h1>
+        <h1>Error Loading Dashboard</h1>
         <p>{adminError}</p>
       </div>
     );
   }
 
   return (
-    <div className="admin-console">
-      <header className="admin-hero">
-        <div>
-          <span className="admin-eyebrow">Quản trị ORCA SaaS</span>
-          <h1>Tổng quan hệ thống</h1>
-          <p>Trung tâm điều hành cho Coffee Production Management Platform: doanh nghiệp, user, billing, AI, audit và báo cáo điều hành.</p>
+    <div className="admin-app">
+      <aside className="admin-sidebar">
+        <div className="admin-sidebar-header">
+          <h2>ORCA Admin</h2>
+          <p>Platform Management</p>
         </div>
-        <div className="admin-hero-actions">
-          <button type="button" className="admin-button admin-button-soft" onClick={handleNotImplemented}><CalendarDays size={16} /> 30 ngày</button>
-          <button type="button" className="admin-button admin-button-primary" onClick={handleNotImplemented}><Download size={16} /> Xuất báo cáo</button>
-        </div>
-      </header>
-
-      {active === 'overview' && (
-        <>
-          <section className="admin-kpi-grid">
-            {kpis.map(item => <KpiCard key={item.label} item={item} />)}
-          </section>
-          <section className="admin-grid-2">
-            <ChartPanel title="Đơn phát sinh theo tháng">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={systemTrendData}>
-                  <defs>
-                    <linearGradient id="revenueFill" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor="#d4a574" stopOpacity={0.45} />
-                      <stop offset="100%" stopColor="#d4a574" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area dataKey="orders" stroke="#d4a574" fill="url(#revenueFill)" strokeWidth={3} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartPanel>
-            <ChartPanel title="User mới theo tháng">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={systemTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line dataKey="users" stroke="#60a5fa" strokeWidth={3} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartPanel>
-            <ChartPanel title="Xưởng mới theo tháng">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={systemTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="teams" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartPanel>
-            <ChartPanel title="Công việc tạo theo tháng">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={systemTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="tasks" fill="#22c55e" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartPanel>
-          </section>
-          
-        </>
-      )}
-
-      {active === 'businesses' && (
-        <section className="admin-card">
-          <div className="admin-card-head">
-            <div><h3>Quản lý doanh nghiệp / xưởng</h3><p>Xem, thêm, chỉnh sửa, khóa hoặc xóa doanh nghiệp.</p></div>
-            <button type="button" className="admin-button admin-button-primary" onClick={handleNotImplemented}><Plus size={16} /> Thêm doanh nghiệp</button>
-          </div>
-          <div className="admin-toolbar">
-            <label><Search size={16} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm tên, mã, người đại diện..." /></label>
-            <select value={status} onChange={event => setStatus(event.target.value)}><option value="All">Tất cả</option><option value="Active">Đang hoạt động</option><option value="Trial">Dùng thử</option><option value="Locked">Đã khóa</option></select>
-            <select value={plan} onChange={event => setPlan(event.target.value)}><option value="All">Tất cả</option><option value="Starter">Cơ bản</option><option value="Growth">Tăng trưởng</option><option value="Enterprise">Doanh nghiệp</option></select>
-            <button type="button" className="admin-button admin-button-soft"><Filter size={16} /> Ngày đăng ký</button>
-          </div>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead><tr><th>Tên doanh nghiệp</th><th>Mã</th><th>Đại diện</th><th>Email</th><th>Điện thoại</th><th>NV</th><th>Đơn</th><th>Batch</th><th>Gói</th><th>Ngày ĐK</th><th>Trạng thái</th><th>Xác minh</th><th></th></tr></thead>
-              <tbody>
-                {businessRows.map(item => (
-                  <tr key={item.code}>
-                    <td><strong>{item.name}</strong></td><td>{item.code}</td><td>{item.owner}</td><td>{item.email}</td><td>{item.phone}</td><td>{item.employees}</td><td>{item.orders}</td><td>{item.batches}</td><td>{item.plan}</td><td>{item.date}</td><td><StatusBadge value={String(item.status)} /></td>
-                    <td>
-                      <div className="admin-verification-cell">
-                        <StatusBadge value={String(item.verificationStatus)} />
-                        <small>GPL: {item.businessLicense || '-'}</small>
-                        <small>ĐC: {item.businessAddress || '-'}</small>
-                        {item.websiteUrl && <small>Web: {item.websiteUrl}</small>}
-                        {item.certificationDocument && <small>Cert: {item.certificationDocument}</small>}
-                        {item.verificationRejectReason && <small>Lý do: {item.verificationRejectReason}</small>}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="admin-row-actions">
-                        <button onClick={() => handleEditTeam(item.id, item.name, item.description)} className="btn-edit">Sửa</button>
-                        {item.verificationStatus === 'PENDING' && <>
-                          <button onClick={() => updateTeamVerification(item.id, 'APPROVED')} className="btn-approve"><CheckCircle2 size={14} /> Duyệt</button>
-                          <button onClick={() => updateTeamVerification(item.id, 'REJECTED')} className="btn-reject"><XCircle size={14} /> Từ chối</button>
-                        </>}
-                        <button onClick={handleNotImplemented} className="btn-lock"><Lock size={14} /> Khóa</button>
-                        <button onClick={() => handleDeleteTeam(item.id)} className="btn-delete">Xóa</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      {active === 'users' && (
-        <section className="admin-card">
-          <div className="admin-card-head">
-            <div><h3>Quản lý người dùng toàn hệ thống</h3><p>Tạo người dùng, đặt lại mật khẩu, gán vai trò và chuyển doanh nghiệp.</p></div>
-            <button type="button" className="admin-button admin-button-primary" onClick={handleCreateUser}><Plus size={16} /> Tạo người dùng</button>
-          </div>
-          <div className="admin-toolbar">
-            <label><Search size={16} /><input value={query} onChange={event => { setQuery(event.target.value); setUserPage(1); }} placeholder="Tìm người dùng, email, doanh nghiệp..." /></label>
-            <button type="button" className="admin-button admin-button-soft"><Filter size={16} /> Role / trạng thái</button>
-          </div>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead><tr><th>Người dùng</th><th>Email</th><th>SĐT</th><th>Doanh nghiệp</th><th>Vai trò</th><th>Trạng thái</th><th>Lần đăng nhập cuối</th><th></th></tr></thead>
-              <tbody>
-                {userRows.map((item, index) => (
-                  <tr key={`${item.email}-${index}`}>
-                    <td><div className="admin-user-cell"><span>{item.name.charAt(0)}</span><strong>{item.name}</strong></div></td><td>{item.email}</td><td>{item.phone}</td><td>{item.company}</td><td>{item.role}</td><td><StatusBadge value={item.status} /></td><td>{item.lastLogin}</td>
-                    <td><div className="admin-row-actions"><button onClick={() => handleEditUser(item.id, item.name, item.email)} className="btn-edit">Sửa</button><button onClick={() => handleResetPassword(item.id)} className="btn-reset"><RotateCcw size={14} /> Đặt lại</button><button onClick={handleNotImplemented} className="btn-lock">{item.status === 'Locked' ? <Unlock size={14} /> : <Lock size={14} />} {item.status === 'Locked' ? 'Kích hoạt' : 'Khóa'}</button></div></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="admin-pagination"><button disabled={userPage === 1} onClick={() => setUserPage(1)}>1</button><button disabled={userPage === 2} onClick={() => setUserPage(2)}>2</button><span>Hiển thị 6 user / trang</span></div>
-        </section>
-      )}
-
-      {active === 'subscriptions' && (
-        <section className="admin-card">
-          <div className="admin-card-head"><div><h3>Quản lý gói dịch vụ SaaS</h3><p>Các gói Cơ bản, Tăng trưởng, Doanh nghiệp cùng giới hạn người dùng, đơn hàng, lô sản xuất, xưởng và điểm AI.</p></div><button className="admin-button admin-button-primary" onClick={handleCreatePlan}><Plus size={16} /> Tạo gói</button></div>
-          <div className="admin-plan-grid">
-            {plans.map(item => <article className="admin-plan" key={item.name}><h4>{item.name}</h4><strong>{item.price ? money(item.price) : 'Liên hệ'}</strong><span>{item.period}</span><div className="admin-plan-limits"><p>{item.users} người dùng</p><p>{number(item.orders)} đơn hàng</p><p>{number(item.batches)} lô</p><p>{item.workshops} xưởng</p><p>{number(item.ai)} điểm AI</p></div><ul>{item.features.map((feature: string) => <li key={feature}>{feature}</li>)}</ul><div className="admin-row-actions"><button onClick={() => handleUpdatePlan(item.id, item.name)} className="btn-edit">Sửa</button><button onClick={() => handleDeletePlan(item.id)} className="btn-delete">Xóa</button></div></article>)}
-          </div>
-          <div className="admin-feature-table">
-            <table className="admin-table"><thead><tr><th>Tính năng</th>{plans.map(item => <th key={item.name}>{item.name}</th>)}</tr></thead><tbody>{featureRows.map((feature: string) => <tr key={feature}><td>{feature}</td>{plans.map((item, index) => <td key={`${item.name}-${feature}`}>{index === 0 && feature.includes('Custom') ? <XCircle size={16} /> : <CheckCircle2 size={16} />}</td>)}</tr>)}</tbody></table>
-          </div>
-        </section>
-      )}
-
-      {active === 'billing' && (
-        <>
-          <section className="admin-card admin-revenue-filter">
-            <div>
-              <span className="admin-eyebrow">Revenue Report</span>
-              <h3>Doanh thu theo khoảng thời gian</h3>
-              <p>Admin chọn ngày bắt đầu và ngày kết thúc để xem, lọc bảng hóa đơn và xuất báo cáo doanh thu theo đúng khoảng đó.</p>
-            </div>
-            <div className="admin-date-range">
-              <label>
-                <span>Từ ngày</span>
-                <input type="date" value={revenueFrom} onChange={event => setRevenueFrom(event.target.value)} />
-              </label>
-              <label>
-                <span>Đến ngày</span>
-                <input type="date" value={revenueTo} onChange={event => setRevenueTo(event.target.value)} />
-              </label>
-              <button type="button" className="admin-button admin-button-primary" onClick={exportRevenueReport}>
-                <Download size={16} /> Xuất doanh thu
+        <nav className="admin-nav">
+          <div className="admin-nav-section">Main Menu</div>
+          {sidebarModules.slice(0, 6).map(tab => {
+            const Icon = tab.icon;
+            return (
+              <button key={tab.id} className={active === tab.id ? 'active' : ''} onClick={() => handleNavClick(tab.id)}>
+                <Icon size={16} /> <span>{tab.label}</span>
               </button>
+            );
+          })}
+          <div className="admin-nav-section">System</div>
+          {sidebarModules.slice(6).map(tab => {
+            const Icon = tab.icon;
+            return (
+              <button key={tab.id} className={active === tab.id ? 'active' : ''} onClick={() => handleNavClick(tab.id)}>
+                <Icon size={16} /> <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
+
+      <main className="admin-main">
+        <div className="admin-main-inner">
+          <header className="admin-hero">
+            <div>
+              <h1>{sidebarModules.find(m => m.id === active)?.label || 'Dashboard'}</h1>
+              <p>Manage platform configurations, monitor activity, and support your customers.</p>
             </div>
-          </section>
+            <div className="admin-hero-actions">
+              {active === 'users' && <button className="admin-button admin-button-primary" onClick={handleCreateUser}><Plus size={16} /> Add User</button>}
+              {active === 'overview' && <button className="admin-button admin-button-secondary"><Download size={16} /> Export Data</button>}
+            </div>
+          </header>
 
-          <section className="admin-mini-grid">
-            <MiniMetric label="Doanh thu trong khoảng" value={money(revenueReport.total)} icon={DollarSign} />
-            <MiniMetric label="Số ngày đã chọn" value={number(revenueReport.rangeDays)} icon={CalendarDays} />
-            <MiniMetric label="Trung bình / ngày" value={money(revenueReport.averagePerDay)} icon={ReceiptText} />
-            <MiniMetric label="Chờ + lỗi" value={money(revenueReport.pending + revenueReport.failed)} icon={AlertTriangle} />
-          </section>
-          <section className="admin-grid-3">
-            <ChartPanel title="Biểu đồ doanh thu theo ngày"><ResponsiveContainer width="100%" height="100%"><AreaChart data={revenueReport.timeline}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="date" /><YAxis /><Tooltip formatter={(value) => [`${value} triệu`, 'Doanh thu']} /><Area dataKey="revenue" stroke="#d4a574" fill="#d4a57433" strokeWidth={3} /></AreaChart></ResponsiveContainer></ChartPanel>
-            <ChartPanel title="Doanh thu theo gói (triệu VNĐ)">{revenueReport.revenueByPlan.length > 0 ? <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={revenueReport.revenueByPlan} dataKey="value" nameKey="name" outerRadius={92} label>{revenueReport.revenueByPlan.map((_, index) => <Cell key={index} fill={['#60a5fa', '#8b5cf6', '#22c55e', '#d4a574', '#f97316'][index]} />)}</Pie><Tooltip formatter={(value) => [`${value} triệu`, 'Doanh thu']} /></PieChart></ResponsiveContainer> : <div className="admin-chart-empty">Không có dữ liệu.</div>}</ChartPanel>
-            <ChartPanel title="Top khách hàng theo khoảng ngày">{revenueReport.topCustomers.length > 0 ? <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={revenueReport.topCustomers} dataKey="value" nameKey="name" outerRadius={92}>{revenueReport.topCustomers.map((_, index) => <Cell key={index} fill={['#d4a574', '#60a5fa', '#22c55e', '#8b5cf6', '#f97316'][index]} />)}</Pie><Tooltip formatter={(value) => [`${value} triệu`, 'Doanh thu']} /></PieChart></ResponsiveContainer> : <div className="admin-chart-empty">Không có doanh thu trong khoảng ngày đã chọn.</div>}</ChartPanel>
-          </section>
-          <section className="admin-card"><div className="admin-card-head"><div><h3>Billing Management</h3><p>Hiển thị {number(revenueReport.rangeInvoices.length)} giao dịch thật trong khoảng đã chọn.</p></div></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Mã giao dịch</th><th>Người dùng</th><th>Gói</th><th>Số tiền</th><th>Ngày thanh toán</th><th>Ngân hàng</th><th>Trạng thái</th></tr></thead><tbody>{revenueReport.rangeInvoices.length === 0 ? <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--text-secondary)' }}>Chưa có giao dịch thanh toán thật trong khoảng này.</td></tr> : revenueReport.rangeInvoices.map(item => <tr key={item.id}><td>{item.txnRef}</td><td>{paymentCustomerName(item)}</td><td>{item.planId}</td><td>{money(Number(item.amount))}</td><td>{formatShortDate(paymentDate(item))}</td><td>{item.bankCode || '-'}</td><td><StatusBadge value={String(item.status)} /></td></tr>)}</tbody></table></div></section>
-        </>
-      )}
+          {active === 'overview' && (
+            <>
+              <section className="admin-kpi-grid">
+                {dashboardKpis.map(item => <KpiCard key={item.label} item={item} />)}
+              </section>
+              <section className="admin-grid-2">
+                <ChartPanel title="Revenue Growth (Monthly)">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={systemTrendData}>
+                      <defs>
+                        <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                      <XAxis dataKey="month" axisLine={false} tickLine={false} />
+                      <YAxis axisLine={false} tickLine={false} />
+                      <Tooltip />
+                      <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#revFill)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </ChartPanel>
+                <ChartPanel title="Platform Users & Companies">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={systemTrendData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                      <XAxis dataKey="month" axisLine={false} tickLine={false} />
+                      <YAxis axisLine={false} tickLine={false} yAxisId="left" />
+                      <YAxis axisLine={false} tickLine={false} yAxisId="right" orientation="right" />
+                      <Tooltip />
+                      <Line yAxisId="left" type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={3} dot={false} />
+                      <Line yAxisId="right" type="monotone" dataKey="companies" stroke="#8b5cf6" strokeWidth={3} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartPanel>
+              </section>
+            </>
+          )}
 
-      {active === 'ai' && (
-        <>
-          <section className="admin-mini-grid">{aiUsage.map(item => <MiniMetric key={item.label} label={item.label} value={item.value} icon={item.icon} />)}</section>
-          <section className="admin-card">
-            <div className="admin-card-head"><div><h3>Quản lý AI</h3><p>Giới hạn sử dụng AI, bật/tắt AI, quản lý điểm và lịch sử AI.</p></div><button className="admin-button admin-button-primary" onClick={handleAiConfig}><Settings size={16} /> Cấu hình AI</button></div>
-            <div className="admin-ai-controls"><label><input type="checkbox" defaultChecked /> Bật AI toàn hệ thống</label><label><input type="checkbox" defaultChecked /> Giới hạn theo gói</label><label><input type="checkbox" /> Chặn khi vượt chi phí</label></div>
-            <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>User</th><th>Email</th><th>Gói AI</th><th>Hết hạn</th></tr></thead><tbody>{adminUsers.length === 0 ? <tr><td colSpan={4} style={{ textAlign: 'center', padding: 24, color: 'var(--text-secondary)' }}>Chưa có user trong hệ thống.</td></tr> : adminUsers.slice(0, 6).map(item => <tr key={item.id}><td>{item.fullName || item.username}</td><td>{item.email || '-'}</td><td>{item.aiPlan || 'free'}</td><td>{item.aiPlanExpiresAt ? formatShortDate(item.aiPlanExpiresAt) : '-'}</td></tr>)}</tbody></table></div>
-          </section>
-        </>
-      )}
+          {active === 'workspace_requests' && (
+            <section className="admin-card">
+              <div className="admin-card-head">
+                <div><h3>Pending Approvals</h3><p>Review and verify new company registrations.</p></div>
+              </div>
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead><tr><th>Company Name</th><th>Owner</th><th>Business Info</th><th>Registration Date</th><th>Status</th><th>Actions</th></tr></thead>
+                  <tbody>
+                    {pendingRequests.length === 0 ? (
+                      <tr><td colSpan={6} style={{textAlign:'center', padding:'32px', color:'#6b7280'}}>No pending requests.</td></tr>
+                    ) : pendingRequests.map(item => (
+                      <tr key={item.id}>
+                        <td><strong>{item.name}</strong></td>
+                        <td>{item.ownerName || '-'}</td>
+                        <td>
+                          <div style={{fontSize:'12px', color:'#6b7280'}}>
+                            <div>License: {item.businessLicense || '-'}</div>
+                            <div>Address: {item.businessAddress || '-'}</div>
+                          </div>
+                        </td>
+                        <td>{item.createdAt ? formatShortDate(item.createdAt) : '-'}</td>
+                        <td><StatusBadge value={item.verificationStatus || 'PENDING'} /></td>
+                        <td>
+                          <div className="admin-row-actions">
+                            <button className="admin-button admin-button-primary" onClick={() => updateTeamVerification(item.id, 'APPROVED')} style={{padding:'4px 10px', fontSize:'12px'}}>Approve</button>
+                            <button className="admin-button admin-button-secondary" onClick={() => updateTeamVerification(item.id, 'REJECTED')} style={{padding:'4px 10px', fontSize:'12px'}}>Reject</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
-      
-      {active === 'support' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
-          <section className="admin-card">
-            <h3>Ticket hỗ trợ</h3>
-            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>Chưa có ticket nào</div>
-          </section>
-          <section className="admin-card">
-            <h3>Khiếu nại</h3>
-            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>Không có khiếu nại</div>
-          </section>
-          <section className="admin-card">
-            <h3>Yêu cầu xác minh</h3>
-            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>Không có yêu cầu nào</div>
-          </section>
+          {active === 'companies' && (
+            <section className="admin-card">
+              <div className="admin-card-head">
+                <div><h3>Approved Companies</h3><p>Manage all active organizations on the platform.</p></div>
+              </div>
+              <div className="admin-toolbar">
+                <div className="admin-search-input"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search companies..." /></div>
+              </div>
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead><tr><th>Company</th><th>Workspace Code</th><th>Owner</th><th>Members</th><th>Status</th><th>Actions</th></tr></thead>
+                  <tbody>
+                    {approvedCompanies.filter(c => c.name.toLowerCase().includes(query.toLowerCase())).map(item => (
+                      <tr key={item.id}>
+                        <td><strong>{item.name}</strong></td>
+                        <td><code style={{background:'#f3f4f6', padding:'2px 6px', borderRadius:'4px', fontSize:'12px'}}>{item.id.slice(0,8)}</code></td>
+                        <td>{item.ownerName || '-'}</td>
+                        <td>{item.memberCount} users</td>
+                        <td><StatusBadge value="Active" /></td>
+                        <td>
+                          <div className="admin-row-actions">
+                            <button className="btn-icon" title="View"><FileText size={16}/></button>
+                            <button className="btn-icon danger" title="Suspend"><Lock size={16}/></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {active === 'users' && (
+            <section className="admin-card">
+              <div className="admin-card-head">
+                <div><h3>Platform Users</h3><p>Manage all registered accounts across all companies.</p></div>
+              </div>
+              <div className="admin-toolbar">
+                <div className="admin-search-input"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by name, email..." /></div>
+                <select className="admin-select" value={status} onChange={e=>setStatus(e.target.value)}><option value="All">All Roles</option><option value="ADMIN">Admin</option><option value="MEMBER">Member</option></select>
+              </div>
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr></thead>
+                  <tbody>
+                    {adminUsers.filter(u => `${u.fullName} ${u.email}`.toLowerCase().includes(query.toLowerCase())).slice(0,10).map(item => (
+                      <tr key={item.id}>
+                        <td><div className="admin-user-cell"><div className="admin-user-avatar">{(item.fullName || item.username || '?').charAt(0)}</div><strong>{item.fullName || item.username}</strong></div></td>
+                        <td>{item.email}</td>
+                        <td><StatusBadge value={item.role} /></td>
+                        <td><StatusBadge value="Active" /></td>
+                        <td>{item.createdAt ? formatShortDate(item.createdAt) : '-'}</td>
+                        <td>
+                          <div className="admin-row-actions">
+                            <button className="btn-icon" title="Reset Password"><RotateCcw size={16}/></button>
+                            <button className="btn-icon danger" title="Lock Account"><Lock size={16}/></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="admin-pagination">
+                <span>Showing 10 records</span>
+                <div className="admin-pagination-buttons">
+                  <button disabled>&lt;</button>
+                  <button className="active">1</button>
+                  <button>2</button>
+                  <button>&gt;</button>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {active === 'subscriptions' && (
+            <>
+              <div className="admin-hero" style={{marginBottom: 16}}>
+                <div><h3>Subscription Plans</h3><p>Manage SaaS pricing tiers, limits, and features.</p></div>
+                <button className="admin-button admin-button-primary"><Plus size={16} /> Create Plan</button>
+              </div>
+              <section className="admin-plan-grid">
+                {plans.map(item => (
+                  <article className="admin-plan" key={item.name}>
+                    <h4>{item.name}</h4>
+                    <div className="price">{item.price ? money(item.price) : 'Custom'} <span style={{fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)'}}>/ {item.period}</span></div>
+                    <div className="admin-plan-limits">
+                      <div className="admin-plan-limit-item"><span>Max Users</span><strong>{number(item.users)}</strong></div>
+                      <div className="admin-plan-limit-item"><span>Max Orders</span><strong>{number(item.orders)}</strong></div>
+                      <div className="admin-plan-limit-item"><span>Workshops</span><strong>{item.workshops}</strong></div>
+                      <div className="admin-plan-limit-item"><span>AI Points</span><strong>{number(item.ai)}</strong></div>
+                    </div>
+                    <div className="admin-row-actions" style={{marginTop: 20}}>
+                      <button className="admin-button admin-button-secondary" style={{flex:1}}>Edit Plan</button>
+                    </div>
+                  </article>
+                ))}
+              </section>
+            </>
+          )}
+
+          {active === 'payments' && (
+            <>
+              <section className="admin-mini-grid">
+                <MiniMetric label="Total Revenue" value={money(revenueReport.total)} icon={DollarSign} />
+                <MiniMetric label="Pending Transactions" value={money(revenueReport.pending)} icon={AlertTriangle} />
+              </section>
+              <section className="admin-card">
+                <div className="admin-card-head">
+                  <div><h3>Payment History</h3><p>View all transactions across the platform.</p></div>
+                </div>
+                <div className="admin-table-wrap">
+                  <table className="admin-table">
+                    <thead><tr><th>Txn ID</th><th>Company/User</th><th>Plan</th><th>Amount</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody>
+                      {revenueReport.rangeInvoices.slice(0,10).map(item => (
+                        <tr key={item.id}>
+                          <td><code style={{fontSize:12}}>{item.txnRef}</code></td>
+                          <td><strong>{paymentCustomerName(item)}</strong></td>
+                          <td>{item.planId}</td>
+                          <td>{money(Number(item.amount))}</td>
+                          <td>{formatShortDate(paymentDate(item))}</td>
+                          <td><StatusBadge value={String(item.status)} /></td>
+                          <td><button className="admin-button admin-button-secondary" style={{padding:'4px 8px', fontSize:12}}>Receipt</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </>
+          )}
+
+          {active === 'reports' && (
+            <section className="admin-card">
+              <div className="admin-card-head">
+                <div><h3>Data Export & Reports</h3><p>Generate analytical reports for platform performance.</p></div>
+              </div>
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead><tr><th>Report Type</th><th>Description</th><th>Last Generated</th><th>Action</th></tr></thead>
+                  <tbody>
+                    <tr><td><strong>Revenue Report</strong></td><td>Monthly breakdown of all SaaS payments</td><td>Today, 10:30 AM</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> CSV</button></td></tr>
+                    <tr><td><strong>Company Growth</strong></td><td>New company registrations and churn rate</td><td>Yesterday, 14:00 PM</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> Excel</button></td></tr>
+                    <tr><td><strong>Platform Usage</strong></td><td>Storage, AI tokens, and API requests usage</td><td>2 days ago</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> PDF</button></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {active === 'logs' && (
+            <section className="admin-card">
+              <div className="admin-card-head">
+                <div><h3>System & Security Logs</h3><p>Monitor platform activity and security events.</p></div>
+                <div className="admin-toolbar" style={{margin:0}}>
+                  <select className="admin-select"><option>All Event Types</option><option>Login</option><option>Payment</option><option>Security</option></select>
+                </div>
+              </div>
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead><tr><th>Timestamp</th><th>Event Type</th><th>Actor</th><th>IP Address</th><th>Status</th></tr></thead>
+                  <tbody>
+                    <tr><td>{formatShortDate(new Date())} {formatTime(new Date().toISOString())}</td><td><strong>Admin Login</strong></td><td>john.admin</td><td>192.168.1.1</td><td><StatusBadge value="Active" /></td></tr>
+                    <tr><td>{formatShortDate(new Date())} {formatTime(new Date(Date.now() - 3600000).toISOString())}</td><td><strong>Payment Refund</strong></td><td>system</td><td>-</td><td><StatusBadge value="Active" /></td></tr>
+                    <tr><td>{formatShortDate(new Date())} {formatTime(new Date(Date.now() - 7200000).toISOString())}</td><td><strong>Failed Login</strong></td><td>unknown</td><td>10.0.0.45</td><td><StatusBadge value="Failed" /></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
         </div>
-      )}
+      </main>
     </div>
   );
 }
