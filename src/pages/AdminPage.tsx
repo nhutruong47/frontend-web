@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import {
   Activity,
   AlertTriangle,
   Building2,
@@ -203,7 +204,7 @@ function StatusBadge({ value }: { value: string }) {
 
 export default function AdminPage() {
   const { user } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const sectionParam = searchParams.get('section') as AdminSection | null;
   const active: AdminSection = sidebarModules.some(tab => tab.id === sectionParam) ? sectionParam! : 'overview';
   
