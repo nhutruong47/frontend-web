@@ -201,6 +201,12 @@
   gap: 12px;
 }
 
+.admin-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(260px, 1fr));
+  gap: 12px;
+}
+
 .admin-card {
   padding: 18px;
 }
@@ -609,6 +615,7 @@
   .admin-kpi-grid,
   .admin-mini-grid,
   .admin-grid-2,
+  .admin-grid-3,
   .admin-plan-grid,
   .admin-system-grid {
     grid-template-columns: 1fr;

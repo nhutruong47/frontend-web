@@ -505,6 +505,14 @@ export default function AdminPage() {
       .map(([name, value]) => ({ name, value: Math.round(value / 1000000), amount: value }))
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5);
+    const planMap = paidPayments.reduce<Record<string, number>>((acc, item) => {
+      const planName = item.planId || 'Không rõ';
+      acc[planName] = (acc[planName] || 0) + Number(item.amount);
+      return acc;
+    }, {});
+    const revenueByPlan = Object.entries(planMap)
+      .map(([name, value]) => ({ name, value: Math.round(value / 1000000), amount: value }))
+      .sort((a, b) => b.amount - a.amount);
     const rangeDays = Math.max(1, Math.ceil((safeTo.getTime() - safeFrom.getTime()) / 86400000));
 
     return {
@@ -518,6 +526,7 @@ export default function AdminPage() {
       rangeDays,
       averagePerDay: Math.round(total / rangeDays),
       topCustomers,
+      revenueByPlan,
       timeline: timeline.length > 0 ? timeline : [{ date: 'Không có', revenue: 0 }],
     };
   }, [adminPayments, revenueFrom, revenueTo]);
@@ -766,8 +775,9 @@ export default function AdminPage() {
             <MiniMetric label="Trung bình / ngày" value={money(revenueReport.averagePerDay)} icon={ReceiptText} />
             <MiniMetric label="Chờ + lỗi" value={money(revenueReport.pending + revenueReport.failed)} icon={AlertTriangle} />
           </section>
-          <section className="admin-grid-2">
+          <section className="admin-grid-3">
             <ChartPanel title="Biểu đồ doanh thu theo ngày"><ResponsiveContainer width="100%" height="100%"><AreaChart data={revenueReport.timeline}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="date" /><YAxis /><Tooltip formatter={(value) => [`${value} triệu`, 'Doanh thu']} /><Area dataKey="revenue" stroke="#d4a574" fill="#d4a57433" strokeWidth={3} /></AreaChart></ResponsiveContainer></ChartPanel>
+            <ChartPanel title="Doanh thu theo gói (triệu VNĐ)">{revenueReport.revenueByPlan.length > 0 ? <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={revenueReport.revenueByPlan} dataKey="value" nameKey="name" outerRadius={92} label>{revenueReport.revenueByPlan.map((_, index) => <Cell key={index} fill={['#60a5fa', '#8b5cf6', '#22c55e', '#d4a574', '#f97316'][index]} />)}</Pie><Tooltip formatter={(value) => [`${value} triệu`, 'Doanh thu']} /></PieChart></ResponsiveContainer> : <div className="admin-chart-empty">Không có dữ liệu.</div>}</ChartPanel>
             <ChartPanel title="Top khách hàng theo khoảng ngày">{revenueReport.topCustomers.length > 0 ? <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={revenueReport.topCustomers} dataKey="value" nameKey="name" outerRadius={92}>{revenueReport.topCustomers.map((_, index) => <Cell key={index} fill={['#d4a574', '#60a5fa', '#22c55e', '#8b5cf6', '#f97316'][index]} />)}</Pie><Tooltip formatter={(value) => [`${value} triệu`, 'Doanh thu']} /></PieChart></ResponsiveContainer> : <div className="admin-chart-empty">Không có doanh thu trong khoảng ngày đã chọn.</div>}</ChartPanel>
           </section>
           <section className="admin-card"><div className="admin-card-head"><div><h3>Billing Management</h3><p>Hiển thị {number(revenueReport.rangeInvoices.length)} giao dịch thật trong khoảng đã chọn.</p></div></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Mã giao dịch</th><th>Người dùng</th><th>Gói</th><th>Số tiền</th><th>Ngày thanh toán</th><th>Ngân hàng</th><th>Trạng thái</th></tr></thead><tbody>{revenueReport.rangeInvoices.length === 0 ? <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--text-secondary)' }}>Chưa có giao dịch thanh toán thật trong khoảng này.</td></tr> : revenueReport.rangeInvoices.map(item => <tr key={item.id}><td>{item.txnRef}</td><td>{paymentCustomerName(item)}</td><td>{item.planId}</td><td>{money(Number(item.amount))}</td><td>{formatShortDate(paymentDate(item))}</td><td>{item.bankCode || '-'}</td><td><StatusBadge value={String(item.status)} /></td></tr>)}</tbody></table></div></section>
