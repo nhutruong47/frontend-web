@@ -55,16 +55,22 @@
     color: var(--text-primary);
 }
 
-.pricing-payment-methods button.active.momo {
-    border-color: #d6008f;
-    color: #d6008f;
-    background: rgba(214, 0, 143, 0.1);
+.pricing-payment-methods button.active.mb-bank {
+    border-color: #1459c8;
+    color: #1459c8;
+    background: rgba(20, 89, 200, 0.1);
 }
 
 .pricing-payment-methods button.active.vnpay {
     border-color: #1459c8;
     color: #1459c8;
     background: rgba(20, 89, 200, 0.1);
+}
+
+.pricing-payment-methods button.active.payos {
+    border-color: #2e7d32;
+    color: #2e7d32;
+    background: rgba(46, 125, 50, 0.1);
 }
 
 .pricing-grid {

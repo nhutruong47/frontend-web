@@ -6,12 +6,12 @@
     overflow: hidden;
 }
 
-.vnpay-mock-page.momo {
-    --pay-primary: #d6008f;
-    --pay-primary-dark: #a5006c;
-    --pay-soft: #fff0f8;
+.vnpay-mock-page.mb-bank {
+    --pay-primary: #1459c8;
+    --pay-primary-dark: #0b3d90;
+    --pay-soft: #eef6ff;
     --pay-header: #fff;
-    --pay-header-text: #9d0a71;
+    --pay-header-text: #1459c8;
 }
 
 .vnpay-mock-page.vnpay {

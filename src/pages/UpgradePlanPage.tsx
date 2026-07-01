@@ -4,7 +4,7 @@ import {
     Smartphone,
     QrCode,
 } from 'lucide-react';
-import type { PaymentMethod } from '../services/paymentService';
+import { paymentService, type PaymentMethod } from '../services/paymentService';
 import './UpgradePlanPage.css';
 
 interface Plan {
@@ -78,16 +78,27 @@ const plans: Plan[] = [
 export default function UpgradePlanPage() {
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(() => {
         const saved = localStorage.getItem('orca-payment-method');
-        return saved === 'MOMO' || saved === 'VNPAY' ? saved : 'MOMO';
+        return saved === 'MB_BANK' || saved === 'VNPAY' || saved === 'PAYOS' ? (saved as PaymentMethod) : 'PAYOS';
     });
 
-    const handleSelectPlan = (plan: Plan) => {
+    const handleSelectPlan = async (plan: Plan) => {
         if (plan.id === 'starter') {
             return;
         }
         localStorage.setItem('orca-ai-plan-pending', plan.id);
         localStorage.setItem('orca-payment-method', paymentMethod);
-        window.location.href = `/vnpay-mock-checkout?planId=${plan.id}&method=${paymentMethod}`;
+        
+        if (paymentMethod === 'PAYOS') {
+            try {
+                const res = await paymentService.createPayosPayment(plan.id);
+                window.location.href = res.checkoutUrl;
+            } catch (err) {
+                console.error(err);
+                alert('Có lỗi xảy ra khi tạo link thanh toán PayOS. Vui lòng thử lại.');
+            }
+        } else {
+            window.location.href = `/vnpay-mock-checkout?planId=${plan.id}&method=${paymentMethod}`;
+        }
     };
 
     return (
@@ -100,11 +111,19 @@ export default function UpgradePlanPage() {
             <section className="pricing-payment-methods" aria-label="Phương thức thanh toán">
                 <button
                     type="button"
-                    className={paymentMethod === 'MOMO' ? 'active momo' : 'momo'}
-                    onClick={() => setPaymentMethod('MOMO')}
+                    className={paymentMethod === 'PAYOS' ? 'active payos' : 'payos'}
+                    onClick={() => setPaymentMethod('PAYOS')}
+                >
+                    <QrCode size={18} />
+                    <span>PayOS (VietQR)</span>
+                </button>
+                <button
+                    type="button"
+                    className={paymentMethod === 'MB_BANK' ? 'active mb-bank' : 'mb-bank'}
+                    onClick={() => setPaymentMethod('MB_BANK')}
                 >
                     <Smartphone size={18} />
-                    <span>MoMo QR</span>
+                    <span>MB Bank</span>
                 </button>
                 <button
                     type="button"

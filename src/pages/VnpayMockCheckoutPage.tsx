@@ -16,11 +16,11 @@ const methodConfig: Record<PaymentMethod, {
     className: string;
     instruction: string;
 }> = {
-    MOMO: {
-        label: 'Cổng thanh toán MoMo',
-        shortLabel: 'MoMo',
-        className: 'momo',
-        instruction: 'Mở MoMo Test trong LDPlayer, chọn quét mã QR và xác nhận giao dịch sandbox.',
+    MB_BANK: {
+        label: 'Thanh toán chuyển khoản MB Bank',
+        shortLabel: 'MB Bank',
+        className: 'mb-bank',
+        instruction: 'Mở ứng dụng ngân hàng, quét mã VietQR và xác nhận chuyển khoản.',
     },
     VNPAY: {
         label: 'Cổng thanh toán VNPay QR',
@@ -79,7 +79,7 @@ export default function VnpayMockCheckoutPage() {
     const planId = searchParams.get('planId') || 'professional';
     const plan = planMap[planId] ?? planMap.professional;
     const methodParam = searchParams.get('method')?.toUpperCase();
-    const method: PaymentMethod = methodParam === 'MOMO' ? 'MOMO' : 'VNPAY';
+    const method: PaymentMethod = methodParam === 'MB_BANK' ? 'MB_BANK' : 'VNPAY';
     const config = methodConfig[method];
     const [qrPayment, setQrPayment] = useState<VirtualQrPaymentResponse | null>(null);
     const [loading, setLoading] = useState(true);

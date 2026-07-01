@@ -18,7 +18,15 @@ export interface MockTransferResponse {
     paymentMethod?: PaymentMethod;
 }
 
-export type PaymentMethod = 'MOMO' | 'VNPAY';
+export interface CreatePayosPaymentResponse {
+    checkoutUrl: string;
+    txnRef: string;
+    planId: string;
+    planName: string;
+    amount: number;
+}
+
+export type PaymentMethod = 'MB_BANK' | 'VNPAY' | 'PAYOS';
 
 export interface VirtualQrPaymentResponse {
     status: string;
@@ -39,6 +47,11 @@ export interface VirtualQrPaymentResponse {
 export const paymentService = {
     async createVnpayPayment(planId: string): Promise<CreateVnpayPaymentResponse> {
         const response = await api.post<CreateVnpayPaymentResponse>('/api/payments/vnpay/create', { planId });
+        return response.data;
+    },
+
+    async createPayosPayment(planId: string): Promise<CreatePayosPaymentResponse> {
+        const response = await api.post<CreatePayosPaymentResponse>('/api/payments/payos/create', { planId });
         return response.data;
     },
 
