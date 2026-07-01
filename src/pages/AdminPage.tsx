@@ -168,19 +168,18 @@ const buildKpis = (overview: AdminOverview): KpiItem[] => [
 ];
 
 const initialPlans = [
-  { name: 'Cơ bản', price: 499000, period: 'Tháng', users: 5, orders: 100, batches: 300, workshops: 1, ai: 5000, features: ['Bảng đơn hàng', 'Theo dõi lô sản xuất', 'Báo cáo cơ bản'] },
-  { name: 'Tăng trưởng', price: 1499000, period: 'Tháng', users: 30, orders: 1000, batches: 5000, workshops: 5, ai: 40000, features: ['Quy trình QC', 'Trợ lý AI', 'Xuất dữ liệu thanh toán'] },
-  { name: 'Doanh nghiệp', price: 0, period: 'Năm', users: 500, orders: 99999, batches: 99999, workshops: 50, ai: 500000, features: ['Cam kết dịch vụ', 'Quy trình tùy chỉnh', 'Giới hạn AI riêng'] }
+  { name: 'Chuyên nghiệp', price: 129000, period: 'Tháng', users: 30, orders: 1000, batches: 5000, workshops: 5, ai: 40000, features: ['Cảnh báo công việc', 'Cảnh báo nguyên liệu', 'Phân tích hiệu suất', 'Phát hiện điểm nghẽn'] },
+  { name: 'Doanh nghiệp', price: 249000, period: 'Tháng', users: 500, orders: 99999, batches: 99999, workshops: 50, ai: 500000, features: ['Kế hoạch dài hạn', 'Dự báo nhu cầu', 'Mô phỏng kịch bản', 'Quản lý nhiều xưởng'] }
 ];
 
 const featureRows = [
   'Quản lý đơn hàng',
   'Theo dõi lô sản xuất',
-  'Quy trình QC',
-  'Trợ lý AI',
-  'Xuất dữ liệu thanh toán',
-  'Quy trình tùy chỉnh',
-  'Hỗ trợ riêng'
+  'Cảnh báo công việc',
+  'Cảnh báo nguyên liệu',
+  'Kế hoạch dài hạn',
+  'Mô phỏng kịch bản',
+  'Trợ lý AI'
 ];
 
 function KpiCard({ item }: { item: KpiItem }) {
@@ -505,8 +504,14 @@ export default function AdminPage() {
       .map(([name, value]) => ({ name, value: Math.round(value / 1000000), amount: value }))
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5);
+    const getPlanName = (id: string) => {
+      if (!id || id.toLowerCase() === 'free') return 'Dùng thử';
+      if (id.toLowerCase() === 'professional') return 'Chuyên nghiệp';
+      if (id.toLowerCase() === 'enterprise') return 'Doanh nghiệp';
+      return id;
+    };
     const planMap = paidPayments.reduce<Record<string, number>>((acc, item) => {
-      const planName = item.planId || 'Không rõ';
+      const planName = getPlanName(item.planId);
       acc[planName] = (acc[planName] || 0) + Number(item.amount);
       return acc;
     }, {});
