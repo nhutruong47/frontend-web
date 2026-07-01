@@ -28,6 +28,12 @@ const methodConfig: Record<PaymentMethod, {
         className: 'vnpay',
         instruction: 'Mở mobile banking hoặc ví hỗ trợ VNPay QR để quét mã thử nghiệm.',
     },
+    PAYOS: {
+        label: 'Thanh toán qua PayOS',
+        shortLabel: 'PayOS',
+        className: 'payos',
+        instruction: 'Quét mã VietQR trên cổng PayOS để thanh toán.',
+    },
 };
 
 function formatCurrency(value: number) {
