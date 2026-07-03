@@ -241,6 +241,17 @@ export default function CreateTaskPage() {
     const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
     const totalTokens = messages.reduce((sum, message) => sum + estimateTokens(message.content), 0);
 
+    const handleCopyMessage = (content: string) => {
+        navigator.clipboard.writeText(content);
+        alert('Đã copy nội dung!');
+    };
+
+    const handleDeleteMessage = (id: string) => {
+        if (window.confirm('Bạn có chắc chắn muốn xóa đoạn chat này?')) {
+            setMessages(prev => prev.filter(m => m.id !== id));
+        }
+    };
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -997,10 +1008,11 @@ export default function CreateTaskPage() {
                                         )}
                                         {msg.role === 'assistant' && (
                                             <div className="task-gpt-message-actions">
-                                                <ion-icon name="copy-outline"></ion-icon>
-                                                <ion-icon name="thumbs-up-outline"></ion-icon>
-                                                <ion-icon name="thumbs-down-outline"></ion-icon>
-                                                <ion-icon name="refresh-outline"></ion-icon>
+                                                <ion-icon name="copy-outline" onClick={() => handleCopyMessage(msg.content)} style={{ cursor: 'pointer' }} title="Copy"></ion-icon>
+                                                <ion-icon name="thumbs-up-outline" onClick={() => alert('Cảm ơn bạn đã đánh giá!')} style={{ cursor: 'pointer' }} title="Hữu ích"></ion-icon>
+                                                <ion-icon name="thumbs-down-outline" onClick={() => alert('Cảm ơn bạn đã đánh giá!')} style={{ cursor: 'pointer' }} title="Chưa tốt"></ion-icon>
+                                                <ion-icon name="refresh-outline" style={{ cursor: 'pointer' }} title="Thử lại"></ion-icon>
+                                                <ion-icon name="trash-outline" onClick={() => handleDeleteMessage(msg.id)} style={{ cursor: 'pointer', color: '#ef4444' }} title="Xóa đoạn chat này"></ion-icon>
                                                 {showTokens && <span className="task-gpt-token">{formatTokenCount(estimateTokens(msg.content))} token</span>}
                                             </div>
                                         )}
