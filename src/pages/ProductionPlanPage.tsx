@@ -88,7 +88,7 @@ export default function ProductionPlanPage() {
 
     const loadMyAttendance = async () => {
         try {
-            const att = await attendanceService.getTodayAttendance(userId, teamId);
+            const att = await attendanceService.getTodayAttendance(teamId);
             setMyAttendance(att);
         } catch (e) { console.error(e); }
     };
@@ -176,7 +176,7 @@ export default function ProductionPlanPage() {
         if (!userId || !teamId) return;
         setLoadingAttendance(true);
         try {
-            const result = await attendanceService.checkIn(userId, teamId, {
+            const result = await attendanceService.checkIn(teamId, {
                 shiftType, stage, orderId: selectedOrder?.id, breakMinutes
             });
             setMyAttendance(result);
@@ -192,7 +192,7 @@ export default function ProductionPlanPage() {
         if (!userId || !teamId) return;
         setLoadingAttendance(true);
         try {
-            const result = await attendanceService.checkOut(userId, teamId);
+            const result = await attendanceService.checkOut(teamId);
             setMyAttendance(result);
             alert('Check-out thanh cong!');
         } catch (e: any) {

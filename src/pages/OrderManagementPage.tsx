@@ -110,9 +110,9 @@ export default function OrderManagementPage() {
             await interGroupOrderService.acceptOrder(orderId);
             setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'ACCEPTED' } : o));
             alert('Đã chấp nhận đơn hàng và tạo Mục tiêu thành công!');
-        } catch (err) {
-            alert('Có lỗi xảy ra khi chấp nhận đơn.');
+        } catch (err: any) {
             console.error(err);
+            alert('Có lỗi xảy ra khi chấp nhận đơn: ' + (err.response?.data?.error || err.message));
         }
     };
 
@@ -138,10 +138,36 @@ export default function OrderManagementPage() {
         }
     };
 
-    const handleComplete = async (orderId: string) => {
-        if (!confirm('Hoàn thành đơn hàng này?')) return;
+    const handleShip = async (orderId: string) => {
+        if (!confirm('Xác nhận bắt đầu giao đơn hàng này?')) return;
         try {
-            await interGroupOrderService.completeOrder(orderId);
+            await interGroupOrderService.shipOrder(orderId);
+            setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'SHIPPING' } : o));
+        } catch (err) {
+            alert('Có lỗi xảy ra.');
+            console.error(err);
+        }
+    };
+
+    const handleDeliver = async (orderId: string) => {
+        if (!confirm('Xác nhận đã giao đơn hàng này đến nơi?')) return;
+        try {
+            await interGroupOrderService.deliverOrder(orderId);
+            setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'DELIVERED' } : o));
+        } catch (err) {
+            alert('Có lỗi xảy ra.');
+            console.error(err);
+        }
+    };
+
+    const handleConfirmDelivery = async (orderId: string) => {
+        if (!confirm('Xác nhận đã nhận hàng thành công?')) return;
+        try {
+            await interGroupOrderService.buyerConfirmDelivery(orderId, {
+                deliveryStatus: 'ON_TIME',
+                rating: 5,
+                comment: 'Đã nhận hàng'
+            });
             setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'COMPLETED' } : o));
         } catch (err) {
             alert('Có lỗi xảy ra.');
@@ -223,14 +249,33 @@ export default function OrderManagementPage() {
     };
 
     const getStatusBadge = (order: InterGroupOrder) => {
-        if (order.cancelRequested) return <span className="status-badge status-rejected"><ion-icon name="alert-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Yêu cầu hủy</span>;
+        const getStyle = (type: 'yellow' | 'green' | 'red' | 'blue' | 'orange') => {
+            switch (type) {
+                case 'yellow': return { background: 'rgba(234, 179, 8, 0.1)', color: '#eab308', border: '1px solid rgba(234, 179, 8, 0.2)' };
+                case 'green': return { background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.2)' };
+                case 'red': return { background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' };
+                case 'blue': return { background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)' };
+                case 'orange': return { background: 'rgba(249, 115, 22, 0.1)', color: '#f97316', border: '1px solid rgba(249, 115, 22, 0.2)' };
+                default: return {};
+            }
+        };
+
+        if (order.cancelRequested) return <span className="status-badge" style={getStyle('red')}><ion-icon name="alert-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Yêu cầu hủy</span>;
+        
         switch (order.status) {
-            case 'PENDING': return <span className="status-badge status-pending"><ion-icon name="time-outline" style={{ fontSize: '13px' }}></ion-icon> Chờ xử lý</span>;
-            case 'ACCEPTED': return <span className="status-badge status-accepted"><ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Đã nhận làm</span>;
-            case 'REJECTED': return <span className="status-badge status-rejected"><ion-icon name="close-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Bị từ chối</span>;
-            case 'COMPLETED': return <span className="status-badge status-completed"><ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Hoàn thành</span>;
-            case 'CANCELED': return <span className="status-badge status-canceled"><ion-icon name="ban-outline" style={{ fontSize: '13px' }}></ion-icon> Đã hủy</span>;
-            default: return <span className="status-badge">{order.status}</span>;
+            case 'RFQ_CREATED': return <span className="status-badge" style={getStyle('yellow')}><ion-icon name="document-text-outline" style={{ fontSize: '13px' }}></ion-icon> Yêu cầu báo giá</span>;
+            case 'QUOTED': return <span className="status-badge" style={getStyle('blue')}><ion-icon name="pricetag-outline" style={{ fontSize: '13px' }}></ion-icon> Đã báo giá</span>;
+            case 'PENDING': return <span className="status-badge" style={getStyle('yellow')}><ion-icon name="time-outline" style={{ fontSize: '13px' }}></ion-icon> Chờ xử lý</span>;
+            case 'ACCEPTED': return <span className="status-badge" style={getStyle('green')}><ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Đã nhận làm</span>;
+            case 'CONFIRMED': return <span className="status-badge" style={getStyle('green')}><ion-icon name="checkmark-done-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Đã xác nhận</span>;
+            case 'IN_PRODUCTION': return <span className="status-badge" style={getStyle('blue')}><ion-icon name="construct-outline" style={{ fontSize: '13px' }}></ion-icon> Đang sản xuất</span>;
+            case 'QC': return <span className="status-badge" style={getStyle('orange')}><ion-icon name="flask-outline" style={{ fontSize: '13px' }}></ion-icon> Kiểm định QC</span>;
+            case 'COMPLETED': return <span className="status-badge" style={getStyle('green')}><ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Hoàn thành</span>;
+            case 'CANCELED': return <span className="status-badge" style={getStyle('red')}><ion-icon name="ban-outline" style={{ fontSize: '13px' }}></ion-icon> Đã hủy</span>;
+            case 'REJECTED': return <span className="status-badge" style={getStyle('red')}><ion-icon name="close-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Bị từ chối</span>;
+            case 'SHIPPING': return <span className="status-badge" style={getStyle('blue')}><ion-icon name="car-outline" style={{ fontSize: '13px' }}></ion-icon> Đang giao</span>;
+            case 'DELIVERED': return <span className="status-badge" style={getStyle('green')}><ion-icon name="cube-outline" style={{ fontSize: '13px' }}></ion-icon> Đã giao</span>;
+            default: return <span className="status-badge" style={{ border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.05)' }}>{order.status}</span>;
         }
     };
 
@@ -497,15 +542,23 @@ export default function OrderManagementPage() {
                                     <td style={{ padding: '12px', textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
                                             {/* Inbound PENDING: Accept/Reject */}
-                                            {activeTab === 'inbound' && order.status === 'PENDING' && !order.cancelRequested && (
+                                            {activeTab === 'inbound' && (order.status === 'PENDING' || order.status === 'RFQ_CREATED') && !order.cancelRequested && (
                                                 <>
                                                     <button className="btn btn-secondary" onClick={() => handleReject(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>Từ chối</button>
                                                     <button className="btn btn-primary" onClick={() => handleAccept(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>Chấp nhận</button>
                                                 </>
                                             )}
-                                            {/* Inbound ACCEPTED: Mark as Delivered */}
-                                            {activeTab === 'inbound' && order.status === 'ACCEPTED' && !order.cancelRequested && (
-                                                <button className="btn btn-primary" onClick={() => handleComplete(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}><ion-icon name="car-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Đã giao</button>
+                                            {/* Inbound ACCEPTED: Mark as Shipping */}
+                                            {activeTab === 'inbound' && (order.status === 'ACCEPTED' || order.status === 'CONFIRMED') && !order.cancelRequested && (
+                                                <button className="btn btn-primary" onClick={() => handleShip(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}><ion-icon name="car-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Giao hàng</button>
+                                            )}
+                                            {/* Inbound SHIPPING: Mark as Delivered */}
+                                            {activeTab === 'inbound' && order.status === 'SHIPPING' && !order.cancelRequested && (
+                                                <button className="btn btn-primary" onClick={() => handleDeliver(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}><ion-icon name="cube-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Đã giao hàng</button>
+                                            )}
+                                            {/* Outbound DELIVERED: Confirm Delivery */}
+                                            {activeTab === 'outbound' && order.status === 'DELIVERED' && !order.cancelRequested && (
+                                                <button className="btn btn-primary" onClick={() => handleConfirmDelivery(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}><ion-icon name="checkmark-done-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Xác nhận đã nhận hàng</button>
                                             )}
                                             {/* Inbound CANCEL_REQUESTED: Approve/Reject Cancel */}
                                             {activeTab === 'inbound' && order.cancelRequested && (
@@ -515,7 +568,7 @@ export default function OrderManagementPage() {
                                                 </>
                                             )}
                                             {/* Both: Cancel (PENDING or ACCEPTED) */}
-                                            {(order.status === 'PENDING' || order.status === 'ACCEPTED') && !order.cancelRequested && (
+                                            {(order.status === 'PENDING' || order.status === 'RFQ_CREATED' || order.status === 'ACCEPTED' || order.status === 'CONFIRMED') && !order.cancelRequested && (
                                                 <button className="btn btn-secondary" onClick={() => handleCancel(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}><ion-icon name="ban-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> {activeTab === 'outbound' ? 'Hủy / Xin hủy' : 'Hủy'}</button>
                                             )}
                                             {/* Show canceller */}

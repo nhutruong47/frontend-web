@@ -32,17 +32,17 @@ export interface CheckInPayload {
 }
 
 export const attendanceService = {
-    checkIn: (userId: string, teamId: string, payload?: Partial<CheckInPayload>) =>
-        api.post<AttendanceDTO>(`/api/attendance/check-in/${userId}/${teamId}`, payload || {}).then(r => r.data),
+    checkIn: (teamId: string, payload?: Partial<CheckInPayload>) =>
+        api.post<AttendanceDTO>(`/api/attendance/check-in/${teamId}`, payload || {}).then(r => r.data),
 
-    checkOut: (userId: string, teamId: string) =>
-        api.post<AttendanceDTO>(`/api/attendance/check-out/${userId}/${teamId}`).then(r => r.data),
+    checkOut: (teamId: string) =>
+        api.post<AttendanceDTO>(`/api/attendance/check-out/${teamId}`).then(r => r.data),
 
-    getTodayAttendance: (userId: string, teamId: string) =>
-        api.get<AttendanceDTO>(`/api/attendance/today/${userId}/${teamId}`).then(r => r.data).catch(() => null),
+    getTodayAttendance: (teamId: string) =>
+        api.get<AttendanceDTO>(`/api/attendance/today/${teamId}`).then(r => r.data).catch(() => null),
 
-    getHistory: (userId: string, teamId: string) =>
-        api.get<AttendanceDTO[]>(`/api/attendance/history/${userId}/${teamId}`).then(r => r.data),
+    getHistory: (teamId: string) =>
+        api.get<AttendanceDTO[]>(`/api/attendance/history/${teamId}`).then(r => r.data),
 
     getTeamHistory: (teamId: string) =>
         api.get<AttendanceDTO[]>(`/api/attendance/team-history/${teamId}`).then(r => r.data),

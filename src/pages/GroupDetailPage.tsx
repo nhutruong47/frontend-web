@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { teamService, goalService, taskService, getTrialStatus, chatService } from '../services/groupService';
+import { teamService, goalService, taskService, getTrialStatus, chatService, inventoryService } from '../services/groupService';
 import { attendanceService } from '../services/attendanceService';
 import type { Team, Goal, Task, ChatMsg, SalaryReport, AiChatLogMsg } from '../types/types';
 
@@ -37,12 +37,6 @@ const MEMBER_COLORS = ['#d4a574', '#f59e0b', '#10b981', '#ec4899', '#f43f5e', '#
 
 
 
-const inventoryService = {
-  getByTeam: async (..._args: any[]) => [],
-  create: async (..._args: any[]) => {},
-  updateQuantity: async (..._args: any[]) => {},
-  delete: async (..._args: any[]) => {}
-};
 
 export default function GroupDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -52,6 +46,10 @@ export default function GroupDetailPage() {
     const [goals, setGoals] = useState<Goal[]>([]);
     const [allTasks, setAllTasks] = useState<Task[]>([]);
     const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+    const [memberRoleFilter, setMemberRoleFilter] = useState<string>('ALL');
+    const [teamRoles, setTeamRoles] = useState<string[]>([]);
+    const [showManageRolesModal, setShowManageRolesModal] = useState(false);
+    const [newRoleName, setNewRoleName] = useState('');
     const [showAddMember, setShowAddMember] = useState(false);
     const [inviteEmail, setInviteEmail] = useState('');
     const [showCreateGoal, setShowCreateGoal] = useState(false);
@@ -191,7 +189,17 @@ export default function GroupDetailPage() {
 
     useEffect(() => {
         if (!id) return;
-        teamService.getDetail(id).then(setTeam).catch(() => { });
+        teamService.getDetail(id).then(data => {
+            setTeam(data);
+            if (data.metadata) {
+                try {
+                    const parsed = JSON.parse(data.metadata);
+                    if (parsed.roles && Array.isArray(parsed.roles)) {
+                        setTeamRoles(parsed.roles);
+                    }
+                } catch (e) { console.error('Error parsing metadata', e); }
+            }
+        }).catch(() => { });
         goalService.getByTeam(id).then(g => {
             setGoals(g);
             // Load all tasks for all goals
@@ -199,7 +207,7 @@ export default function GroupDetailPage() {
                 .then(taskArrays => setAllTasks(taskArrays.flat()))
                 .catch(() => { });
         }).catch(() => { });
-        // inventoryService.getByTeam(id).then(setanys).catch(() => { });
+        inventoryService.getByTeam(id).then(data => { console.log('[INVENTORY] Loaded', data?.length, 'items for team', id, data); setanys(data || []); }).catch(err => { console.error('[INVENTORY] Error loading inventory:', err); });
         getTrialStatus().then(s => { setTrialActive(s.aiTrialActive); setTrialDays(s.daysRemaining); }).catch(() => { });
     }, [id]);
 
@@ -217,7 +225,7 @@ export default function GroupDetailPage() {
     const loadTodayAttendance = useCallback(async () => {
         if (!id || !user?.id) return;
         try {
-            const att = await attendanceService.getTodayAttendance(user.id, id);
+            const att = await attendanceService.getTodayAttendance(id);
             setMyAttendance(att);
         } catch (e) {
             console.error('Lỗi tải thông tin chấm công hôm nay:', e);
@@ -227,7 +235,7 @@ export default function GroupDetailPage() {
     const loadAttendanceHistory = useCallback(async () => {
         if (!id || !user?.id) return;
         try {
-            const history = await attendanceService.getHistory(user.id, id);
+            const history = await attendanceService.getHistory(id);
             setAttendanceHistory(history || []);
         } catch (e) {
             console.error('Lỗi tải lịch sử chấm công:', e);
@@ -271,7 +279,7 @@ export default function GroupDetailPage() {
             else if (rawStage.includes('DONG') || rawStage.includes('ĐÓNG') || rawStage.includes('GÓI') || rawStage.includes('GOI')) stage = 'DONG_GOI';
             else if (rawStage.includes('QA') || rawStage.includes('QC') || rawStage.includes('KIỂM') || rawStage.includes('KIEM')) stage = 'QA';
             
-            const result = await attendanceService.checkIn(user.id, id, {
+            const result = await attendanceService.checkIn(id, {
                 shiftType: 'NGAY',
                 stage: stage as any,
                 breakMinutes: 0
@@ -289,7 +297,7 @@ export default function GroupDetailPage() {
         if (!id || !user?.id) return;
         setLoadingAttendance(true);
         try {
-            const result = await attendanceService.checkOut(user.id, id);
+            const result = await attendanceService.checkOut(id);
             setMyAttendance(result);
             alert('Tan ca thành công!');
         } catch (e: any) {
@@ -636,7 +644,7 @@ export default function GroupDetailPage() {
             await inventoryService.create({
                 teamId: id,
                 name: invName,
-                quantity: Number(invQty),
+                quantity: Number(invQty.replace(/\./g, '')),
                 unit: invUnit || 'Cái',
                 lowStockThreshold: Number(invThreshold) || 10
             });
@@ -650,7 +658,7 @@ export default function GroupDetailPage() {
         if (!id || !updateInvQty) return;
         setLoading(true);
         try {
-            await inventoryService.updateQuantity(invId, Number(updateInvQty));
+            await inventoryService.updateQuantity(invId, Number(updateInvQty.replace(/\./g, '')));
             const items = await inventoryService.getByTeam(id);
             setanys(items);
             setUpdatingInvId(null); setUpdateInvQty('');
@@ -849,11 +857,26 @@ export default function GroupDetailPage() {
             {/* ===== EMPTY STATE / ANALYTICS ===== */}
             {/* ===== MEMBER CARDS ===== */}
             {showMemberRoles && visibleMemberStats.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 260px))', gap: 14, marginBottom: 18 }}>
-                {visibleMemberStats.map(m => {
+            <>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                    <button onClick={() => setMemberRoleFilter('ALL')} style={{ padding: '6px 14px', borderRadius: 20, border: memberRoleFilter === 'ALL' ? '1px solid var(--accent-primary, #d4a574)' : '1px solid var(--border, #e2e8f0)', background: memberRoleFilter === 'ALL' ? 'var(--accent-primary, #d4a574)' : 'transparent', color: memberRoleFilter === 'ALL' ? '#fff' : 'var(--text-secondary, #64748b)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Tất cả</button>
+                    {Array.from(new Set(visibleMemberStats.flatMap(m => m.jobLabels || []).filter((l: string) => l.trim().length > 0))).map(role => (
+                        <button key={role} onClick={() => setMemberRoleFilter(role)} style={{ padding: '6px 14px', borderRadius: 20, border: memberRoleFilter === role ? '1px solid var(--accent-primary, #d4a574)' : '1px solid var(--border, #e2e8f0)', background: memberRoleFilter === role ? 'var(--accent-primary, #d4a574)' : 'transparent', color: memberRoleFilter === role ? '#fff' : 'var(--text-secondary, #64748b)', fontSize: 13, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize' }}>
+                            {role}
+                        </button>
+                    ))}
+                    <button onClick={() => setMemberRoleFilter('NONE')} style={{ padding: '6px 14px', borderRadius: 20, border: memberRoleFilter === 'NONE' ? '1px solid var(--accent-primary, #d4a574)' : '1px solid var(--border, #e2e8f0)', background: memberRoleFilter === 'NONE' ? 'var(--accent-primary, #d4a574)' : 'transparent', color: memberRoleFilter === 'NONE' ? '#fff' : 'var(--text-secondary, #64748b)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Chưa phân vai</button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 260px))', gap: 14, marginBottom: 18 }}>
+                    {visibleMemberStats.filter(m => {
+                        if (memberRoleFilter === 'ALL') return true;
+                        const roles = (m.jobLabels || []).filter((l: string) => l.trim().length > 0);
+                        if (memberRoleFilter === 'NONE') return roles.length === 0;
+                        return roles.includes(memberRoleFilter);
+                    }).map(m => {
                         const displayName = m.fullName || m.username;
                     return (
-                        <div key={m.userId} style={{ minWidth: 220, background: '#fff', borderRadius: 14, padding: '16px 20px', border: '1px solid #e2e8f0', flexShrink: 0 }}>
+                        <div key={m.userId} style={{ minWidth: 220, background: 'var(--bg-card, #fff)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border, #e2e8f0)', flexShrink: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                                 <div style={{ width: 36, height: 36, borderRadius: '50%', background: m.color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 14 }}>{getInitials(displayName)}</div>
                                 <div>
@@ -908,6 +931,7 @@ export default function GroupDetailPage() {
                     );
                 })}
             </div>
+            </>
             )}
 
             {/* ===== DB ROADMAP: same source as task table ===== */}
@@ -1254,8 +1278,13 @@ export default function GroupDetailPage() {
                                                 const clampActual = (val: number) => Math.max(0, target > 0 ? Math.min(val, target) : val);
                                                 const persistActual = (val: number) => {
                                                     taskService.update(t.id, { actualOutput: val })
-                                                        .catch((err: any) => setError(err?.response?.data?.error || 'Khong the cap nhat'))
-                                                        .then(() => { if (id) { goalService.getByTeam(id).then(g => { setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }); } });
+                                                        .then((updatedTask) => {
+                                                            if (updatedTask && updatedTask.id) {
+                                                                setAllTasks(prev => prev.map(tk => tk.id === updatedTask.id ? updatedTask : tk));
+                                                            }
+                                                            if (id) { goalService.getByTeam(id).then(setGoals); }
+                                                        })
+                                                        .catch((err: any) => setError(err?.response?.data?.error || 'Khong the cap nhat'));
                                                 };
                                                 return (
                                                     <div>
@@ -1285,8 +1314,11 @@ export default function GroupDetailPage() {
                                                                         const value = e.currentTarget.value;
                                                                         try {
                                                                             setError('');
-                                                                            await taskService.update(t.id, { outputTarget: value === '' ? undefined : Number(value) });
-                                                                            if (id) { goalService.getByTeam(id).then(g => { setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }); }
+                                                                            const updatedTask = await taskService.update(t.id, { outputTarget: value === '' ? undefined : Number(value) });
+                                                                            if (updatedTask && updatedTask.id) {
+                                                                                setAllTasks(prev => prev.map(tk => tk.id === updatedTask.id ? updatedTask : tk));
+                                                                            }
+                                                                            if (id) { const g = await goalService.getByTeam(id); setGoals(g); }
                                                                         } catch (err: any) {
                                                                             setError(err?.response?.data?.error || 'Không thể cập nhật mục tiêu');
                                                                         }
@@ -1332,20 +1364,28 @@ export default function GroupDetailPage() {
                                                     <select value={t.memberId || ''} onChange={async e => {
                                                         const nextMemberId = e.target.value;
                                                         if (!nextMemberId) return;
+                                                        let updatedTask;
                                                         if (t.memberId && t.memberId !== nextMemberId) {
                                                             const reason = window.prompt('Lý do chuyển giao công việc?', 'Điều phối lại nhân sự') || 'Điều phối lại nhân sự';
-                                                            await taskService.transfer(t.id, nextMemberId, reason);
+                                                            updatedTask = await taskService.transfer(t.id, nextMemberId, reason);
                                                         } else {
-                                                            await taskService.assign(t.id, nextMemberId);
+                                                            updatedTask = await taskService.assign(t.id, nextMemberId);
                                                         }
-                                                        const g = await goalService.getByTeam(id!);
-                                                        setGoals(g);
-                                                        Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat()));
+                                                        if (updatedTask && updatedTask.id) {
+                                                            setAllTasks(prev => prev.map(tk => tk.id === updatedTask.id ? updatedTask : tk));
+                                                        }
+                                                        if (id) { const g = await goalService.getByTeam(id); setGoals(g); }
                                                     }} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', minWidth: 100 }}>
                                                         <option value="">— Giao —</option>
                                                         {team?.members?.map(m => <option key={m.userId} value={m.userId}>{m.fullName || m.username}</option>)}
                                                     </select>
-                                                    <select value={t.backupMemberId || ''} onChange={async e => { await taskService.setBackup(t.id, e.target.value); const g = await goalService.getByTeam(id!); setGoals(g); Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat())); }} style={{ background: '#fff7ed', border: '1px solid #fde3c7', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', minWidth: 120 }}>
+                                                    <select value={t.backupMemberId || ''} onChange={async e => {
+                                                        const updatedTask = await taskService.setBackup(t.id, e.target.value);
+                                                        if (updatedTask && updatedTask.id) {
+                                                            setAllTasks(prev => prev.map(tk => tk.id === updatedTask.id ? updatedTask : tk));
+                                                        }
+                                                        if (id) { const g = await goalService.getByTeam(id); setGoals(g); }
+                                                    }} style={{ background: '#fff7ed', border: '1px solid #fde3c7', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', minWidth: 120 }}>
                                                         <option value="">— Sao lưu —</option>
                                                         {team?.members?.map(m => <option key={m.userId} value={m.userId}>{m.fullName || m.username}</option>)}
                                                     </select>
@@ -1414,9 +1454,9 @@ export default function GroupDetailPage() {
                 {/* Table */}
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                        <tr style={{ background: '#f8fafc' }}>
+                        <tr style={{ background: 'transparent' }}>
                             {['Tên mặt hàng', 'Tình trạng', 'Số lượng', 'Cập nhật', ''].map((h, i) => (
-                                <th key={i} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' }}>{h}</th>
+                                <th key={i} style={{ padding: '10px 16px', textAlign: h === 'Số lượng' ? 'center' : 'left', fontSize: 11, fontWeight: 700, color: h === 'Số lượng' ? '#d4a574' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border, #e2e8f0)' }}>{h}</th>
                             ))}
                         </tr>
                     </thead>
@@ -1440,18 +1480,25 @@ export default function GroupDetailPage() {
                                             <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor }}></div> {statusLabel}
                                         </span>
                                     </td>
-                                    <td style={{ padding: '12px 16px' }}>
-                                        <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{item.quantity} <span style={{ fontSize: 12, fontWeight: 500, color: '#64748b' }}>{item.unit}</span></div>
+                                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 30px', gap: 6, alignItems: 'baseline', width: '100%', maxWidth: 120, margin: '0 auto' }}>
+                                            <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 15, color: '#3b82f6', letterSpacing: '0.5px' }}>
+                                                {Number(item.quantity).toLocaleString('vi-VN')}
+                                            </div>
+                                            <div style={{ textAlign: 'left', fontSize: 13, fontWeight: 500, color: '#94a3b8' }}>
+                                                {item.unit}
+                                            </div>
+                                        </div>
                                     </td>
                                     <td style={{ padding: '12px 16px' }}>
                                         {isUpdating ? (
                                             <div style={{ display: 'flex', gap: 6 }}>
-                                                <input type="number" value={updateInvQty} onChange={e => setUpdateInvQty(e.target.value)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #d4a574', width: 70, fontSize: 12 }} autoFocus />
+                                                <input type="text" value={updateInvQty} onChange={e => { const val = e.target.value.replace(/\./g, ''); if (!isNaN(Number(val))) setUpdateInvQty(val === '' ? '' : Number(val).toLocaleString('de-DE')); }} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #d4a574', width: 70, fontSize: 12 }} autoFocus />
                                                 <button onClick={() => handleUpdateInvQty(item.id)} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 6, padding: '0 8px', fontSize: 11, cursor: 'pointer' }}>OK</button>
                                                 <button onClick={() => setUpdatingInvId(null)} style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 6, padding: '0 8px', fontSize: 11, cursor: 'pointer' }}>Hủy</button>
                                             </div>
                                         ) : (
-                                            <button onClick={() => { setUpdatingInvId(item.id); setUpdateInvQty(item.quantity.toString()); }} style={{ background: '#f8fafc', color: '#d4a574', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Chỉnh sửa</button>
+                                            <button onClick={() => { setUpdatingInvId(item.id); setUpdateInvQty(Number(item.quantity).toLocaleString('de-DE')); }} style={{ background: '#f8fafc', color: '#d4a574', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Chỉnh sửa</button>
                                         )}
                                     </td>
                                     <td style={{ padding: '12px 16px' }}>
@@ -1829,22 +1876,139 @@ export default function GroupDetailPage() {
             {showLabelModal && selectedMemberForLabels && (
                 <div className="modal-overlay" onClick={() => setShowLabelModal(false)} style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000 }}>
                     <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, background: '#fff', color: '#1a1a1a', borderRadius: 16, padding: '24px' }}>
-                        <h2 style={{ margin: '0 0 8px', color: '#1e293b', fontSize: 18 }}>Nhãn dán công việc</h2>
+                        <h2 style={{ margin: '0 0 8px', color: '#1e293b', fontSize: 18 }}>Phân vai trò</h2>
                         <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>
-                            Gán thẻ nhãn cho <b>{selectedMemberForLabels.fullName || selectedMemberForLabels.username}</b>. Các nhãn phân cách nhau bằng dấu phẩy (Ví dụ: Thợ rang, Đóng gói).
+                            Gán vai trò cho <b>{selectedMemberForLabels.fullName || selectedMemberForLabels.username}</b>. Bạn có thể chọn từ danh sách hoặc tự nhập ở dưới.
                         </p>
+                        
+                        {teamRoles.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                                {teamRoles.map(role => {
+                                    const currentRoles = editingLabels.split(',').map(r => r.trim()).filter(r => r);
+                                    const isSelected = currentRoles.includes(role);
+                                    return (
+                                        <button 
+                                            key={role}
+                                            onClick={() => {
+                                                if (isSelected) {
+                                                    setEditingLabels(currentRoles.filter(r => r !== role).join(', '));
+                                                } else {
+                                                    setEditingLabels([...currentRoles, role].join(', '));
+                                                }
+                                            }}
+                                            style={{ 
+                                                padding: '6px 12px', 
+                                                borderRadius: 12, 
+                                                border: isSelected ? '1px solid #d4a574' : '1px solid #e2e8f0', 
+                                                background: isSelected ? '#fff7ed' : '#f8fafc', 
+                                                color: isSelected ? '#d97706' : '#64748b', 
+                                                fontSize: 13, 
+                                                fontWeight: 600, 
+                                                cursor: 'pointer' 
+                                            }}
+                                        >
+                                            {role}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                         <input
                             value={editingLabels}
                             onChange={e => setEditingLabels(e.target.value)}
-                            placeholder="Nhập thẻ nhãn..."
+                            placeholder="Nhập vai trò khác (phân cách bởi dấu phẩy)..."
                             style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 14, outline: 'none', background: '#f8fafc' }}
                             autoFocus
                             onKeyDown={e => e.key === 'Enter' && handleSaveLabels()}
                         />
-                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 24 }}>
-                            <button onClick={() => setShowLabelModal(false)} style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
-                            <button onClick={handleSaveLabels} disabled={loading} style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                                {loading ? 'Đang lưu...' : 'Lưu nhãn'}
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', marginTop: 24 }}>
+                            <button onClick={() => { setShowLabelModal(false); setShowManageRolesModal(true); }} style={{ background: 'transparent', border: 'none', color: '#d4a574', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <ion-icon name="list-circle-outline"></ion-icon> Tạo vai trò
+                            </button>
+                            <div style={{ display: 'flex', gap: 10 }}>
+                                <button onClick={() => setShowLabelModal(false)} style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
+                                <button onClick={handleSaveLabels} disabled={loading} style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                                    {loading ? 'Đang lưu...' : 'Lưu'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Manage Roles Modal */}
+            {showManageRolesModal && (
+                <div className="modal-overlay" onClick={() => setShowManageRolesModal(false)} style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000 }}>
+                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, background: '#fff', color: '#1a1a1a', borderRadius: 16, padding: '24px' }}>
+                        <h2 style={{ margin: '0 0 8px', color: '#1e293b', fontSize: 18 }}>Quản lý vai trò</h2>
+                        <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>
+                            Thêm các vai trò chuẩn để phân công nhanh cho thành viên.
+                        </p>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20, maxHeight: 200, overflowY: 'auto' }}>
+                            {teamRoles.length === 0 ? (
+                                <div style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '10px 0' }}>Chưa có vai trò nào</div>
+                            ) : (
+                                teamRoles.map(role => (
+                                    <div key={role} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+                                        <span style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>{role}</span>
+                                        <button onClick={async () => {
+                                            const updatedRoles = teamRoles.filter(r => r !== role);
+                                            setTeamRoles(updatedRoles);
+                                            const newMetadata = JSON.stringify({ ...JSON.parse(team?.metadata || '{}'), roles: updatedRoles });
+                                            try {
+                                                await teamService.update(team!.id, { metadata: newMetadata });
+                                                setTeam(prev => prev ? { ...prev, metadata: newMetadata } : prev);
+                                            } catch (e) { console.error(e); }
+                                        }} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 4 }}>
+                                            <ion-icon name="trash-outline" style={{ fontSize: 16 }}></ion-icon>
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <input
+                                value={newRoleName}
+                                onChange={e => setNewRoleName(e.target.value)}
+                                placeholder="Nhập tên vai trò mới..."
+                                style={{ flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 14, outline: 'none' }}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter' && newRoleName.trim()) {
+                                        const r = newRoleName.trim();
+                                        if (!teamRoles.includes(r)) {
+                                            const updatedRoles = [...teamRoles, r];
+                                            setTeamRoles(updatedRoles);
+                                            setNewRoleName('');
+                                            const newMetadata = JSON.stringify({ ...JSON.parse(team?.metadata || '{}'), roles: updatedRoles });
+                                            teamService.update(team!.id, { metadata: newMetadata }).then(() => {
+                                                setTeam(prev => prev ? { ...prev, metadata: newMetadata } : prev);
+                                            }).catch(console.error);
+                                        }
+                                    }
+                                }}
+                            />
+                            <button onClick={async () => {
+                                const r = newRoleName.trim();
+                                if (r && !teamRoles.includes(r)) {
+                                    const updatedRoles = [...teamRoles, r];
+                                    setTeamRoles(updatedRoles);
+                                    setNewRoleName('');
+                                    const newMetadata = JSON.stringify({ ...JSON.parse(team?.metadata || '{}'), roles: updatedRoles });
+                                    try {
+                                        await teamService.update(team!.id, { metadata: newMetadata });
+                                        setTeam(prev => prev ? { ...prev, metadata: newMetadata } : prev);
+                                    } catch (e) { console.error(e); }
+                                }
+                            }} style={{ background: '#d4a574', color: '#fff', border: 'none', borderRadius: 10, padding: '0 16px', fontWeight: 600, cursor: 'pointer' }}>
+                                Thêm
+                            </button>
+                        </div>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
+                            <button onClick={() => setShowManageRolesModal(false)} style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#1e293b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                                Xong
                             </button>
                         </div>
                     </div>
@@ -1864,7 +2028,7 @@ export default function GroupDetailPage() {
                             <div style={{ display: 'flex', gap: 16 }}>
                                 <div style={{ flex: 1 }}>
                                     <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Số lượng <span style={{ color: '#dc2626' }}>*</span></label>
-                                    <input type="number" value={invQty} onChange={e => setInvQty(e.target.value)} placeholder="0" style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} />
+                                    <input type="text" value={invQty} onChange={e => { const val = e.target.value.replace(/\./g, ''); if (!isNaN(Number(val))) setInvQty(val === '' ? '' : Number(val).toLocaleString('de-DE')); }} placeholder="0" style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} />
                                 </div>
                                 <div style={{ flex: 1 }}>
                                     <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Đơn vị</label>
@@ -2845,8 +3009,8 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                     display: 'grid',
                                     gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr 1.3fr',
                                     gap: 12, padding: '12px 16px',
-                                    background: '#f8fafc', borderRadius: '12px 12px 0 0',
-                                    borderBottom: '1px solid #e2e8f0'
+                                    background: 'var(--bg-input, rgba(255, 255, 255, 0.03))', borderRadius: '12px 12px 0 0',
+                                    borderBottom: '1px solid var(--border)'
                                 }}>
                                     {['Nhân viên', 'Tổng task', 'Hoàn thành', 'Giờ công (Thường + Tăng ca)', 'Đơn giá/giờ', 'Lương thực nhận'].map((h, i) => (
                                         <div key={i} style={{
@@ -2867,9 +3031,9 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                             display: 'grid',
                                             gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr 1.3fr',
                                             gap: 12, padding: '14px 16px',
-                                            borderBottom: '1px solid #e2e8f0',
+                                            borderBottom: '1px solid var(--border)',
                                             alignItems: 'center',
-                                            background: idx % 2 === 0 ? '#fff' : '#fcfcfc'
+                                            background: idx % 2 === 0 ? 'transparent' : 'var(--bg-input, rgba(255,255,255,0.02))'
                                         }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                                 <div style={{
@@ -2881,13 +3045,13 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                                     {(s.memberName || '?').split(' ').slice(-2).map(w => w[0]).join('').toUpperCase()}
                                                 </div>
                                                 <div>
-                                                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>{s.memberName}</div>
+                                                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{s.memberName}</div>
                                                     <div style={{ fontSize: 11, color: '#94a3b8' }}>ID: {s.memberId?.slice(0, 8)}...</div>
                                                 </div>
                                             </div>
 
                                             <div style={{ textAlign: 'center' }}>
-                                                <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>{s.totalTasks}</div>
+                                                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{s.totalTasks}</div>
                                             </div>
 
                                             <div style={{ textAlign: 'center' }}>
@@ -2904,7 +3068,7 @@ function SalaryPanel({ teamId }: { teamId: string }) {
 
                                             {/* Workload */}
                                             <div style={{ textAlign: 'center' }}>
-                                                <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                                                     {(s.regularHours && s.regularHours > 0) ? s.regularHours.toFixed(1) : s.totalWorkload.toFixed(1)}h
                                                 </div>
                                                 {(s.overtimeHours && s.overtimeHours > 0) ? (
@@ -2932,9 +3096,9 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                                         style={{
                                                             display: 'inline-flex', alignItems: 'center', gap: 4,
                                                             padding: '4px 10px', borderRadius: 8,
-                                                            background: hourlyRateOverride[s.memberId] ? 'rgba(212,165,116,0.1)' : '#f8fafc',
+                                                            background: hourlyRateOverride[s.memberId] ? 'rgba(212,165,116,0.1)' : 'var(--bg-input, rgba(255,255,255,0.05))',
                                                             color: hourlyRateOverride[s.memberId] ? '#d4a574' : '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-                                                            border: hourlyRateOverride[s.memberId] ? '1px dashed #d4a574' : '1px dashed #e2e8f0'
+                                                            border: hourlyRateOverride[s.memberId] ? '1px dashed #d4a574' : '1px dashed var(--border)'
                                                         }}
                                                         title="Nhấp để chỉnh sửa đơn giá"
                                                     >
@@ -2960,15 +3124,15 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                     display: 'grid',
                                     gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr 1.3fr',
                                     gap: 12, padding: '18px 16px',
-                                    background: '#f8fafc',
-                                    borderTop: '1px solid #e2e8f0',
+                                    background: 'var(--bg-input, rgba(255, 255, 255, 0.03))',
+                                    borderTop: '1px solid var(--border)',
                                     borderRadius: '0 0 16px 16px',
                                     alignItems: 'center'
                                 }}>
-                                    <div style={{ fontSize: 15, fontWeight: 800, color: '#1e293b' }}>Tổng cộng</div>
-                                    <div style={{ textAlign: 'center', color: '#1e293b' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalTasks}</span></div>
+                                    <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Tổng cộng</div>
+                                    <div style={{ textAlign: 'center', color: 'var(--text-primary)' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalTasks}</span></div>
                                     <div style={{ textAlign: 'center', color: '#10b981' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalCompleted}</span></div>
-                                    <div style={{ textAlign: 'center', color: '#1e293b' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalWorkload.toFixed(1)}h</span></div>
+                                    <div style={{ textAlign: 'center', color: 'var(--text-primary)' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalWorkload.toFixed(1)}h</span></div>
                                     <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>—</div>
                                     <div style={{ textAlign: 'left' }}>
                                         <div style={{
@@ -2982,7 +3146,7 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                         )}
 
                         {/* Action Buttons */}
-                        <div style={{ padding: '16px 28px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: 12, background: '#f8fafc' }}>
+                        <div style={{ padding: '16px 28px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 12, background: 'var(--bg-input, rgba(255, 255, 255, 0.03))' }}>
                             <button
                                 onClick={async () => {
                                     try {
