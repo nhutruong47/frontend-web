@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { productionService } from '../services/groupService';
 
@@ -192,7 +192,7 @@ export default function FactoryDashboardPage() {
                                         <div>
                                             <div style={{ color: 'var(--text-muted)' }}>Nguoi nhan</div>
                                             {order.recipientName && <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{order.recipientName}</div>}
-                                            {order.recipientPhone && <div style={{ color: 'var(--accent-primary)', fontSize: 11 }}>{order.recipientPhone}</div>}
+                                            {order.recipientPhone && <div style={{ color: 'var(--primary)', fontSize: 11 }}>{order.recipientPhone}</div>}
                                         </div>
                                         {order.recipientPhone && (
                                             <a href={`tel:${order.recipientPhone}`} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#10b981', fontWeight: 600, textDecoration: 'none' }}>
@@ -305,7 +305,7 @@ export default function FactoryDashboardPage() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                             {dashboard.staffDetails?.map((staff: any) => (
                                 <div key={staff.userId} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-                                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+                                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
                                         {(staff.userName || '?').charAt(0).toUpperCase()}
                                     </div>
                                     <div style={{ flex: 1 }}>

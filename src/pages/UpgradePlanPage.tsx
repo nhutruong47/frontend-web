@@ -1,81 +1,28 @@
-import {
-    CheckCircle2,
-} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import { paymentService } from '../services/paymentService';
+import type { SubscriptionPlan } from '../types/types';
 import './UpgradePlanPage.css';
 
-interface Plan {
-    id: string;
-    name: string;
-    price: string;
-    priceNote: string;
-    subtitle: string;
-    target: string;
-    featured?: boolean;
-    buttonText: string;
-    features: string[];
-    theme: 'light' | 'beige' | 'dark';
-}
-
-const plans: Plan[] = [
-    {
-        id: 'starter',
-        name: 'Cơ bản',
-        price: '0đ',
-        priceNote: '/tháng',
-        subtitle: 'AI quản lý công việc',
-        target: 'Dành cho xưởng nhỏ',
-        buttonText: 'Bắt đầu',
-        features: [
-            'AI tạo task từ đơn hàng',
-            'AI giao việc cho nhân viên',
-            'Theo dõi tiến độ sản xuất',
-            'Quản lý đơn hàng và batch',
-            'Báo cáo vận hành cơ bản'
-        ],
-        theme: 'light',
-    },
-    {
-        id: 'professional',
-        name: 'Plus',
-        price: '129.000đ',
-        priceNote: '/tháng',
-        subtitle: 'Dùng AI 100 lần',
-        target: 'Dành cho xưởng đang tăng trưởng',
-        featured: true,
-        buttonText: 'Nâng cấp ngay',
-        features: [
-            'Cảnh báo công việc có nguy cơ trễ',
-            'Cảnh báo thiếu nguyên liệu',
-            'Phân tích hiệu suất sản xuất',
-            'Phát hiện điểm nghẽn trong quy trình',
-            'Đề xuất tối ưu tiến độ và nguồn lực'
-        ],
-        theme: 'beige',
-    },
-    {
-        id: 'enterprise',
-        name: 'Doanh nghiệp',
-        price: '249.000đ',
-        priceNote: '/tháng',
-        subtitle: 'Không giới hạn AI trong 30 ngày',
-        target: 'Dành cho doanh nghiệp nhiều xưởng',
-        buttonText: 'Nâng cấp ngay',
-        features: [
-            'Lập kế hoạch sản xuất dài hạn',
-            'Dự báo nhu cầu và công suất',
-            'Mô phỏng trước các kịch bản sản xuất',
-            'Quản lý nhiều xưởng trên một nền tảng',
-            'Thương hiệu riêng cho doanh nghiệp'
-        ],
-        theme: 'dark',
-    },
-];
-
 export default function UpgradePlanPage() {
+    const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const handleSelectPlan = async (plan: Plan) => {
-        if (plan.id === 'starter') {
+    useEffect(() => {
+        paymentService.getPlans()
+            .then(data => {
+                // Sắp xếp theo giá tăng dần
+                setPlans(data.sort((a, b) => a.price - b.price));
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Failed to load plans", err);
+                setLoading(false);
+            });
+    }, []);
+
+    const handleSelectPlan = async (plan: SubscriptionPlan) => {
+        if (!plan.id || plan.price === 0) {
             return;
         }
         localStorage.setItem('orca-ai-plan-pending', plan.id);
@@ -90,6 +37,20 @@ export default function UpgradePlanPage() {
         }
     };
 
+    if (loading) {
+        return <div className="pricing-page"><p style={{textAlign: 'center', marginTop: 100}}>Đang tải gói dịch vụ...</p></div>;
+    }
+
+    const formatPrice = (price: number) => {
+        return price.toLocaleString('vi-VN') + 'đ';
+    };
+
+    const getThemeForIndex = (index: number) => {
+        if (index === 0) return 'light';
+        if (index === 1) return 'beige';
+        return 'dark';
+    };
+
     return (
         <div className="pricing-page">
             <section className="pricing-header">
@@ -97,27 +58,29 @@ export default function UpgradePlanPage() {
                 <p>Chọn gói phù hợp để tối ưu quy trình và nâng cao năng suất nhà máy của bạn.</p>
             </section>
 
-
-
             <section className="pricing-grid">
-                {plans.map((plan) => {
+                {plans.map((plan, index) => {
+                    const theme = getThemeForIndex(index);
+                    const isFeatured = index === 1; // Highlight gói ở giữa
+                    const features = plan.features ? plan.features.split(',').map(f => f.trim()) : [];
+                    
                     return (
                         <article
                             key={plan.id}
-                            className={`pricing-card theme-${plan.theme} ${plan.featured ? 'featured' : ''}`}
+                            className={`pricing-card theme-${theme} ${isFeatured ? 'featured' : ''}`}
                         >
-                            {plan.featured && <span className="pricing-ribbon">★ Phổ biến nhất</span>}
+                            {isFeatured && <span className="pricing-ribbon">★ Phổ biến nhất</span>}
                             
                             <h2>{plan.name}</h2>
                             
                             <div className="pricing-price">
-                                <strong>{plan.price}</strong>
-                                <span>{plan.priceNote}</span>
+                                <strong>{formatPrice(plan.price)}</strong>
+                                <span>/{plan.period || 'Tháng'}</span>
                             </div>
 
                             <div className="pricing-subtitle">
-                                <strong>{plan.subtitle}</strong>
-                                <span>{plan.target}</span>
+                                <strong>Giới hạn: {plan.users} NV, {plan.workshops} Xưởng</strong>
+                                <span>{plan.ai > 0 ? `+${plan.ai} AI Tokens` : ''}</span>
                             </div>
 
                             <button
@@ -125,16 +88,20 @@ export default function UpgradePlanPage() {
                                 className="pricing-action"
                                 onClick={() => handleSelectPlan(plan)}
                             >
-                                {plan.buttonText}
+                                {plan.price === 0 ? 'Bắt đầu' : 'Nâng cấp ngay'}
                             </button>
 
                             <ul className="pricing-features">
-                                {plan.features.map((feature) => (
-                                    <li key={feature}>
+                                {features.map((feature, idx) => (
+                                    <li key={idx}>
                                         <CheckCircle2 className="check-icon" size={18} />
                                         <span>{feature}</span>
                                     </li>
                                 ))}
+                                <li>
+                                    <CheckCircle2 className="check-icon" size={18} />
+                                    <span>Tối đa {plan.orders} đơn hàng/tháng</span>
+                                </li>
                             </ul>
                         </article>
                     );
@@ -143,3 +110,4 @@ export default function UpgradePlanPage() {
         </div>
     );
 }
+

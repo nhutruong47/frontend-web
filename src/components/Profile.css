@@ -1,4 +1,4 @@
-/* PREMIUM PROFILE STYLES */
+﻿/* PREMIUM PROFILE STYLES — token-based */
 
 .profile-header-backdrop {
     position: absolute;
@@ -12,8 +12,8 @@
 
 .avatar-edit-overlay {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.6);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
     border-radius: 50%;
     display: flex;
     justify-content: center;
@@ -24,14 +24,12 @@
     backdrop-filter: blur(4px);
 }
 
-.profile-avatar-large:hover .avatar-edit-overlay {
-    opacity: 1;
-}
+.profile-avatar-large:hover .avatar-edit-overlay { opacity: 1; }
 
 .avatar-edit-btn {
-    background: rgba(255,255,255,0.2);
-    border: 1px solid rgba(255,255,255,0.4);
-    color: #fff;
+    background: var(--glass-bg);
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -44,19 +42,19 @@
 }
 
 .avatar-edit-btn:hover {
-    background: rgba(255,255,255,0.4);
+    background: var(--accent-soft);
     transform: scale(1.1);
 }
 
 .avatar-uploading-spinner {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.7);
+    inset: 0;
+    background: var(--modal-overlay);
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
-    color: #3b82f6;
+    color: var(--info);
     font-size: 32px;
 }
 
@@ -74,27 +72,26 @@
 
 .premium-input {
     width: 100%;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-input);
+    border: 1px solid var(--border);
     padding: 16px 20px 16px 45px;
     border-radius: 12px;
-    color: var(--shell-text-main);
+    color: var(--text-primary);
     font-size: 15px;
     transition: all 0.3s ease;
     outline: none;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-sm);
 }
 
-body.theme-light .premium-input {
-    background: rgba(0, 0, 0, 0.02);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+[data-theme="light"] .premium-input {
+    background: var(--bg-card);
+    border-color: var(--border);
 }
 
 .premium-input:focus,
 .premium-input:valid {
-    border-color: #3b82f6;
-    background: rgba(59, 130, 246, 0.05);
+    border-color: var(--primary);
+    background: var(--bg-input);
 }
 
 .premium-label {
@@ -102,7 +99,7 @@ body.theme-light .premium-input {
     left: 45px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--shell-text-soft);
+    color: var(--text-secondary);
     font-size: 15px;
     transition: all 0.3s ease;
     pointer-events: none;
@@ -113,15 +110,15 @@ body.theme-light .premium-input {
     top: -10px;
     left: 15px;
     font-size: 12px;
-    background: var(--shell-bg-dark);
+    background: var(--bg-card);
     padding: 0 5px;
-    color: #3b82f6;
+    color: var(--primary);
     border-radius: 4px;
 }
 
-body.theme-light .premium-input:focus ~ .premium-label,
-body.theme-light .premium-input:valid ~ .premium-label {
-    background: #ffffff;
+[data-theme="light"] .premium-input:focus ~ .premium-label,
+[data-theme="light"] .premium-input:valid ~ .premium-label {
+    background: var(--bg-card);
 }
 
 .premium-input-icon {
@@ -129,20 +126,20 @@ body.theme-light .premium-input:valid ~ .premium-label {
     left: 15px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--shell-text-soft);
+    color: var(--text-secondary);
     font-size: 20px;
     transition: all 0.3s ease;
 }
 
 .premium-input:focus ~ .premium-input-icon {
-    color: #3b82f6;
+    color: var(--primary);
 }
 
 /* WEBCAM MODAL */
 .webcam-modal-backdrop {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.8);
+    inset: 0;
+    background: var(--modal-overlay);
     backdrop-filter: blur(8px);
     z-index: 9999;
     display: flex;
@@ -158,6 +155,9 @@ body.theme-light .premium-input:valid ~ .premium-label {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    background: var(--modal-bg);
+    border: 1px solid var(--modal-border);
+    color: var(--text-primary);
 }
 
 .webcam-header {
@@ -165,30 +165,23 @@ body.theme-light .premium-input:valid ~ .premium-label {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid var(--border);
 }
 
-body.theme-light .webcam-header {
-    border-bottom: 1px solid rgba(0,0,0,0.1);
-}
+[data-theme="light"] .webcam-header { border-bottom-color: var(--border); }
 
-.webcam-header h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-}
+.webcam-header h3 { margin: 0; font-size: 18px; font-weight: 600; }
 
 .close-btn {
     background: transparent;
     border: none;
-    color: var(--shell-text-soft);
+    color: var(--text-secondary);
     font-size: 24px;
     cursor: pointer;
     transition: color 0.2s;
 }
-.close-btn:hover {
-    color: #ef4444;
-}
+
+.close-btn:hover { color: var(--danger); }
 
 .webcam-body {
     background: #000;
@@ -203,7 +196,7 @@ body.theme-light .webcam-header {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transform: scaleX(-1); /* Mirror effect */
+    transform: scaleX(-1);
 }
 
 .webcam-footer {
@@ -220,7 +213,7 @@ body.theme-light .webcam-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    box-shadow: var(--shadow-md);
 }
 
 .profile-feedback {
@@ -238,15 +231,15 @@ body.theme-light .webcam-header {
 }
 
 .profile-feedback.success {
-    color: #86efac;
-    background: rgba(22, 101, 52, 0.2);
-    border-color: rgba(74, 222, 128, 0.35);
+    color: var(--success);
+    background: var(--success-soft);
+    border-color: var(--success);
 }
 
 .profile-feedback.error {
-    color: #fca5a5;
-    background: rgba(127, 29, 29, 0.2);
-    border-color: rgba(248, 113, 113, 0.35);
+    color: var(--danger);
+    background: var(--danger-soft);
+    border-color: var(--danger);
 }
 
 .profile-feedback button,
@@ -275,9 +268,9 @@ body.theme-light .webcam-header {
 
 .profile-password-panel {
     padding: 20px;
-    border: 1px solid var(--shell-border);
+    border: 1px solid var(--border);
     border-radius: 12px;
-    background: var(--shell-surface-soft);
+    background: var(--bg-input);
 }
 
 .profile-password-heading {
@@ -290,13 +283,13 @@ body.theme-light .webcam-header {
 
 .profile-password-heading h3 {
     margin: 0 0 5px;
-    color: var(--shell-title);
+    color: var(--text-primary);
     font-size: 17px;
 }
 
 .profile-password-heading p {
     margin: 0;
-    color: var(--shell-text-soft);
+    color: var(--text-secondary);
     font-size: 13px;
 }
 
@@ -310,7 +303,7 @@ body.theme-light .webcam-header {
     display: flex;
     flex-direction: column;
     gap: 7px;
-    color: var(--shell-text-soft);
+    color: var(--text-secondary);
     font-size: 12px;
     font-weight: 700;
 }
@@ -319,16 +312,16 @@ body.theme-light .webcam-header {
     width: 100%;
     min-height: 44px;
     padding: 10px 12px;
-    border: 1px solid var(--shell-border);
+    border: 1px solid var(--border);
     border-radius: 8px;
     outline: none;
-    background: var(--shell-surface);
-    color: var(--shell-text);
+    background: var(--bg-card);
+    color: var(--text-primary);
 }
 
 .profile-password-grid input:focus {
-    border-color: var(--shell-accent);
-    box-shadow: 0 0 0 3px var(--shell-accent-soft);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .profile-password-actions {
@@ -343,24 +336,18 @@ body.theme-light .webcam-header {
     min-height: 42px;
     padding: 10px 16px;
     border-radius: 8px;
-    border: 1px solid var(--shell-border);
+    border: 1px solid var(--border);
     font-weight: 700;
     cursor: pointer;
 }
 
 @media (max-width: 720px) {
     .profile-edit-grid,
-    .profile-password-grid {
-        grid-template-columns: 1fr;
-    }
+    .profile-password-grid { grid-template-columns: 1fr; }
 
     .profile-security-actions,
-    .profile-password-actions {
-        flex-direction: column;
-    }
+    .profile-password-actions { flex-direction: column; }
 
     .profile-security-actions button,
-    .profile-password-actions button {
-        width: 100%;
-    }
+    .profile-password-actions button { width: 100%; }
 }

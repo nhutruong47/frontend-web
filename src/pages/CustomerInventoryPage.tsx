@@ -1,6 +1,16 @@
-export default function CustomerInventoryPage() {
+import { useState } from 'react';
 
-    // Placeholder
+interface CustomerInventoryItem {
+    id: string;
+    customerName: string;
+    material: string;
+    stock: number;
+    unit: string;
+}
+
+export default function CustomerInventoryPage() {
+    const [items] = useState<CustomerInventoryItem[]>([]);
+
     return (
         <div className="dashboard-page">
             <header className="page-header">
@@ -10,36 +20,59 @@ export default function CustomerInventoryPage() {
                 </div>
             </header>
             <div className="page-content">
-                <div style={{ background: '#fff', padding: 24, borderRadius: 16 }}>
-                    <h3>Quản lý nguyên liệu do khách hàng cung cấp</h3>
-                    <p style={{ color: '#64748b' }}>Theo dõi tồn kho riêng biệt theo từng khách hàng để phục vụ các đơn hàng gia công hoặc rang xay.</p>
-                    <table className="data-table" style={{ marginTop: 20 }}>
-                        <thead>
-                            <tr>
-                                <th>Khách hàng</th>
-                                <th>Nguyên liệu</th>
-                                <th>Tồn kho</th>
-                                <th>Đơn vị</th>
-                                <th>Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Công ty A</td>
-                                <td>Arabica</td>
-                                <td>3000</td>
-                                <td>kg</td>
-                                <td><button className="btn btn-sm btn-outline">Cập nhật</button></td>
-                            </tr>
-                            <tr>
-                                <td>Công ty B</td>
-                                <td>Robusta</td>
-                                <td>5000</td>
-                                <td>kg</td>
-                                <td><button className="btn btn-sm btn-outline">Cập nhật</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div className="inventory-card">
+                    <header className="inventory-card-header">
+                        <h3>Quản lý nguyên liệu do khách hàng cung cấp</h3>
+                        <p className="inventory-card-subtitle">
+                            Theo dõi tồn kho riêng biệt theo từng khách hàng để phục vụ các đơn hàng gia công hoặc rang xay.
+                        </p>
+                    </header>
+
+                    {items.length === 0 ? (
+                        <div className="inventory-empty-state">
+                            <div className="inventory-empty-illustration">
+                                <ion-icon name="archive-outline"></ion-icon>
+                            </div>
+                            <h4 className="inventory-empty-title">
+                                Chưa có nguyên liệu khách gửi
+                            </h4>
+                            <p className="inventory-empty-hint">
+                                Khi khách hàng gửi nguyên liệu vào kho, bạn sẽ ghi nhận ở đây để theo dõi tồn kho riêng theo từng khách.
+                            </p>
+                            <div className="inventory-empty-actions">
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={() => {/* route to customer-material intake */ }}
+                                >
+                                    <ion-icon name="add-circle-outline" style={{ marginRight: 6 }}></ion-icon>
+                                    Tiếp nhận nguyên liệu
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <table className="data-table" style={{ marginTop: 20 }}>
+                            <thead>
+                                <tr>
+                                    <th>Khách hàng</th>
+                                    <th>Nguyên liệu</th>
+                                    <th>Tồn kho</th>
+                                    <th>Đơn vị</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {items.map((it) => (
+                                    <tr key={it.id}>
+                                        <td>{it.customerName}</td>
+                                        <td>{it.material}</td>
+                                        <td>{it.stock}</td>
+                                        <td>{it.unit}</td>
+                                        <td><button className="btn btn-sm btn-outline">Cập nhật</button></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </div>
         </div>

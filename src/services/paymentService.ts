@@ -1,4 +1,5 @@
 import api from './api';
+import type { SubscriptionPlan } from '../types/types';
 
 export interface CreateVnpayPaymentResponse {
     paymentUrl: string;
@@ -45,6 +46,11 @@ export interface VirtualQrPaymentResponse {
 }
 
 export const paymentService = {
+    async getPlans(): Promise<SubscriptionPlan[]> {
+        const response = await api.get<SubscriptionPlan[]>('/api/payments/plans');
+        return response.data;
+    },
+
     async createVnpayPayment(planId: string): Promise<CreateVnpayPaymentResponse> {
         const response = await api.post<CreateVnpayPaymentResponse>('/api/payments/vnpay/create', { planId });
         return response.data;

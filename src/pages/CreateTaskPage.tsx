@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -74,7 +74,7 @@ const normalizeVietnameseText = (value: string) =>
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
-        .replace(/đ/g, 'd')
+        .replace(/đ'/g, 'd')
         .replace(/\s+/g, ' ')
         .trim();
 
@@ -531,12 +531,12 @@ export default function CreateTaskPage() {
                     margin-bottom: 20px;
                 }
                 body.task-studio-mode .logo-text {
-                    color: var(--accent-primary) !important;
-                    -webkit-text-fill-color: var(--accent-primary);
+                    color: var(--primary) !important;
+                    -webkit-text-fill-color: var(--primary);
                     letter-spacing: 0.12em;
                 }
                 body.task-studio-mode .logo-icon {
-                    color: var(--accent-primary) !important;
+                    color: var(--primary) !important;
                     background: var(--bg-secondary);
                     box-shadow: inset 0 0 0 1px var(--border);
                 }
@@ -552,7 +552,7 @@ export default function CreateTaskPage() {
                 }
                 body.task-studio-mode .nav-item.active,
                 body.task-studio-mode .nav-item:hover {
-                    color: var(--accent-primary);
+                    color: var(--primary);
                     background: rgba(50, 34, 20, 0.04);
                     box-shadow: none;
                     transform: none;
@@ -1749,7 +1749,7 @@ export default function CreateTaskPage() {
                                                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
                                                     {m.jobLabels && m.jobLabels.length > 0 ? (
                                                         m.jobLabels.map((label: string, idx: number) => (
-                                                            <span key={idx} style={{ background: 'rgba(212, 165, 116, 0.12)', color: 'var(--accent-primary)', padding: '2px 8px', borderRadius: 12, fontSize: 10, fontWeight: 700 }}>
+                                                            <span key={idx} style={{ background: 'rgba(212, 165, 116, 0.12)', color: 'var(--primary)', padding: '2px 8px', borderRadius: 12, fontSize: 10, fontWeight: 700 }}>
                                                                 {label}
                                                             </span>
                                                         ))
@@ -2111,7 +2111,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk, isConfirmed
             <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--border)', position: 'relative' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                     <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>Xem trước công việc</h2>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(212, 165, 116, 0.12)', color: 'var(--accent-primary)', padding: '4px 12px', borderRadius: '20px', fontSize: 11, fontWeight: 700 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(212, 165, 116, 0.12)', color: 'var(--primary)', padding: '4px 12px', borderRadius: '20px', fontSize: 11, fontWeight: 700 }}>
                         <ion-icon name="checkmark-done-outline"></ion-icon> AI ĐÃ XỬ LÝ
                     </div>
                 </div>

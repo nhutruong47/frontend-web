@@ -1,4 +1,4 @@
-.pricing-page {
+﻿.pricing-page {
     min-height: 100%;
     background: transparent;
     font-family: var(--font, 'Inter', sans-serif);
@@ -106,7 +106,7 @@
     transform: scale(1.04);
     z-index: 10;
     box-shadow: var(--shadow-lg), var(--shadow-glow);
-    border-color: var(--accent-secondary) !important;
+    border-color: var(--secondary) !important;
     background: linear-gradient(180deg, rgba(212, 165, 116, 0.05) 0%, var(--bg-card) 100%) !important;
 }
 
@@ -137,7 +137,7 @@
 }
 
 .pricing-card.featured h2 {
-    color: var(--accent-primary) !important;
+    color: var(--primary) !important;
 }
 
 .pricing-price {
@@ -258,7 +258,7 @@
 }
 
 .pricing-card.featured .check-icon {
-    color: var(--accent-primary) !important;
+    color: var(--primary) !important;
 }
 
 /* Theme overrides for specific cards if needed (Enterprise Card) */

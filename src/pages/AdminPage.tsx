@@ -15,14 +15,25 @@ import {
   Search,
   ServerCrash,
   ShieldCheck,
-  Users
+  Users,
+  Wallet,
+  Receipt,
+  Trash2,
+  Edit2
 } from 'lucide-react';
+import { useChartPalette } from '../utils/chartTheme';
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
+  Cell,
+  Legend,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -30,8 +41,9 @@ import {
 } from 'recharts';
 
 import { useAuth } from '../context/AuthContext';
-import { adminService } from '../services/adminService';
-import type { AdminOverview, AdminPayment, AdminTeam, AdminUser } from '../types/types';
+import { adminCostService, adminService } from '../services/adminService';
+import type { AdminOverview, AdminPayment, AdminTeam, AdminUser, SubscriptionPlan, SystemLog, Cost, CostCategory, CostDashboardStats } from '../types/types';
+import { OrcaSelect } from '../components/OrcaSelect';
 import './AdminPage.css';
 
 type AdminSection =
@@ -41,6 +53,7 @@ type AdminSection =
   | 'users'
   | 'subscriptions'
   | 'payments'
+  | 'costs'
   | 'reports'
   | 'logs';
 
@@ -48,6 +61,11 @@ const money = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
 
 const number = (value: number) => new Intl.NumberFormat('vi-VN').format(value);
+
+const millionsFormatter = (val: unknown): [string, string] => {
+  const num = typeof val === 'number' ? val : Number(val ?? 0);
+  return [`${num}M`, 'Chi phí'];
+};
 
 const parseDateInput = (value: string, endOfDay = false) => {
   const date = new Date(`${value}T${endOfDay ? '23:59:59' : '00:00:00'}`);
@@ -62,6 +80,7 @@ const sidebarModules: Array<{ id: AdminSection; label: string; icon: React.Eleme
   { id: 'users', label: 'Quản lý người dùng', icon: Users },
   { id: 'subscriptions', label: 'Gói dịch vụ', icon: CreditCard },
   { id: 'payments', label: 'Thanh toán & doanh thu', icon: DollarSign },
+  { id: 'costs', label: 'Chi phí', icon: Wallet },
   { id: 'reports', label: 'Báo cáo thống kê', icon: FileText },
   { id: 'logs', label: 'Nhật ký hệ thống', icon: ServerCrash },
 ];
@@ -113,6 +132,7 @@ const emptyOverview: AdminOverview = {
   taskStatusCounts: {},
   recentUsers: [],
   recentTeams: [],
+  systemTrendData: []
 };
 
 const getDate = (value: string | null | undefined) => {
@@ -135,11 +155,6 @@ const formatTime = (value: string | null | undefined) => {
 
 const paymentCustomerName = (payment: AdminPayment) =>
   payment.fullName || payment.username || payment.email || 'Không rõ người dùng';
-
-const initialPlans = [
-  { name: 'Chuyên nghiệp', price: 129000, period: 'Tháng', users: 30, orders: 1000, batches: 5000, workshops: 5, ai: 40000, features: ['Cảnh báo công việc', 'Cảnh báo nguyên liệu', 'Phân tích hiệu suất', 'Phát hiện điểm nghẽn'] },
-  { name: 'Doanh nghiệp', price: 249000, period: 'Tháng', users: 500, orders: 99999, batches: 99999, workshops: 50, ai: 500000, features: ['Kế hoạch dài hạn', 'Dự báo nhu cầu', 'Mô phỏng kịch bản', 'Quản lý nhiều xưởng'] }
-];
 
 function KpiCard({ item }: { item: KpiItem }) {
   const Icon = item.icon;
@@ -207,12 +222,14 @@ export default function AdminPage() {
   const [searchParams] = useSearchParams();
   const sectionParam = searchParams.get('section') as AdminSection | null;
   const active: AdminSection = sidebarModules.some(tab => tab.id === sectionParam) ? sectionParam! : 'overview';
+  const chartPalette = useChartPalette();
   
   const [overview, setOverview] = useState<AdminOverview>(emptyOverview);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [adminTeams, setAdminTeams] = useState<AdminTeam[]>([]);
   const [adminPayments, setAdminPayments] = useState<AdminPayment[]>([]);
-  const [plans] = useState<any[]>(initialPlans);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
   
   const [adminLoading, setAdminLoading] = useState(true);
   const [adminError, setAdminError] = useState('');
@@ -222,10 +239,24 @@ export default function AdminPage() {
   const [userPage, setUserPage] = useState(1);
   const [revenueFrom] = useState('2026-06-01');
   const [revenueTo] = useState('2026-06-30');
+  
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
 
-  const handleNotImplemented = () => {
-    alert('Tính năng này đang được bảo trì hoặc đang trong quá trình phát triển.');
-  };
+  // Costs State
+  const [costs, setCosts] = useState<Cost[]>([]);
+  const [costCategories, setCostCategories] = useState<CostCategory[]>([]);
+  const [costStats, setCostStats] = useState<CostDashboardStats | null>(null);
+  const [costPage, setCostPage] = useState(0);
+  const [costTotalPages, setCostTotalPages] = useState(1);
+  const [costSearch, setCostSearch] = useState('');
+  const [costFilterCategory, setCostFilterCategory] = useState('');
+  const [costFilterStatus, setCostFilterStatus] = useState('');
+  const [isCostModalOpen, setIsCostModalOpen] = useState(false);
+  const [isCostCategoryModalOpen, setIsCostCategoryModalOpen] = useState(false);
+  const [editingCost, setEditingCost] = useState<Cost | null>(null);
+  const [costLoading, setCostLoading] = useState(true);
+  const [costError, setCostError] = useState('');
 
   useEffect(() => {
     if (user?.role !== 'ADMIN') {
@@ -237,23 +268,63 @@ export default function AdminPage() {
     setAdminError('');
     Promise.all([
       adminService.getOverview(),
-      adminService.getUsers(),
-      adminService.getTeams(),
-      adminService.getPayments(),
+      adminService.getUsers(0, 1000, ''),
+      adminService.getTeams(0, 1000, ''),
+      adminService.getPayments(0, 1000, ''),
+      adminService.getPlans(),
+      adminService.getLogs(0, 100, ''),
     ])
-      .then(([overviewData, userData, teamData, paymentData]) => {
+      .then(([overviewData, userData, teamData, paymentData, plansData, logsData]) => {
         setOverview({ ...emptyOverview, ...overviewData });
-        setAdminUsers(userData || []);
-        setAdminTeams(teamData || []);
-        setAdminPayments(paymentData || []);
+        setAdminUsers(userData.content || []);
+        setAdminTeams(teamData.content || []);
+        setAdminPayments(paymentData.content || []);
+        setPlans(plansData || []);
+        setSystemLogs(logsData.content || []);
       })
-      .catch(() => {
+      .catch((e) => {
+        console.error(e);
         setAdminError('Không tải được thống kê thật từ hệ thống.');
       })
       .finally(() => setAdminLoading(false));
   }, [user?.role]);
 
+  const loadCosts = () => {
+    adminCostService.getCosts(costPage, 10, costSearch, costFilterCategory, costFilterStatus)
+      .then(res => {
+        setCosts(res.content ?? []);
+        setCostTotalPages(res.totalPages || 1);
+      }).catch(console.error);
+  };
 
+  const loadCostDashboard = () => {
+    setCostLoading(true);
+    setCostError('');
+    Promise.all([
+      adminCostService.getDashboard(),
+      adminCostService.getCategories()
+    ]).then(([stats, categories]) => {
+      setCostStats(stats);
+      setCostCategories(categories ?? []);
+    }).catch(err => {
+      console.error(err);
+      setCostError('Không tải được dữ liệu chi phí. Vui lòng thử lại.');
+    }).finally(() => {
+      setCostLoading(false);
+    });
+  };
+
+  useEffect(() => {
+    if (active === 'costs' && user?.role === 'ADMIN') {
+      loadCostDashboard();
+    }
+  }, [active, user?.role]);
+
+  useEffect(() => {
+    if (active === 'costs' && user?.role === 'ADMIN') {
+      loadCosts();
+    }
+  }, [active, user?.role, costPage, costSearch, costFilterCategory, costFilterStatus]);
 
   const revenueReport = useMemo(() => {
     const fromDate = parseDateInput(revenueFrom);
@@ -306,14 +377,7 @@ export default function AdminPage() {
     { label: 'Xưởng chờ duyệt', value: number(adminTeams.filter(t => t.verificationStatus === 'PENDING').length), detail: 'Cần xử lý', icon: AlertTriangle, tone: 'amber' },
   ];
 
-  const systemTrendData = [
-    { month: 'Jan', revenue: 120, companies: 45, users: 1200 },
-    { month: 'Feb', revenue: 150, companies: 52, users: 1450 },
-    { month: 'Mar', revenue: 180, companies: 61, users: 1680 },
-    { month: 'Apr', revenue: 210, companies: 75, users: 1900 },
-    { month: 'May', revenue: 250, companies: 88, users: 2200 },
-    { month: 'Jun', revenue: 310, companies: 105, users: 2600 },
-  ];
+  const systemTrendData = overview.systemTrendData || [];
 
   const pendingRequests = adminTeams.filter(t => t.verificationStatus === 'PENDING');
   const approvedCompanies = adminTeams.filter(t => t.verificationStatus !== 'PENDING');
@@ -334,6 +398,55 @@ export default function AdminPage() {
       const created = await adminService.createUser({ username, email: '', fullName: '', role: 'MEMBER' });
       setAdminUsers(current => [created, ...current]);
     } catch { window.alert("Error creating user."); }
+  };
+
+  const handleResetPassword = async (userId: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn tạo mật khẩu mới cho người dùng này?')) return;
+    try {
+      const res = await adminService.resetUserPassword(userId);
+      window.alert(`Mật khẩu mới: ${res.password}\n\nVui lòng lưu lại và gửi cho người dùng.`);
+    } catch {
+      window.alert('Lỗi khi cấp lại mật khẩu.');
+    }
+  };
+
+  const handleToggleLock = async (user: AdminUser) => {
+    const action = user.status === 'Locked' ? 'mở khóa' : 'khóa';
+    if (!window.confirm(`Bạn có chắc chắn muốn ${action} tài khoản này?`)) return;
+    try {
+      const updated = await adminService.updateUserLock(user.id, user.status !== 'Locked');
+      setAdminUsers(current => current.map(u => u.id === user.id ? { ...u, ...updated } : u));
+    } catch {
+      window.alert(`Lỗi khi ${action} tài khoản.`);
+    }
+  };
+
+  const handleToggleSuspendCompany = async (team: AdminTeam) => {
+    const isLocked = team.published === false;
+    const action = isLocked ? 'khôi phục' : 'đình chỉ';
+    if (!window.confirm(`Bạn có chắc chắn muốn ${action} công ty này?`)) return;
+    try {
+      if (isLocked) {
+        const updated = await adminService.updateTeamPublication(team.id, true);
+        setAdminTeams(current => current.map(t => t.id === team.id ? { ...t, ...updated } : t));
+      } else {
+        await adminService.deleteTeam(team.id);
+        setAdminTeams(current => current.map(t => t.id === team.id ? { ...t, published: false } : t));
+      }
+    } catch {
+      window.alert(`Lỗi khi ${action} công ty.`);
+    }
+  };
+
+  const handleUpdateServiceCost = async (team: AdminTeam) => {
+    const cost = window.prompt('Nhập chi phí dịch vụ/triển khai mới (VNĐ):', String(team.serviceCost || 0));
+    if (cost === null) return;
+    try {
+      const updated = await adminService.updateTeam(team.id, { serviceCost: Number(cost) });
+      setAdminTeams(current => current.map(t => t.id === team.id ? { ...t, ...updated } : t));
+    } catch {
+      window.alert('Lỗi khi cập nhật chi phí dịch vụ.');
+    }
   };
 
   if (user?.role !== 'ADMIN') {
@@ -388,32 +501,32 @@ export default function AdminPage() {
               </section>
               <section className="admin-grid-2">
                 <ChartPanel title="Tăng trưởng doanh thu (Hàng tháng)">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={systemTrendData}>
                       <defs>
                         <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          <stop offset="5%" stopColor={chartPalette.categorical[1]} stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor={chartPalette.categorical[1]} stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                      <XAxis dataKey="month" axisLine={false} tickLine={false} />
-                      <YAxis axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartPalette.grid} />
+                      <XAxis dataKey="month" axisLine={false} tickLine={false} stroke={chartPalette.muted} />
+                      <YAxis axisLine={false} tickLine={false} stroke={chartPalette.muted} />
                       <Tooltip />
-                      <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#revFill)" />
+                      <Area type="monotone" dataKey="revenue" stroke={chartPalette.categorical[1]} strokeWidth={3} fillOpacity={1} fill="url(#revFill)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </ChartPanel>
                 <ChartPanel title="Người dùng & Công ty">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={systemTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                      <XAxis dataKey="month" axisLine={false} tickLine={false} />
-                      <YAxis axisLine={false} tickLine={false} yAxisId="left" />
-                      <YAxis axisLine={false} tickLine={false} yAxisId="right" orientation="right" />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartPalette.grid} />
+                      <XAxis dataKey="month" axisLine={false} tickLine={false} stroke={chartPalette.muted} />
+                      <YAxis axisLine={false} tickLine={false} yAxisId="left" stroke={chartPalette.muted} />
+                      <YAxis axisLine={false} tickLine={false} yAxisId="right" orientation="right" stroke={chartPalette.muted} />
                       <Tooltip />
-                      <Line yAxisId="left" type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={3} dot={false} />
-                      <Line yAxisId="right" type="monotone" dataKey="companies" stroke="#8b5cf6" strokeWidth={3} dot={false} />
+                      <Line yAxisId="left" type="monotone" dataKey="users" stroke={chartPalette.categorical[0]} strokeWidth={3} dot={false} />
+                      <Line yAxisId="right" type="monotone" dataKey="companies" stroke={chartPalette.categorical[4]} strokeWidth={3} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </ChartPanel>
@@ -468,19 +581,24 @@ export default function AdminPage() {
               </div>
               <div className="admin-table-wrap">
                 <table className="admin-table">
-                  <thead><tr><th>Công ty</th><th>Mã Workspace</th><th>Chủ sở hữu</th><th>Thành viên</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+                  <thead><tr><th>Công ty</th><th>Mã Workspace</th><th>Chủ sở hữu</th><th>Thành viên</th><th>Chi phí dịch vụ</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
                   <tbody>
                     {approvedCompanies.filter(c => c.name.toLowerCase().includes(query.toLowerCase())).map(item => (
-                      <tr key={item.id}>
+                      <tr key={item.id} style={{ opacity: item.published === false ? 0.5 : 1 }}>
                         <td><strong>{item.name}</strong></td>
                         <td><code style={{background:'rgba(255,255,255,0.1)', color: 'inherit', padding:'4px 8px', borderRadius:'6px', fontSize:'12px', fontWeight: 600, letterSpacing: '0.5px'}}>{item.id.slice(0,8)}</code></td>
                         <td>{item.ownerName || '-'}</td>
                         <td>{item.memberCount} users</td>
-                        <td><StatusBadge value="Active" /></td>
+                        <td>
+                          <button className="btn-icon" style={{width: 'auto', padding: '4px 8px', fontSize: 12}} onClick={() => handleUpdateServiceCost(item)}>
+                            {money(item.serviceCost || 0)}
+                          </button>
+                        </td>
+                        <td><StatusBadge value={item.published === false ? "Locked" : "Active"} /></td>
                         <td>
                           <div className="admin-row-actions">
-                            <button className="btn-icon" title="Xem" onClick={handleNotImplemented}><FileText size={16}/></button>
-                            <button className="btn-icon danger" title="Đình chỉ" onClick={handleNotImplemented}><Lock size={16}/></button>
+                            <button className="btn-icon" title="Xem" onClick={() => window.alert('Chi tiết: ' + item.description)}><FileText size={16}/></button>
+                            <button className="btn-icon danger" title={item.published === false ? "Khôi phục" : "Đình chỉ"} onClick={() => handleToggleSuspendCompany(item)}><Lock size={16}/></button>
                           </div>
                         </td>
                       </tr>
@@ -498,12 +616,17 @@ export default function AdminPage() {
               </div>
               <div className="admin-toolbar">
                 <div className="admin-search-input"><Search size={16}/><input value={query} onChange={e=>{setQuery(e.target.value); setUserPage(1);}} placeholder="Tìm kiếm tên, email..." /></div>
-                <select className="admin-select" value={status} onChange={e=>{setStatus(e.target.value); setUserPage(1);}}>
-                  <option value="All">Tất cả vai trò</option>
-                  <option value="ADMIN">Quản trị viên</option>
-                  <option value="FACTORY_OWNER">Chủ xưởng</option>
-                  <option value="MEMBER">Thành viên</option>
-                </select>
+                <OrcaSelect
+                  aria-label="Lọc theo vai trò"
+                  value={status}
+                  onChange={e => { setStatus(e.target.value); setUserPage(1); }}
+                  options={[
+                    { value: 'All', label: 'Tất cả vai trò' },
+                    { value: 'ADMIN', label: 'Quản trị viên' },
+                    { value: 'FACTORY_OWNER', label: 'Chủ xưởng' },
+                    { value: 'MEMBER', label: 'Thành viên' },
+                  ]}
+                />
               </div>
               <div className="admin-table-wrap">
                 <table className="admin-table">
@@ -517,12 +640,12 @@ export default function AdminPage() {
                           <td><div className="admin-user-cell"><div className="admin-user-avatar">{(item.fullName || item.username || '?').charAt(0)}</div><strong>{item.fullName || item.username}</strong></div></td>
                           <td>{item.email}</td>
                           <td><StatusBadge value={item.role} /></td>
-                          <td><StatusBadge value="Active" /></td>
+                          <td><StatusBadge value={item.status || 'Active'} /></td>
                           <td>{item.createdAt ? formatShortDate(item.createdAt) : '-'}</td>
                           <td>
                             <div className="admin-row-actions">
-                              <button className="btn-icon" title="Cấp lại mật khẩu" onClick={handleNotImplemented}><RotateCcw size={16}/></button>
-                              <button className="btn-icon danger" title="Khóa tài khoản" onClick={handleNotImplemented}><Lock size={16}/></button>
+                              <button className="btn-icon" title="Cấp lại mật khẩu" onClick={() => handleResetPassword(item.id)}><RotateCcw size={16}/></button>
+                              <button className="btn-icon danger" title={item.status === 'Locked' ? "Mở khóa tài khoản" : "Khóa tài khoản"} onClick={() => handleToggleLock(item)}><Lock size={16}/></button>
                             </div>
                           </td>
                         </tr>
@@ -552,7 +675,10 @@ export default function AdminPage() {
             <>
               <div className="admin-hero" style={{marginBottom: 16}}>
                 <div><h3>Gói dịch vụ</h3><p>Quản lý các mức giá, giới hạn và tính năng.</p></div>
-                <button className="admin-button admin-button-primary" onClick={handleNotImplemented}><Plus size={16} /> Tạo gói mới</button>
+                <button className="admin-button admin-button-primary" onClick={() => {
+                  setEditingPlan(null);
+                  setIsPlanModalOpen(true);
+                }}><Plus size={16} /> Tạo gói mới</button>
               </div>
               <section className="admin-plan-grid">
                 {plans.map(item => (
@@ -566,7 +692,10 @@ export default function AdminPage() {
                       <div className="admin-plan-limit-item"><span>Điểm AI</span><strong>{number(item.ai)}</strong></div>
                     </div>
                     <div className="admin-row-actions" style={{marginTop: 20}}>
-                      <button className="admin-button admin-button-secondary" style={{width:'100%'}} onClick={handleNotImplemented}>Chỉnh sửa</button>
+                      <button className="admin-button admin-button-secondary" style={{width:'100%'}} onClick={() => {
+                        setEditingPlan(item);
+                        setIsPlanModalOpen(true);
+                      }}>Chỉnh sửa</button>
                     </div>
                   </article>
                 ))}
@@ -606,6 +735,197 @@ export default function AdminPage() {
             </>
           )}
 
+          {active === 'costs' && (
+            <>
+              {costLoading ? (
+                <div className="admin-access" style={{ minHeight: '400px' }}>
+                  <Activity size={40} className="spin" />
+                  <h2 style={{ marginTop: 16 }}>Đang tải dữ liệu chi phí...</h2>
+                </div>
+              ) : costError ? (
+                <div className="admin-access" style={{ minHeight: '400px' }}>
+                  <AlertTriangle size={40} color="#ef4444" />
+                  <h2 style={{ marginTop: 16 }}>Đã xảy ra lỗi</h2>
+                  <p style={{ color: '#6b7280', marginBottom: 24 }}>{costError}</p>
+                  <button className="admin-button admin-button-primary" onClick={loadCostDashboard}><RotateCcw size={16}/> Thử lại</button>
+                </div>
+              ) : costStats && (costStats.totalSystem === 0 && costs.length === 0) ? (
+                <div className="admin-access" style={{ minHeight: '400px' }}>
+                  <Wallet size={48} color="#9ca3af" />
+                  <h2 style={{ marginTop: 16 }}>📊 Chưa có dữ liệu chi phí</h2>
+                  <p style={{ color: '#6b7280', marginBottom: 24 }}>Hệ thống chưa ghi nhận khoản chi phí nào.</p>
+                  <button className="admin-button admin-button-primary" onClick={() => { setEditingCost(null); setIsCostModalOpen(true); }}><Plus size={16}/> Thêm chi phí</button>
+                </div>
+              ) : (
+                <>
+                  {costStats && (
+                    <section className="admin-kpi-grid">
+                      <KpiCard item={{ label: 'Tổng chi hôm nay', value: money(Number(costStats.totalToday ?? 0)), detail: 'Hôm nay', icon: Wallet, tone: 'blue' }} />
+                      <KpiCard item={{ label: 'Tổng chi tháng', value: money(Number(costStats.totalMonth ?? 0)), detail: `${(Number(costStats.monthOverMonthChange ?? 0)) >= 0 ? '+' : ''}${Number(costStats.monthOverMonthChange ?? 0).toFixed(1)}% so với tháng trước`, icon: Receipt, tone: Number(costStats.monthOverMonthChange ?? 0) > 0 ? 'rose' : 'green', trend: Number(costStats.monthOverMonthChange ?? 0) > 0 ? 'up' : 'down' }} />
+                      <KpiCard item={{ label: 'Tổng chi năm', value: money(Number(costStats.totalYear ?? 0)), detail: `${Number(costStats.yearOverYearChange ?? 0) >= 0 ? '+' : ''}${Number(costStats.yearOverYearChange ?? 0).toFixed(1)}% so với năm trước`, icon: DollarSign, tone: 'amber' }} />
+                      <KpiCard item={{ label: 'Tổng chi toàn hệ thống', value: money(Number(costStats.totalSystem ?? 0)), detail: 'Toàn thời gian', icon: Activity, tone: 'violet' }} />
+                    </section>
+                  )}
+
+                  {costStats && Number(costStats.totalMonth ?? 0) > 10000000 && (
+                    <div style={{ background: '#fef2f2', border: '1px solid #f87171', color: '#b91c1c', padding: '12px 16px', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 500 }}>
+                      <AlertTriangle size={18} />
+                      <span>Cảnh báo: Chi phí tháng này đã vượt mức ngân sách dự kiến (10,000,000đ). Vui lòng rà soát lại các khoản chi.</span>
+                    </div>
+                  )}
+
+                  <section className="admin-grid-2">
+                    <ChartPanel title="Chi phí theo tháng (Area Chart)">
+                      {costStats?.monthlyChart && costStats.monthlyChart.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <AreaChart data={costStats.monthlyChart ?? []}>
+                            <defs>
+                              <linearGradient id="costFill" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor={chartPalette.categorical[3]} stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor={chartPalette.categorical[3]} stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartPalette.grid} />
+                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke={chartPalette.muted} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke={chartPalette.muted} />
+                            <Tooltip formatter={millionsFormatter} />
+                            <Legend verticalAlign="top" height={36}/>
+                            <Area type="monotone" name="Chi phí (Triệu VND)" dataKey="amount" stroke={chartPalette.categorical[3]} strokeWidth={3} fillOpacity={1} fill="url(#costFill)" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      ) : <div style={{textAlign: 'center', padding: '40px', color: 'var(--text-muted)'}}>Không đủ dữ liệu</div>}
+                    </ChartPanel>
+
+                    <ChartPanel title="Chi phí theo ngày (Line Chart)">
+                      {costStats?.dailyChart && costStats.dailyChart.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <LineChart data={costStats.dailyChart ?? []}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartPalette.grid} />
+                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke={chartPalette.muted} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke={chartPalette.muted} />
+                            <Tooltip formatter={millionsFormatter} />
+                            <Legend verticalAlign="top" height={36}/>
+                            <Line type="monotone" name="Chi phí (Triệu VND)" dataKey="amount" stroke={chartPalette.categorical[2]} strokeWidth={3} dot={false} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      ) : <div style={{textAlign: 'center', padding: '40px', color: 'var(--text-muted)'}}>Không đủ dữ liệu</div>}
+                    </ChartPanel>
+
+                    <ChartPanel title="Phân bổ theo danh mục (Pie Chart)">
+                      {costStats?.categoryChart && costStats.categoryChart.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <PieChart>
+                            <Pie data={costStats.categoryChart ?? []} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                              {(costStats.categoryChart ?? []).map((_, index) => (
+                                <Cell key={`cell-${index}`} fill={chartPalette.categorical[index % chartPalette.categorical.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={millionsFormatter} />
+                            <Legend verticalAlign="bottom" height={36}/>
+                          </PieChart>
+                        </ResponsiveContainer>
+                      ) : <div style={{textAlign: 'center', padding: '40px', color: 'var(--text-muted)'}}>Không đủ dữ liệu</div>}
+                    </ChartPanel>
+
+                    <ChartPanel title="Top danh mục chi tiêu (Bar Chart)">
+                      {costStats?.categoryChart && costStats.categoryChart.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={(costStats.categoryChart ?? []).slice(0, 5)}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartPalette.grid} />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke={chartPalette.muted} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke={chartPalette.muted} />
+                            <Tooltip formatter={millionsFormatter} />
+                            <Legend verticalAlign="top" height={36}/>
+                            <Bar dataKey="value" name="Chi phí (Triệu VND)" fill={chartPalette.categorical[4]} radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : <div style={{textAlign: 'center', padding: '40px', color: '#9ca3af'}}>Không đủ dữ liệu</div>}
+                    </ChartPanel>
+                  </section>
+                  
+                  <section className="admin-card">
+                    <div className="admin-card-head">
+                      <div><h3>Quản lý chi phí</h3><p>Xem, thêm, sửa, xóa các khoản chi phí của hệ thống.</p></div>
+                      <div className="admin-row-actions">
+                        <button className="admin-button admin-button-secondary" onClick={() => setIsCostCategoryModalOpen(true)}>Quản lý Danh mục</button>
+                        <button className="admin-button admin-button-primary" onClick={() => { setEditingCost(null); setIsCostModalOpen(true); }}><Plus size={16}/> Thêm khoản chi</button>
+                        <button className="admin-button admin-button-secondary"><Download size={16}/> Xuất Excel</button>
+                      </div>
+                    </div>
+                    
+                    <div className="admin-toolbar">
+                      <div className="admin-search-input"><Search size={16}/><input value={costSearch} onChange={e => {setCostSearch(e.target.value); setCostPage(0);}} placeholder="Tìm kiếm tên, mô tả..." /></div>
+                      <OrcaSelect
+                        aria-label="Lọc theo danh mục"
+                        value={costFilterCategory}
+                        onChange={e => { setCostFilterCategory(e.target.value); setCostPage(0); }}
+                        options={[
+                          { value: '', label: 'Tất cả danh mục' },
+                          ...costCategories.map(c => ({ value: c.id, label: c.name })),
+                        ]}
+                      />
+                      <OrcaSelect
+                        aria-label="Lọc theo trạng thái"
+                        value={costFilterStatus}
+                        onChange={e => { setCostFilterStatus(e.target.value); setCostPage(0); }}
+                        options={[
+                          { value: '', label: 'Tất cả trạng thái' },
+                          { value: 'PAID', label: 'Đã thanh toán' },
+                          { value: 'PENDING', label: 'Chờ thanh toán' },
+                          { value: 'CANCELLED', label: 'Đã hủy' },
+                        ]}
+                      />
+                    </div>
+
+                    <div className="admin-table-wrap">
+                      <table className="admin-table">
+                        <thead><tr><th>Ngày</th><th>Tên khoản chi</th><th>Danh mục</th><th>Số tiền</th><th>Người tạo</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+                        <tbody>
+                          {costs.length === 0 ? (
+                            <tr><td colSpan={7} style={{textAlign:'center', padding:'32px', color:'#6b7280'}}>Không có khoản chi nào phù hợp.</td></tr>
+                          ) : costs.map(item => (
+                            <tr key={item.id}>
+                              <td>{formatShortDate(item.date)}</td>
+                              <td><strong>{item.name}</strong><br/><small style={{color:'#6b7280'}}>{item.description}</small></td>
+                              <td>{item.category?.name || '-'}</td>
+                              <td>{money(item.amount)}</td>
+                              <td>{item.payer || item.createdBy || '-'}</td>
+                              <td><StatusBadge value={item.status} /></td>
+                              <td>
+                                <div className="admin-row-actions">
+                                  <button className="btn-icon" title="Sửa" onClick={() => { setEditingCost(item); setIsCostModalOpen(true); }}><Edit2 size={16}/></button>
+                                  <button className="btn-icon danger" title="Xóa" onClick={() => {
+                                    if(window.confirm('Bạn có chắc chắn muốn xóa khoản chi này?')) {
+                                      adminCostService.deleteCost(item.id).then(() => {
+                                        loadCostDashboard();
+                                        loadCosts();
+                                      });
+                                    }
+                                  }}><Trash2 size={16}/></button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    {costTotalPages > 1 && (
+                      <div className="admin-pagination">
+                        <span>Trang {costPage + 1} / {costTotalPages}</span>
+                        <div className="admin-pagination-buttons">
+                          <button disabled={costPage === 0} onClick={() => setCostPage(p => p - 1)}>&lt;</button>
+                          <button className="active">{costPage + 1}</button>
+                          <button disabled={costPage >= costTotalPages - 1} onClick={() => setCostPage(p => p + 1)}>&gt;</button>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+                </>
+              )}
+            </>
+          )}
+
           {active === 'reports' && (
             <section className="admin-card">
               <div className="admin-card-head">
@@ -629,16 +949,32 @@ export default function AdminPage() {
               <div className="admin-card-head">
                 <div><h3>Nhật ký hệ thống</h3><p>Theo dõi hoạt động và bảo mật của nền tảng.</p></div>
                 <div className="admin-toolbar" style={{margin:0}}>
-                  <select className="admin-select"><option>Tất cả sự kiện</option><option>Đăng nhập</option><option>Thanh toán</option><option>Bảo mật</option></select>
+                  <OrcaSelect
+                    aria-label="Lọc nhật ký"
+                    defaultValue="all"
+                    options={[
+                      { value: 'all', label: 'Tất cả sự kiện' },
+                      { value: 'login', label: 'Đăng nhập' },
+                      { value: 'payment', label: 'Thanh toán' },
+                      { value: 'security', label: 'Bảo mật' },
+                    ]}
+                  />
                 </div>
               </div>
               <div className="admin-table-wrap">
                 <table className="admin-table">
                   <thead><tr><th>Thời gian</th><th>Loại sự kiện</th><th>Người thực hiện</th><th>Địa chỉ IP</th><th>Trạng thái</th></tr></thead>
                   <tbody>
-                    <tr><td>{formatShortDate(new Date())} {formatTime(new Date().toISOString())}</td><td><strong>Đăng nhập Admin</strong></td><td>john.admin</td><td>192.168.1.1</td><td><StatusBadge value="SUCCESS" /></td></tr>
-                    <tr><td>{formatShortDate(new Date())} {formatTime(new Date(Date.now() - 3600000).toISOString())}</td><td><strong>Hoàn tiền</strong></td><td>system</td><td>-</td><td><StatusBadge value="SUCCESS" /></td></tr>
-                    <tr><td>{formatShortDate(new Date())} {formatTime(new Date(Date.now() - 7200000).toISOString())}</td><td><strong>Đăng nhập thất bại</strong></td><td>unknown</td><td>10.0.0.45</td><td><StatusBadge value="FAILED" /></td></tr>
+                    {systemLogs.map(log => (
+                      <tr key={log.id}>
+                        <td>{formatShortDate(log.createdAt)} {formatTime(log.createdAt)}</td>
+                        <td><strong>{log.actionType}</strong></td>
+                        <td>{log.actorUsername}</td>
+                        <td>{log.ipAddress || '-'}</td>
+                        <td><StatusBadge value={log.status || 'SUCCESS'} /></td>
+                      </tr>
+                    ))}
+                    {systemLogs.length === 0 && <tr><td colSpan={5} style={{textAlign: 'center', padding: '20px'}}>Không có dữ liệu nhật ký.</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -647,6 +983,203 @@ export default function AdminPage() {
 
         </div>
       </main>
+
+      {isPlanModalOpen && (
+        <div className="admin-modal-overlay">
+          <div className="admin-modal">
+            <div className="admin-modal-header">
+              <h3>{editingPlan ? 'Chỉnh sửa gói dịch vụ' : 'Tạo gói mới'}</h3>
+              <button className="btn-icon" onClick={() => setIsPlanModalOpen(false)}>✕</button>
+            </div>
+            <div className="admin-modal-body">
+              <div className="admin-form-group">
+                <label>Tên gói</label>
+                <input type="text" className="admin-input" defaultValue={editingPlan?.name} placeholder="VD: Doanh nghiệp" />
+              </div>
+              <div className="admin-form-group">
+                <label>Giá (VNĐ)</label>
+                <input type="number" className="admin-input" defaultValue={editingPlan?.price} placeholder="VD: 500000" />
+              </div>
+              <div className="admin-form-group">
+                <label>Chu kỳ</label>
+                <OrcaSelect
+                  fullWidth
+                  defaultValue={editingPlan?.period || 'Tháng'}
+                  options={[
+                    { value: 'Tháng', label: 'Tháng' },
+                    { value: 'Năm', label: 'Năm' },
+                    { value: 'Liên hệ', label: 'Liên hệ' },
+                  ]}
+                />
+              </div>
+              <div className="admin-form-group">
+                <label>Giới hạn người dùng</label>
+                <input type="number" className="admin-input" defaultValue={editingPlan?.users} />
+              </div>
+              <div className="admin-form-group">
+                <label>Giới hạn đơn hàng</label>
+                <input type="number" className="admin-input" defaultValue={editingPlan?.orders} />
+              </div>
+              <div className="admin-form-group">
+                <label>Số xưởng con</label>
+                <input type="number" className="admin-input" defaultValue={editingPlan?.workshops} />
+              </div>
+              <div className="admin-form-group">
+                <label>Điểm AI</label>
+                <input type="number" className="admin-input" defaultValue={editingPlan?.ai} />
+              </div>
+              <div className="admin-form-group">
+                <label>Tính năng nổi bật</label>
+                <textarea className="admin-input" defaultValue={editingPlan?.features} placeholder="Phân cách bằng dấu phẩy"></textarea>
+              </div>
+            </div>
+            <div className="admin-modal-footer">
+              <button className="admin-button admin-button-secondary" onClick={() => setIsPlanModalOpen(false)}>Hủy</button>
+              <button className="admin-button admin-button-primary" onClick={() => setIsPlanModalOpen(false)}>Lưu lại</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCostModalOpen && (
+        <div className="admin-modal-overlay">
+          <div className="admin-modal" style={{ maxWidth: '600px' }}>
+            <div className="admin-modal-header">
+              <h3>{editingCost ? 'Sửa khoản chi' : 'Thêm khoản chi mới'}</h3>
+              <button className="btn-icon" onClick={() => setIsCostModalOpen(false)}>✕</button>
+            </div>
+            <form onSubmit={e => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const rawDate = formData.get('date') as string | null;
+              const localIso = rawDate ? `${rawDate}:00` : new Date().toISOString().slice(0, 19);
+              const costData = {
+                name: formData.get('name'),
+                categoryId: (formData.get('categoryId') as string) || undefined,
+                amount: Number(formData.get('amount')),
+                currency: 'VND',
+                date: localIso,
+                payer: formData.get('payer'),
+                description: formData.get('description'),
+                invoiceUrl: formData.get('invoiceUrl'),
+                status: formData.get('status')
+              };
+              const req = editingCost
+                ? adminCostService.updateCost(editingCost.id, costData)
+                : adminCostService.createCost(costData);
+
+              req.then(() => {
+                setIsCostModalOpen(false);
+                loadCostDashboard();
+                loadCosts();
+              }).catch(err => window.alert('Lỗi: ' + (err?.response?.data?.error || err?.response?.data?.message || err.message)));
+            }}>
+              <div className="admin-modal-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="admin-form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Tên khoản chi *</label>
+                  <input name="name" required type="text" className="admin-input" defaultValue={editingCost?.name} placeholder="VD: Mua server AWS tháng 7" />
+                </div>
+                <div className="admin-form-group">
+                  <label>Danh mục</label>
+                  <OrcaSelect
+                    fullWidth
+                    name="categoryId"
+                    defaultValue={editingCost?.category?.id || ''}
+                    options={[
+                      { value: '', label: 'Chọn danh mục' },
+                      ...costCategories.map(c => ({ value: c.id, label: c.name })),
+                    ]}
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label>Số tiền (VNĐ) *</label>
+                  <input name="amount" required type="number" min="0" className="admin-input" defaultValue={editingCost?.amount} placeholder="VD: 5000000" />
+                </div>
+                <div className="admin-form-group">
+                  <label>Ngày chi</label>
+                  <input name="date" required type="datetime-local" className="admin-input" defaultValue={editingCost?.date ? new Date(editingCost.date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)} />
+                </div>
+                <div className="admin-form-group">
+                  <label>Người chi trả</label>
+                  <input name="payer" type="text" className="admin-input" defaultValue={editingCost?.payer} placeholder="Tên người thanh toán" />
+                </div>
+                <div className="admin-form-group">
+                  <label>Trạng thái</label>
+                  <OrcaSelect
+                    fullWidth
+                    name="status"
+                    defaultValue={editingCost?.status || 'PAID'}
+                    options={[
+                      { value: 'PAID', label: 'Đã thanh toán' },
+                      { value: 'PENDING', label: 'Chờ thanh toán' },
+                      { value: 'CANCELLED', label: 'Đã hủy' },
+                    ]}
+                  />
+                </div>
+                <div className="admin-form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Đính kèm hóa đơn (URL)</label>
+                  <input name="invoiceUrl" type="url" className="admin-input" defaultValue={editingCost?.invoiceUrl} placeholder="https://..." />
+                </div>
+                <div className="admin-form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Mô tả chi tiết</label>
+                  <textarea name="description" className="admin-input" defaultValue={editingCost?.description} placeholder="Ghi chú thêm về khoản chi này"></textarea>
+                </div>
+              </div>
+              <div className="admin-modal-footer">
+                <button type="button" className="admin-button admin-button-secondary" onClick={() => setIsCostModalOpen(false)}>Hủy</button>
+                <button type="submit" className="admin-button admin-button-primary">Lưu khoản chi</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isCostCategoryModalOpen && (
+        <div className="admin-modal-overlay">
+          <div className="admin-modal">
+            <div className="admin-modal-header">
+              <h3>Quản lý Danh mục Chi phí</h3>
+              <button className="btn-icon" onClick={() => setIsCostCategoryModalOpen(false)}>✕</button>
+            </div>
+            <div className="admin-modal-body">
+              <form style={{ display: 'flex', gap: '8px', marginBottom: '20px' }} onSubmit={e => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                adminCostService.createCategory({ name: formData.get('name') as string, description: formData.get('description') as string })
+                  .then(() => {
+                    (e.target as HTMLFormElement).reset();
+                    adminCostService.getCategories().then(setCostCategories);
+                  }).catch(err => window.alert('Lỗi: ' + (err?.response?.data?.error || err?.response?.data?.message || err.message)));
+              }}>
+                <input name="name" required type="text" className="admin-input" placeholder="Tên danh mục mới" />
+                <input name="description" type="text" className="admin-input" placeholder="Mô tả" />
+                <button type="submit" className="admin-button admin-button-primary" style={{ whiteSpace: 'nowrap' }}>Thêm</button>
+              </form>
+              
+              <table className="admin-table">
+                <thead><tr><th>Tên danh mục</th><th>Mô tả</th><th>Thao tác</th></tr></thead>
+                <tbody>
+                  {costCategories.map(cat => (
+                    <tr key={cat.id}>
+                      <td><strong>{cat.name}</strong></td>
+                      <td>{cat.description}</td>
+                      <td>
+                        <button className="btn-icon danger" onClick={() => {
+                          if (window.confirm('Xóa danh mục này?')) {
+                            adminCostService.deleteCategory(cat.id).then(() => {
+                              adminCostService.getCategories().then(setCostCategories);
+                            }).catch(err => window.alert('Không thể xóa: ' + (err?.response?.data?.error || err?.response?.data?.message || err.message)));
+                          }
+                        }}><Trash2 size={16}/></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

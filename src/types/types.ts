@@ -420,13 +420,47 @@ export interface InventoryItem {
 export interface AdminUser {
     id: string;
     username: string;
-    fullName: string;
     email: string;
-    role: 'ADMIN' | 'MEMBER';
-    chipId: string;
-    createdAt: string | null;
+    fullName: string;
+    role: 'ADMIN' | 'MEMBER' | 'MANAGER' | 'SALES' | 'ACCOUNTANT';
+    status: 'Active' | 'Locked';
+    createdAt: string;
     aiPlan?: string;
     aiPlanExpiresAt?: string | null;
+}
+
+export interface PageResponse<T> {
+    content: T[];
+    totalElements: number;
+    totalPages: number;
+    size: number;
+    number: number;
+}
+
+export interface SubscriptionPlan {
+    id?: string;
+    name: string;
+    price: number;
+    period: string;
+    users: number;
+    orders: number;
+    workshops: number;
+    ai: number;
+    features: string;
+}
+
+export interface SystemLog {
+    id: string;
+    actorId: string;
+    actorUsername: string;
+    actionType: string;
+    targetType: string;
+    targetId: string;
+    details: string;
+    ipAddress: string;
+    userAgent: string;
+    status: string;
+    createdAt: string;
 }
 
 export interface AdminTeam {
@@ -458,6 +492,7 @@ export interface AdminTeam {
     cancelledOrders: number;
     totalOrders: number;
     trustScore: number;
+    serviceCost: number;
 }
 
 export interface AdminOrder {
@@ -546,4 +581,45 @@ export interface AdminOverview {
     taskStatusCounts: Record<string, number>;
     recentUsers: AdminUser[];
     recentTeams: AdminTeam[];
+    systemTrendData: {
+        month: string;
+        revenue: number;
+        companies: number;
+        users: number;
+    }[];
+}
+
+export interface CostCategory {
+    id: string;
+    name: string;
+    description: string;
+    status: string;
+    createdAt: string;
+}
+
+export interface Cost {
+    id: string;
+    name: string;
+    category: CostCategory;
+    amount: number;
+    currency: string;
+    date: string;
+    payer: string;
+    description: string;
+    invoiceUrl: string;
+    status: string;
+    createdAt: string;
+    createdBy: string;
+}
+
+export interface CostDashboardStats {
+    totalToday: number;
+    totalMonth: number;
+    totalYear: number;
+    totalSystem: number;
+    monthOverMonthChange: number;
+    yearOverYearChange: number;
+    dailyChart: { date: string; amount: number }[];
+    monthlyChart: { month: string; amount: number }[];
+    categoryChart: { name: string; value: number }[];
 }

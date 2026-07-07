@@ -1,8 +1,8 @@
-.payment-result-page {
+﻿.payment-result-page {
     min-height: 70vh;
     display: grid;
     place-items: center;
-    color: var(--shell-text);
+    color: var(--text-primary);
 }
 
 .payment-result-card {
@@ -11,10 +11,10 @@
     justify-items: center;
     gap: 14px;
     padding: 34px;
-    border: 1px solid var(--shell-border);
+    border: 1px solid var(--border);
     border-radius: 8px;
-    background: var(--shell-surface);
-    box-shadow: var(--shell-shadow);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-md);
     text-align: center;
 }
 
@@ -24,19 +24,19 @@
     display: grid;
     place-items: center;
     border-radius: 999px;
-    background: rgba(34, 197, 94, 0.12);
-    color: #4ade80;
-    border: 1px solid rgba(34, 197, 94, 0.24);
+    background: var(--success-soft);
+    color: var(--success);
+    border: 1px solid var(--success);
 }
 
 .payment-result-card.failed .payment-result-icon {
-    background: rgba(239, 68, 68, 0.12);
-    color: #f87171;
-    border-color: rgba(239, 68, 68, 0.24);
+    background: var(--danger-soft);
+    color: var(--danger);
+    border-color: var(--danger);
 }
 
 .payment-result-kicker {
-    color: var(--shell-accent);
+    color: var(--primary);
     font-size: 12px;
     font-weight: 850;
     letter-spacing: 0.12em;
@@ -45,7 +45,7 @@
 
 .payment-result-card h1 {
     margin: 0;
-    color: var(--shell-title);
+    color: var(--text-primary);
     font-size: 30px;
     line-height: 1.15;
 }
@@ -53,7 +53,7 @@
 .payment-result-card p {
     max-width: 430px;
     margin: 0;
-    color: var(--shell-text-soft);
+    color: var(--text-secondary);
     font-size: 14px;
     line-height: 1.7;
 }
@@ -63,7 +63,7 @@
     height: 160px;
     object-fit: cover;
     border-radius: 8px;
-    border: 1px solid var(--shell-border);
+    border: 1px solid var(--border);
 }
 
 .payment-result-details {
@@ -79,19 +79,19 @@
     gap: 16px;
     padding: 12px 14px;
     border-radius: 8px;
-    background: var(--shell-surface-soft);
-    border: 1px solid var(--shell-border);
+    background: var(--bg-input);
+    border: 1px solid var(--border);
 }
 
 .payment-result-details span {
-    color: var(--shell-text-soft);
+    color: var(--text-secondary);
     font-size: 12px;
     font-weight: 800;
     text-transform: uppercase;
 }
 
 .payment-result-details strong {
-    color: var(--shell-title);
+    color: var(--text-primary);
     text-align: right;
 }
 
@@ -117,12 +117,12 @@
 }
 
 .payment-result-primary {
-    background: var(--shell-accent);
-    color: var(--shell-button-text);
+    background: var(--primary);
+    color: var(--text-on-accent);
 }
 
 .payment-result-secondary {
-    color: var(--shell-text);
-    background: var(--shell-surface-soft);
-    border: 1px solid var(--shell-border);
+    color: var(--text-primary);
+    background: var(--bg-input);
+    border: 1px solid var(--border);
 }

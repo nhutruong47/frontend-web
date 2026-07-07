@@ -1,4 +1,4 @@
-.admin-app {
+﻿.admin-app {
   display: flex;
   min-height: 100vh;
   /* Sync background with global theme */
@@ -74,8 +74,8 @@
 }
 
 .admin-nav button.active {
-  background: rgba(37, 99, 235, 0.1);
-  color: var(--primary-color);
+  background: var(--info-soft);
+  color: var(--primary);
 }
 
 .admin-nav-section {
@@ -214,11 +214,11 @@
   flex-shrink: 0;
 }
 
-.admin-kpi-blue .admin-kpi-icon { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
-.admin-kpi-green .admin-kpi-icon { color: #10b981; background: rgba(16, 185, 129, 0.1); }
-.admin-kpi-amber .admin-kpi-icon { color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
-.admin-kpi-violet .admin-kpi-icon { color: #8b5cf6; background: rgba(139, 92, 246, 0.1); }
-.admin-kpi-rose .admin-kpi-icon { color: #f43f5e; background: rgba(244, 63, 94, 0.1); }
+.admin-kpi-blue .admin-kpi-icon { color: var(--info); background: var(--info-soft); }
+.admin-kpi-green .admin-kpi-icon { color: var(--success); background: var(--success-soft); }
+.admin-kpi-amber .admin-kpi-icon { color: var(--warning); background: var(--warning-soft); }
+.admin-kpi-violet .admin-kpi-icon { color: var(--info); background: var(--info-soft); }
+.admin-kpi-rose .admin-kpi-icon { color: var(--danger); background: var(--danger-soft); }
 
 .admin-kpi-content {
   flex: 1;
@@ -247,8 +247,8 @@
   color: var(--text-muted);
 }
 
-.admin-kpi small.positive { color: #10b981; }
-.admin-kpi small.negative { color: #f43f5e; }
+.admin-kpi small.positive { color: var(--success); }
+.admin-kpi small.negative { color: var(--danger); }
 
 /* Mini Metric */
 .admin-mini-metric {
@@ -258,8 +258,8 @@
 }
 
 .admin-mini-metric svg {
-  color: var(--accent-primary);
-  background: rgba(99, 102, 241, 0.1);
+  color: var(--primary);
+  background: var(--info-soft);
   width: 36px;
   height: 36px;
   padding: 8px;
@@ -305,7 +305,7 @@
   color: var(--text-muted);
   font-size: 13px;
   font-weight: 500;
-  background: rgba(148, 163, 184, 0.05);
+  background: var(--bg-input);
   border-radius: 8px;
   border: 1px dashed var(--border);
 }
@@ -326,7 +326,7 @@
 
 .admin-table th {
   padding: 14px 16px;
-  background: rgba(148, 163, 184, 0.04);
+  background: var(--bg-input);
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
@@ -349,7 +349,7 @@
 }
 
 .admin-table tr:hover td {
-  background: rgba(148, 163, 184, 0.02);
+  background: var(--bg-card-hover);
 }
 
 .admin-table strong {
@@ -366,8 +366,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg);
-  color: white;
+  background: var(--accent-gradient);
+  color: var(--text-on-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -387,11 +387,11 @@
   white-space: nowrap;
 }
 
-.admin-badge.success { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-.admin-badge.warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-.admin-badge.danger { background: rgba(244, 63, 94, 0.1); color: #f43f5e; }
-.admin-badge.neutral { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
-.admin-badge.info { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.admin-badge.success { background: var(--success-soft); color: var(--success); }
+.admin-badge.warning { background: var(--warning-soft); color: var(--warning); }
+.admin-badge.danger { background: var(--danger-soft); color: var(--danger); }
+.admin-badge.neutral { background: var(--bg-input); color: var(--text-muted); }
+.admin-badge.info { background: var(--info-soft); color: var(--info); }
 
 /* Buttons & Inputs */
 .admin-button {
@@ -409,12 +409,12 @@
 }
 
 .admin-button-primary {
-  background: var(--primary-color);
-  color: white;
+  background: var(--primary);
+  color: var(--text-on-accent);
 }
 
 .admin-button-primary:hover {
-  background: #1d4ed8;
+  background: var(--info);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
 }
 
@@ -465,24 +465,20 @@
   color: var(--text-muted);
 }
 
-.admin-select {
-  height: 40px;
-  padding: 0 36px 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 500;
-  appearance: none;
-  cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-  background-position: right 12px center;
-}
+/* ============================================================
+ * ORCA unified Select â€” see components/OrcaSelect.css
+ *
+ * The legacy .admin-select class below is kept ONLY as a
+ * compatibility shim. All admin dropdowns now use <OrcaSelect>
+ * which renders the canonical styled native select with a single
+ * lucide chevron and no native arrow.
+ * ========================================================== */
 
+/* Compatibility: if anything still carries .admin-select, force it to use
+   the OrcaSelect CSS variables without overriding them. */
+.admin-select,
 .admin-select option {
-  background-color: var(--bg-card, #1e1e2e);
-  color: var(--text-primary, #ffffff);
+  font-family: inherit;
 }
 
 .admin-row-actions {
@@ -510,13 +506,13 @@
 }
 
 .btn-icon.danger:hover {
-  background: rgba(244, 63, 94, 0.1);
-  color: #f43f5e;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .btn-icon.success:hover {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 /* Date Range */
@@ -593,9 +589,9 @@
 }
 
 .admin-pagination-buttons button.active {
-  background: var(--primary-color);
-  color: white;
-  border-color: var(--primary-color);
+  background: var(--primary);
+  color: var(--text-on-accent);
+  border-color: var(--primary);
 }
 
 /* Plans */
@@ -686,4 +682,104 @@
   .admin-grid-2, .admin-grid-3, .admin-plan-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Modals */
+.admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--modal-overlay);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.admin-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.admin-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.admin-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.admin-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+  width: 100%;
+  font-family: inherit;
+}
+
+.admin-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--info-soft);
+}
+
+textarea.admin-input {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.admin-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: var(--border);
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
 }

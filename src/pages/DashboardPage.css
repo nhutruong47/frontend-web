@@ -1,18 +1,38 @@
+﻿/* Dashboard page â€” token-based.
+   Replaces legacy --shell-* aliases with the unified token system.
+   --shell-* alias map:
+     --text-primary          â†’ --text-primary
+     --text-primary-soft     â†’ --text-secondary
+     --text-primary-muted    â†’ --text-muted
+     --text-primary         â†’ --text-primary
+     --bg-card       â†’ --bg-card
+     --bg-card-soft  â†’ --bg-input
+     --bg-card-hover â†’ --bg-card-hover
+     --border        â†’ --border
+     --border-strong â†’ --border-strong
+     --primary        â†’ --primary
+     --accent-soft   â†’ --accent-soft
+     --primary-hover â†’ --primary-hover
+     --text-on-accent   â†’ --text-on-accent
+     --shadow-md        â†’ --shadow-md
+     --shadow-lg  â†’ --shadow-lg
+*/
+
 .dashboard-page {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  color: var(--shell-text);
+  color: var(--text-primary);
 }
 
 .dashboard-command,
 .dashboard-stat-card,
 .dashboard-panel,
 .dashboard-empty {
-  border: 1px solid var(--shell-border);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--shell-surface);
-  box-shadow: var(--shell-shadow);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-md);
 }
 
 .dashboard-command {
@@ -21,19 +41,17 @@
   gap: 16px;
   padding: clamp(20px, 3vw, 28px);
   background:
-    linear-gradient(135deg, rgba(212, 165, 116, 0.13), transparent 38%),
-    linear-gradient(110deg, rgba(139, 94, 60, 0.15), transparent 54%),
-    var(--shell-surface);
+    linear-gradient(135deg, var(--accent-soft), transparent 38%),
+    linear-gradient(110deg, var(--primary-soft), transparent 54%),
+    var(--bg-card);
 }
 
-.dashboard-command-main {
-  min-width: 0;
-}
+.dashboard-command-main { min-width: 0; }
 
 .dashboard-eyebrow,
 .dashboard-section-head span,
 .dashboard-stat-card span {
-  color: var(--shell-accent);
+  color: var(--primary);
   font-size: 11px;
   font-weight: 850;
   letter-spacing: 0.08em;
@@ -43,7 +61,7 @@
 .dashboard-command h1 {
   max-width: 760px;
   margin: 8px 0 8px;
-  color: var(--shell-title);
+  color: var(--text-primary);
   font-size: clamp(2rem, 4vw, 3.5rem);
   font-weight: 850;
   line-height: 1.03;
@@ -56,7 +74,7 @@
 .dashboard-empty p,
 .dashboard-ops-card p {
   margin: 0;
-  color: var(--shell-text-soft);
+  color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.58;
 }
@@ -82,10 +100,10 @@
   justify-content: center;
   gap: 8px;
   padding: 0 14px;
-  border: 1px solid var(--shell-border);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--shell-surface-soft);
-  color: var(--shell-title);
+  background: var(--bg-input);
+  color: var(--text-primary);
   font: 800 13px var(--font);
   cursor: pointer;
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
@@ -93,22 +111,21 @@
 
 .dashboard-command-actions .dashboard-primary-action,
 .dashboard-empty button {
-  background: var(--shell-accent);
+  background: var(--primary);
   border-color: transparent;
-  color: var(--shell-button-text);
+  color: var(--text-on-accent);
 }
 
 .dashboard-command-actions button:hover,
 .dashboard-section-head button:hover,
 .dashboard-empty button:hover {
   transform: translateY(-1px);
-  border-color: var(--shell-border-strong);
-  background: var(--shell-surface-hover);
+  border-color: var(--border-strong);
+  background: var(--bg-card-hover);
 }
 
-.dashboard-command-actions .dashboard-primary-action:hover,
-.dashboard-empty button:hover {
-  background: var(--shell-accent-strong);
+.dashboard-command-actions .dashboard-primary-action:hover {
+  background: var(--primary-hover);
 }
 
 .dashboard-quick-actions {
@@ -124,20 +141,20 @@
   align-items: center;
   gap: 10px;
   padding: 12px;
-  border: 1px solid var(--shell-border);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--shell-surface);
-  color: var(--shell-title);
+  background: var(--bg-card);
+  color: var(--text-primary);
   text-align: left;
   cursor: pointer;
-  box-shadow: var(--shell-shadow);
+  box-shadow: var(--shadow-md);
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 
 .dashboard-quick-actions button:hover {
   transform: translateY(-1px);
-  border-color: var(--shell-border-strong);
-  background: var(--shell-surface-hover);
+  border-color: var(--border-strong);
+  background: var(--bg-card-hover);
 }
 
 .dashboard-quick-icon {
@@ -147,15 +164,12 @@
   flex: 0 0 auto;
   place-items: center;
   border-radius: 8px;
-  background: var(--shell-accent-soft);
-  color: var(--shell-accent);
+  background: var(--accent-soft);
+  color: var(--primary);
 }
 
 .dashboard-quick-actions strong,
-.dashboard-quick-actions small {
-  display: block;
-  min-width: 0;
-}
+.dashboard-quick-actions small { display: block; min-width: 0; }
 
 .dashboard-quick-actions strong {
   font-size: 13px;
@@ -165,7 +179,7 @@
 
 .dashboard-quick-actions small {
   margin-top: 3px;
-  color: var(--shell-text-muted);
+  color: var(--text-muted);
   font-size: 11px;
   font-weight: 650;
   line-height: 1.35;
@@ -178,47 +192,43 @@
   justify-content: space-between;
   gap: 10px;
   padding: 18px;
-  border: 1px solid var(--shell-border);
+  border: 1px solid var(--border);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
-    var(--shell-surface-soft);
+    linear-gradient(180deg, var(--glass-bg), transparent),
+    var(--bg-input);
 }
 
 .dashboard-ops-card.overloaded {
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: var(--danger);
   background:
-    linear-gradient(180deg, rgba(239, 68, 68, 0.08), transparent),
-    var(--shell-surface-soft);
+    linear-gradient(180deg, var(--danger-soft), transparent),
+    var(--bg-input);
 }
 
-.dashboard-ops-card.overloaded .dashboard-ops-head {
-  color: #ef4444;
-}
+.dashboard-ops-card.overloaded .dashboard-ops-head { color: var(--danger); }
 
 .dashboard-ops-card.overachieving {
-  border-color: rgba(34, 197, 94, 0.3);
+  border-color: var(--success);
   background:
-    linear-gradient(180deg, rgba(34, 197, 94, 0.08), transparent),
-    var(--shell-surface-soft);
+    linear-gradient(180deg, var(--success-soft), transparent),
+    var(--bg-input);
 }
 
-.dashboard-ops-card.overachieving .dashboard-ops-head {
-  color: #22c55e;
-}
+.dashboard-ops-card.overachieving .dashboard-ops-head { color: var(--success); }
 
 .dashboard-ops-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--shell-accent);
+  color: var(--primary);
   font-size: 12px;
   font-weight: 850;
   text-transform: uppercase;
 }
 
 .dashboard-ops-card strong {
-  color: var(--shell-title);
+  color: var(--text-primary);
   font-size: 22px;
   line-height: 1.2;
 }
@@ -228,7 +238,7 @@
   height: 8px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.18);
+  background: var(--bg-tertiary);
 }
 
 .dashboard-progress-track span {
@@ -236,11 +246,11 @@
   min-width: 8px;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #8b5e3c, #f5b15e);
+  background: var(--accent-gradient);
 }
 
 .dashboard-ops-card small {
-  color: var(--shell-text-muted);
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 700;
 }
@@ -265,37 +275,35 @@
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: rgba(212, 165, 116, 0.15);
-  color: #d4a574;
+  background: var(--accent-soft);
+  color: var(--primary);
 }
 
 .dashboard-stat-card.amber .dashboard-stat-icon {
-  background: rgba(245, 177, 94, 0.16);
-  color: #f5b15e;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .dashboard-stat-card.green .dashboard-stat-icon {
-  background: rgba(139, 94, 60, 0.22);
-  color: #c28a52;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .dashboard-stat-card.blue .dashboard-stat-icon {
-  background: rgba(120, 79, 43, 0.24);
-  color: #b97832;
+  background: var(--info-soft);
+  color: var(--info);
 }
 
 .dashboard-stat-card strong {
   display: block;
   margin-top: 9px;
-  color: var(--shell-title);
+  color: var(--text-primary);
   font-size: clamp(1.45rem, 2.6vw, 2.25rem);
   line-height: 1.06;
   overflow-wrap: anywhere;
 }
 
-.dashboard-stat-card p {
-  margin-top: 6px;
-}
+.dashboard-stat-card p { margin-top: 6px; }
 
 .dashboard-workspace-grid {
   display: grid;
@@ -304,9 +312,7 @@
   align-items: start;
 }
 
-.dashboard-panel {
-  padding: 20px;
-}
+.dashboard-panel { padding: 20px; }
 
 .dashboard-section-head {
   display: flex;
@@ -318,29 +324,24 @@
 
 .dashboard-section-head h2 {
   margin: 5px 0 0;
-  color: var(--shell-title);
+  color: var(--text-primary);
   font-size: 22px;
   font-weight: 850;
   line-height: 1.2;
 }
 
-.dashboard-section-head button {
-  min-width: 118px;
-}
+.dashboard-section-head button { min-width: 118px; }
 
-.dashboard-team-list {
-  display: grid;
-  gap: 12px;
-}
+.dashboard-team-list { display: grid; gap: 12px; }
 
 .dashboard-team-card {
   display: grid;
   grid-template-columns: 168px minmax(0, 1fr);
   min-height: 158px;
   overflow: hidden;
-  border: 1px solid var(--shell-border);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--shell-surface-soft);
+  background: var(--bg-input);
   cursor: pointer;
   outline: none;
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
@@ -348,8 +349,8 @@
 
 .dashboard-team-card:hover,
 .dashboard-team-card:focus-visible {
-  border-color: var(--shell-border-strong);
-  box-shadow: var(--shell-hover-shadow);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
 
@@ -375,16 +376,14 @@
 .dashboard-task-row h3,
 .dashboard-empty h3 {
   margin: 0;
-  color: var(--shell-title);
+  color: var(--text-primary);
   font-size: 16px;
   font-weight: 850;
   line-height: 1.3;
 }
 
 .dashboard-team-card p,
-.dashboard-task-row p {
-  margin-top: 6px;
-}
+.dashboard-task-row p { margin-top: 6px; }
 
 .dashboard-team-card dl {
   display: grid;
@@ -396,13 +395,13 @@
 .dashboard-team-card dl div {
   min-width: 0;
   padding: 9px 10px;
-  border: 1px solid var(--shell-border);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-card);
 }
 
 .dashboard-team-card dt {
-  color: var(--shell-text-muted);
+  color: var(--text-muted);
   font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
@@ -410,16 +409,13 @@
 
 .dashboard-team-card dd {
   margin: 3px 0 0;
-  color: var(--shell-text);
+  color: var(--text-primary);
   font-size: 13px;
   font-weight: 800;
   overflow-wrap: anywhere;
 }
 
-.dashboard-task-list {
-  display: grid;
-  gap: 10px;
-}
+.dashboard-task-list { display: grid; gap: 10px; }
 
 .dashboard-task-row {
   display: grid;
@@ -427,9 +423,9 @@
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border: 1px solid var(--shell-border);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--shell-surface-soft);
+  background: var(--bg-input);
 }
 
 .dashboard-task-mark {
@@ -438,20 +434,18 @@
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: rgba(212, 165, 116, 0.15);
-  color: #d4a574;
+  background: var(--accent-soft);
+  color: var(--primary);
 }
 
-.dashboard-task-copy {
-  min-width: 0;
-}
+.dashboard-task-copy { min-width: 0; }
 
 .dashboard-task-status {
   flex: 0 0 auto;
   padding: 7px 10px;
   border-radius: 999px;
-  background: rgba(245, 177, 94, 0.16);
-  color: #f5b15e;
+  background: var(--warning-soft);
+  color: var(--warning);
   font-size: 11px;
   font-weight: 850;
   text-transform: uppercase;
@@ -459,13 +453,13 @@
 }
 
 .dashboard-task-status.completed {
-  background: rgba(120, 79, 43, 0.20);
-  color: #c28a52;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .dashboard-task-status.in-progress {
-  background: rgba(212, 165, 116, 0.16);
-  color: #d4a574;
+  background: var(--accent-soft);
+  color: var(--primary);
 }
 
 .dashboard-empty {
@@ -473,20 +467,12 @@
   justify-items: start;
   gap: 10px;
   padding: 24px;
-  color: var(--shell-text-soft);
+  color: var(--text-secondary);
 }
 
-.dashboard-empty svg {
-  color: var(--shell-accent);
-}
-
-.dashboard-empty p {
-  max-width: 520px;
-}
-
-.dashboard-empty button {
-  margin-top: 4px;
-}
+.dashboard-empty svg { color: var(--primary); }
+.dashboard-empty p { max-width: 520px; }
+.dashboard-empty button { margin-top: 4px; }
 
 .dashboard-empty-compact {
   min-height: 212px;
@@ -498,50 +484,24 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  color: var(--shell-text-soft);
+  color: var(--text-secondary);
 }
 
 @media (max-width: 1180px) {
-  .dashboard-stat-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .dashboard-quick-actions {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
+  .dashboard-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-quick-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .dashboard-workspace-grid,
-  .dashboard-command {
-    grid-template-columns: 1fr;
-  }
+  .dashboard-command { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 760px) {
-  .dashboard-stat-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .dashboard-quick-actions {
-    grid-template-columns: 1fr;
-  }
-
+  .dashboard-stat-grid { grid-template-columns: 1fr; }
+  .dashboard-quick-actions { grid-template-columns: 1fr; }
   .dashboard-team-card,
-  .dashboard-task-row {
-    grid-template-columns: 1fr;
-  }
-
-  .dashboard-team-card img {
-    height: 190px;
-  }
-
-  .dashboard-section-head {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
+  .dashboard-task-row { grid-template-columns: 1fr; }
+  .dashboard-team-card img { height: 190px; }
+  .dashboard-section-head { align-items: stretch; flex-direction: column; }
   .dashboard-section-head button,
   .dashboard-command-actions button,
-  .dashboard-empty button {
-    width: 100%;
-  }
+  .dashboard-empty button { width: 100%; }
 }

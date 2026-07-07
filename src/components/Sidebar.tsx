@@ -16,15 +16,15 @@ export default function Sidebar() {
 
     const getPlanColor = (plan: string) => {
         if (user?.role === 'ADMIN') {
-            return { bg: 'transparent', text: '#8b5cf6', label: 'Platform Admin' };
+            return { token: 'var(--info)', label: 'Platform Admin' };
         }
         switch (plan.toLowerCase()) {
-            case 'free': return { bg: 'transparent', text: '#9ca3af', label: 'Miễn phí' };
+            case 'free': return { token: 'var(--text-muted)', label: 'Miễn phí' };
             case 'professional':
-            case 'plus': return { bg: 'transparent', text: '#e7a766', label: 'Plus' };
-            case 'pro': return { bg: 'transparent', text: '#8b5cf6', label: 'Pro' };
-            case 'enterprise': return { bg: 'transparent', text: '#ec4899', label: 'Doanh nghiệp' };
-            default: return { bg: 'transparent', text: '#9ca3af', label: plan };
+            case 'plus': return { token: 'var(--primary)', label: 'Plus' };
+            case 'pro': return { token: 'var(--info)', label: 'Pro' };
+            case 'enterprise': return { token: 'var(--accent)', label: 'Doanh nghiệp' };
+            default: return { token: 'var(--text-muted)', label: plan };
         }
     };
     const planStyle = getPlanColor(displayPlan);
@@ -93,6 +93,7 @@ export default function Sidebar() {
         { path: '/admin?section=users', label: 'Quản lý người dùng', icon: 'people-outline' },
         { path: '/admin?section=subscriptions', label: 'Gói dịch vụ', icon: 'receipt-outline' },
         { path: '/admin?section=payments', label: 'Thanh toán & doanh thu', icon: 'card-outline' },
+        { path: '/admin?section=costs', label: 'Chi phí', icon: 'wallet-outline' },
         { path: '/admin?section=reports', label: 'Báo cáo thống kê', icon: 'document-text-outline' },
         { path: '/admin?section=logs', label: 'Nhật ký hệ thống', icon: 'shield-checkmark-outline' },
     ];
@@ -145,14 +146,13 @@ export default function Sidebar() {
                                 {!!item.badge && item.badge > 0 && (
                                     <span className="nav-badge" style={{
                                         marginLeft: 'auto',
-                                        background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                                        color: '#fff',
+                                        background: 'var(--danger)',
+                                        color: 'var(--text-on-accent)',
                                         fontSize: '11px',
                                         fontWeight: 800,
                                         padding: '3px 8px',
                                         borderRadius: '12px',
                                         lineHeight: 1,
-                                        boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
                                         minWidth: '20px',
                                         textAlign: 'center'
                                     }}>
@@ -215,13 +215,11 @@ export default function Sidebar() {
                         <div className="sidebar-avatar sidebar-avatar-initials" style={{ backgroundImage: `url(${user?.avatar || defaultAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center', color: 'transparent' }}></div>
                         <div className="sidebar-user-info">
                             <span className="sidebar-username">{displayName}</span>
-                            <span 
+                            <span
                                 className="sidebar-user-plan"
                                 style={{
-                                    background: planStyle.bg,
-                                    color: planStyle.text,
-                                    padding: planStyle.bg === 'transparent' ? '2px 0' : '2px 10px',
-                                    borderRadius: '12px',
+                                    color: planStyle.token,
+                                    padding: '2px 0',
                                     fontSize: '10px',
                                     fontWeight: 800,
                                     textTransform: 'uppercase',
@@ -230,7 +228,7 @@ export default function Sidebar() {
                                 }}
                             >{planStyle.label}</span>
                         </div>
-                        <ion-icon name={userMenuOpen ? 'chevron-down-outline' : 'storefront-outline'} style={{ marginLeft: 'auto', color: 'var(--shell-text-soft)', fontSize: '18px' }}></ion-icon>
+                        <ion-icon name={userMenuOpen ? 'chevron-down-outline' : 'storefront-outline'} style={{ marginLeft: 'auto', color: 'var(--text-secondary)', fontSize: '18px' }}></ion-icon>
                     </button>
                 </div>
             )}

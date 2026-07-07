@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { productionService } from '../services/groupService';
 import type { ProductionOrder } from '../types/types';
@@ -328,7 +328,7 @@ export default function ProductionOrderPage() {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-primary)' }}>{order.orderCode}</span>
+                                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>{order.orderCode}</span>
                                             <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: `${getStatusColor(order.status)}20`, color: getStatusColor(order.status) }}>
                                                 {getStatusLabel(order.status)}
                                             </span>
@@ -401,7 +401,7 @@ export default function ProductionOrderPage() {
                                         <div>
                                             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Nguoi nhan hang</div>
                                             <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{order.recipientName}</div>
-                                            <div style={{ color: 'var(--accent-primary)', fontSize: 13 }}>{order.recipientPhone}</div>
+                                            <div style={{ color: 'var(--primary)', fontSize: 13 }}>{order.recipientPhone}</div>
                                             {order.shippingNote && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontStyle: 'italic' }}>{order.shippingNote}</div>}
                                         </div>
                                         {order.recipientPhone && (
