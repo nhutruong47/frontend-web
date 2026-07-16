@@ -82,7 +82,7 @@ export default function ProductionPlanPage() {
         try {
             const data = await productionService.getOrders(teamId, true);
             setOrders(data || []);
-        } catch (e) { console.error(e); }
+        } catch (e) { /* loadOrders failure tolerated */ }
         setLoading(false);
     };
 
@@ -90,7 +90,7 @@ export default function ProductionPlanPage() {
         try {
             const att = await attendanceService.getTodayAttendance(teamId);
             setMyAttendance(att);
-        } catch (e) { console.error(e); }
+        } catch (e) { /* attendance load failure tolerated */ }
     };
 
     const handleSelectOrder = async (order: ProductionOrder) => {
@@ -105,7 +105,7 @@ export default function ProductionPlanPage() {
                 setSelectedPlan(null);
                 setDailyTargets([]);
             }
-        } catch (e) { console.error(e); }
+        } catch (e) { /* plan load failure tolerated */ }
     };
 
     const handleGeneratePlan = async () => {
@@ -144,7 +144,7 @@ export default function ProductionPlanPage() {
             const targets = await productionService.getDailyTargetsByPlan(planId);
             setDailyTargets(targets || []);
             setTargetEdits({});
-        } catch (e) { console.error(e); }
+        } catch (e) { /* target load failure tolerated */ }
     };
 
     const handleSaveTarget = async (target: DailyTarget) => {

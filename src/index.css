@@ -1,7 +1,7 @@
-﻿/* ============================================================
+/* ============================================================
  *  ORCA Theme System  v2.1
  *  Two truly distinct modes:
- *    Light = cool neutral white  + Dark Goldenrod
+ *    Light = warm pale yellow    + coffee goldenrod
  *    Dark  = warm espresso brown + caramel
  *  Tokens are split into two sets inside [data-theme="dark"]
  *  and [data-theme="light"].
@@ -151,38 +151,38 @@
  * ============================================================ */
 [data-theme="light"] {
   /* ---- Surfaces ---- */
-  --bg-primary:     #F7F8FA;
-  --bg-secondary:   #FFFFFF;
-  --bg-tertiary:    #EEF1F5;
-  --bg-card:        #FFFFFF;
-  --bg-card-hover:  #F9FAFB;
-  --bg-input:       #FFFFFF;
-  --bg-elevated:    #FFFFFF;
+  --bg-primary:     #FFF8E8;
+  --bg-secondary:   #FFF4D8;
+  --bg-tertiary:    #FFEEC2;
+  --bg-card:        #FFFDF7;
+  --bg-card-hover:  #FFF7E6;
+  --bg-input:       #FFFAF0;
+  --bg-elevated:    #FFFDF8;
 
   /* ---- Borders ---- */
-  --border:         #E5E7EB;
-  --border-strong:  #D1D5DB;
-  --border-focus:   #B8860B;
+  --border:         #EAD7B6;
+  --border-strong:  #D8BB86;
+  --border-focus:   #B97820;
 
   /* ---- Text ---- */
-  --text-primary:   #0F172A;
-  --text-secondary: #475569;
-  --text-muted:     #94A3B8;
-  --text-on-accent: #FFFFFF;
-  --text-inverse:   #F2E8DC;
+  --text-primary:   #24160A;
+  --text-secondary: #684F34;
+  --text-muted:     #9A7A55;
+  --text-on-accent: #241204;
+  --text-inverse:   #FFF7EC;
 
-  /* ---- Brand / Accent (preserved dark goldenrod) ---- */
-  --primary:        #B8860B;
-  --primary-hover:  #8B6508;
-  --primary-soft:   rgba(184, 134, 11, 0.12);
+  /* ---- Brand / Accent (warm coffee gold) ---- */
+  --primary:        #B97820;
+  --primary-hover:  #8A4F12;
+  --primary-soft:   rgba(185, 120, 32, 0.14);
 
-  --secondary:      #D4A574;
-  --secondary-hover:#B8860B;
+  --secondary:      #E6AC5A;
+  --secondary-hover:#B97820;
 
-  --accent:         #B8860B;
-  --accent-gradient:linear-gradient(135deg, #dfc27d 0%, #b8860b 50%, #8b6508 100%);
-  --accent-glow:    rgba(184, 134, 11, 0.28);
-  --accent-soft:    rgba(184, 134, 11, 0.10);
+  --accent:         #B97820;
+  --accent-gradient:linear-gradient(135deg, #F6D58F 0%, #E6AC5A 48%, #B97820 100%);
+  --accent-glow:    rgba(185, 120, 32, 0.25);
+  --accent-soft:    rgba(185, 120, 32, 0.12);
 
   /* ---- Semantic ---- */
   --success:        #059669;
@@ -195,41 +195,41 @@
   --info-soft:      rgba(37, 99, 235, 0.12);
 
   /* ---- Icon ---- */
-  --icon:           #B8860B;
-  --icon-muted:     #94A3B8;
+  --icon:           #B97820;
+  --icon-muted:     #A98A62;
 
-  /* ---- Shadows (cool, soft, float) ---- */
-  --shadow-sm:      0 1px 2px rgba(15, 23, 42, 0.06);
-  --shadow-md:      0 4px 12px rgba(15, 23, 42, 0.08);
-  --shadow-lg:      0 12px 28px rgba(15, 23, 42, 0.10);
-  --shadow-xl:      0 24px 60px rgba(15, 23, 42, 0.14);
-  --shadow-glow:    0 0 24px rgba(184, 134, 11, 0.20);
+  /* ---- Shadows (warm tinted, soft float) ---- */
+  --shadow-sm:      0 1px 2px rgba(121, 73, 22, 0.06);
+  --shadow-md:      0 4px 12px rgba(121, 73, 22, 0.08);
+  --shadow-lg:      0 12px 28px rgba(121, 73, 22, 0.11);
+  --shadow-xl:      0 24px 60px rgba(121, 73, 22, 0.15);
+  --shadow-glow:    0 0 24px rgba(185, 120, 32, 0.18);
 
   /* ---- Glass / Overlay ---- */
-  --overlay-bg:     rgba(15, 23, 42, 0.42);
-  --glass-bg:       rgba(255, 255, 255, 0.78);
-  --glass-border:   rgba(15, 23, 42, 0.08);
+  --overlay-bg:     rgba(36, 22, 10, 0.36);
+  --glass-bg:       rgba(255, 250, 238, 0.82);
+  --glass-border:   rgba(121, 73, 22, 0.12);
 
   /* ---- Tooltip ---- */
-  --tooltip-bg:     #0F172A;
-  --tooltip-text:   #FFFFFF;
+  --tooltip-bg:     #3A210D;
+  --tooltip-text:   #FFF8E8;
 
   /* ---- Dropdown ---- */
-  --dropdown-bg:        #FFFFFF;
-  --dropdown-border:    #E5E7EB;
-  --dropdown-item-hover:rgba(184, 134, 11, 0.08);
-  --dropdown-text:      #0F172A;
+  --dropdown-bg:        #FFFDF7;
+  --dropdown-border:    #EAD7B6;
+  --dropdown-item-hover:rgba(185, 120, 32, 0.10);
+  --dropdown-text:      #24160A;
 
   /* ---- Modal ---- */
-  --modal-bg:       #FFFFFF;
-  --modal-border:   #E5E7EB;
-  --modal-overlay:  rgba(15, 23, 42, 0.5);
+  --modal-bg:       #FFFDF7;
+  --modal-border:   #EAD7B6;
+  --modal-overlay:  rgba(36, 22, 10, 0.42);
 
   /* ---- Table ---- */
   --table-bg:       transparent;
-  --table-header-bg:#F9FAFB;
-  --table-row-hover:#F9FAFB;
-  --table-border:   #E5E7EB;
+  --table-header-bg:#FFF4D8;
+  --table-row-hover:#FFF7E6;
+  --table-border:   #EAD7B6;
 
   /* ---- Login hero text (still cream over coffee image) ---- */
   --hero-text:      #FFF7EC;
@@ -322,4 +322,20 @@ a {
     color 200ms ease,
     border-color 200ms ease,
     box-shadow 200ms ease;
+}
+
+/* ============================================================
+ *  Autofill Global Reset
+ * ============================================================ */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--text-primary) !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--bg-input) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
 }

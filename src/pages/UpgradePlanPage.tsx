@@ -15,8 +15,7 @@ export default function UpgradePlanPage() {
                 setPlans(data.sort((a, b) => a.price - b.price));
                 setLoading(false);
             })
-            .catch(err => {
-                console.error("Failed to load plans", err);
+            .catch(() => {
                 setLoading(false);
             });
     }, []);
@@ -32,7 +31,6 @@ export default function UpgradePlanPage() {
             const res = await paymentService.createPayosPayment(plan.id);
             window.location.href = res.checkoutUrl;
         } catch (err) {
-            console.error(err);
             alert('Có lỗi xảy ra khi tạo link thanh toán PayOS. Vui lòng thử lại.');
         }
     };

@@ -18,7 +18,7 @@ const DEFAULT_MANUAL_ORDER_FORM = {
 };
 export default function OrderManagementPage() {
     const { user } = useAuth();
-    const [, setMyTeams] = useState<Team[]>([]);
+    const [myTeams, setMyTeams] = useState<Team[]>([]);
     const [selectedTeam, setSelectedTeam] = useState<string>(PERSONAL_BUYER);
     const [activeTab, setActiveTab] = useState<'outbound' | 'inbound'>('outbound');
 
@@ -45,7 +45,7 @@ export default function OrderManagementPage() {
                     setSelectedTeam('');
                 }
             } catch (err) {
-                console.error(err);
+                // tolerate teams load failure
             }
         };
         fetchTeams();
@@ -68,7 +68,7 @@ export default function OrderManagementPage() {
                     
                     const unreadIds = data.filter(o => o.buyerViewed === false).map(o => o.id);
                     if (unreadIds.length > 0) {
-                        interGroupOrderService.markViewed(unreadIds, 'BUYER').catch(console.error);
+                        interGroupOrderService.markViewed(unreadIds, 'BUYER').catch(() => { /* mark viewed best-effort */ });
                         data.forEach(o => { if (unreadIds.includes(o.id)) o.buyerViewed = true; });
                     }
                     setOrders(data);
@@ -76,13 +76,13 @@ export default function OrderManagementPage() {
                     const data = await interGroupOrderService.getInboundOrders(selectedTeam);
                     const unreadIds = data.filter(o => o.sellerViewed === false).map(o => o.id);
                     if (unreadIds.length > 0) {
-                        interGroupOrderService.markViewed(unreadIds, 'SELLER').catch(console.error);
+                        interGroupOrderService.markViewed(unreadIds, 'SELLER').catch(() => { /* mark viewed best-effort */ });
                         data.forEach(o => { if (unreadIds.includes(o.id)) o.sellerViewed = true; });
                     }
                     setOrders(data);
                 }
             } catch (err) {
-                console.error(err);
+                // tolerate order load failure
             } finally {
                 setLoading(false);
             }
@@ -111,7 +111,6 @@ export default function OrderManagementPage() {
             setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'ACCEPTED' } : o));
             alert('Đã chấp nhận đơn hàng và tạo Mục tiêu thành công!');
         } catch (err: any) {
-            console.error(err);
             alert('Có lỗi xảy ra khi chấp nhận đơn: ' + (err.response?.data?.error || err.message));
         }
     };
@@ -123,7 +122,6 @@ export default function OrderManagementPage() {
             setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'REJECTED' } : o));
         } catch (err) {
             alert('Có lỗi xảy ra khi từ chối đơn.');
-            console.error(err);
         }
     };
 
@@ -134,7 +132,6 @@ export default function OrderManagementPage() {
             setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'CANCELED' } : o));
         } catch (err) {
             alert('Có lỗi xảy ra khi hủy đơn.');
-            console.error(err);
         }
     };
 
@@ -145,7 +142,6 @@ export default function OrderManagementPage() {
             setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'SHIPPING' } : o));
         } catch (err) {
             alert('Có lỗi xảy ra.');
-            console.error(err);
         }
     };
 
@@ -156,7 +152,6 @@ export default function OrderManagementPage() {
             setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'DELIVERED' } : o));
         } catch (err) {
             alert('Có lỗi xảy ra.');
-            console.error(err);
         }
     };
 
@@ -171,7 +166,6 @@ export default function OrderManagementPage() {
             setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'COMPLETED' } : o));
         } catch (err) {
             alert('Có lỗi xảy ra.');
-            console.error(err);
         }
     };
 
@@ -182,7 +176,6 @@ export default function OrderManagementPage() {
             setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'CANCELED', cancelRequested: false, cancelledBy: 'BUYER' } : o));
         } catch (err) {
             alert('Có lỗi xảy ra.');
-            console.error(err);
         }
     };
 
@@ -193,7 +186,6 @@ export default function OrderManagementPage() {
             setOrders(orders.map(o => o.id === orderId ? { ...o, cancelRequested: false } : o));
         } catch (err) {
             alert('Có lỗi xảy ra.');
-            console.error(err);
         }
     };
 
@@ -242,7 +234,6 @@ export default function OrderManagementPage() {
             setManualOrderForm(DEFAULT_MANUAL_ORDER_FORM);
         } catch (err: any) {
             setManualCreateError(err?.response?.data?.message || err?.response?.data?.error || 'Không thể tạo đơn thủ công.');
-            console.error(err);
         } finally {
             setManualCreateLoading(false);
         }
@@ -251,31 +242,31 @@ export default function OrderManagementPage() {
     const getStatusBadge = (order: InterGroupOrder) => {
         const getStyle = (type: 'yellow' | 'green' | 'red' | 'blue' | 'orange') => {
             switch (type) {
-                case 'yellow': return { background: 'rgba(234, 179, 8, 0.1)', color: '#eab308', border: '1px solid rgba(234, 179, 8, 0.2)' };
-                case 'green': return { background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.2)' };
-                case 'red': return { background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' };
-                case 'blue': return { background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)' };
-                case 'orange': return { background: 'rgba(249, 115, 22, 0.1)', color: '#f97316', border: '1px solid rgba(249, 115, 22, 0.2)' };
+                case 'yellow': return { background: 'var(--warning-soft)', color: 'var(--warning)', border: '1px solid rgba(217, 119, 6, 0.24)' };
+                case 'green': return { background: 'var(--success-soft)', color: 'var(--success)', border: '1px solid rgba(5, 150, 105, 0.22)' };
+                case 'red': return { background: 'var(--danger-soft)', color: 'var(--danger)', border: '1px solid rgba(220, 38, 38, 0.22)' };
+                case 'blue': return { background: 'var(--info-soft)', color: 'var(--info)', border: '1px solid rgba(37, 99, 235, 0.22)' };
+                case 'orange': return { background: 'var(--warning-soft)', color: 'var(--warning)', border: '1px solid rgba(217, 119, 6, 0.24)' };
                 default: return {};
             }
         };
 
-        if (order.cancelRequested) return <span className="status-badge" style={getStyle('red')}><ion-icon name="alert-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Yêu cầu hủy</span>;
+        if (order.cancelRequested) return <span className="status-badge order-status-badge" style={getStyle('red')}><ion-icon name="alert-circle-outline"></ion-icon> Yêu cầu hủy</span>;
         
         switch (order.status) {
-            case 'RFQ_CREATED': return <span className="status-badge" style={getStyle('yellow')}><ion-icon name="document-text-outline" style={{ fontSize: '13px' }}></ion-icon> Yêu cầu báo giá</span>;
-            case 'QUOTED': return <span className="status-badge" style={getStyle('blue')}><ion-icon name="pricetag-outline" style={{ fontSize: '13px' }}></ion-icon> Đã báo giá</span>;
-            case 'PENDING': return <span className="status-badge" style={getStyle('yellow')}><ion-icon name="time-outline" style={{ fontSize: '13px' }}></ion-icon> Chờ xử lý</span>;
-            case 'ACCEPTED': return <span className="status-badge" style={getStyle('green')}><ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Đã nhận làm</span>;
-            case 'CONFIRMED': return <span className="status-badge" style={getStyle('green')}><ion-icon name="checkmark-done-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Đã xác nhận</span>;
-            case 'IN_PRODUCTION': return <span className="status-badge" style={getStyle('blue')}><ion-icon name="construct-outline" style={{ fontSize: '13px' }}></ion-icon> Đang sản xuất</span>;
-            case 'QC': return <span className="status-badge" style={getStyle('orange')}><ion-icon name="flask-outline" style={{ fontSize: '13px' }}></ion-icon> Kiểm định QC</span>;
-            case 'COMPLETED': return <span className="status-badge" style={getStyle('green')}><ion-icon name="checkmark-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Hoàn thành</span>;
-            case 'CANCELED': return <span className="status-badge" style={getStyle('red')}><ion-icon name="ban-outline" style={{ fontSize: '13px' }}></ion-icon> Đã hủy</span>;
-            case 'REJECTED': return <span className="status-badge" style={getStyle('red')}><ion-icon name="close-circle-outline" style={{ fontSize: '13px' }}></ion-icon> Bị từ chối</span>;
-            case 'SHIPPING': return <span className="status-badge" style={getStyle('blue')}><ion-icon name="car-outline" style={{ fontSize: '13px' }}></ion-icon> Đang giao</span>;
-            case 'DELIVERED': return <span className="status-badge" style={getStyle('green')}><ion-icon name="cube-outline" style={{ fontSize: '13px' }}></ion-icon> Đã giao</span>;
-            default: return <span className="status-badge" style={{ border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.05)' }}>{order.status}</span>;
+            case 'RFQ_CREATED': return <span className="status-badge order-status-badge" style={getStyle('yellow')}><ion-icon name="document-text-outline"></ion-icon> Yêu cầu báo giá</span>;
+            case 'QUOTED': return <span className="status-badge order-status-badge" style={getStyle('blue')}><ion-icon name="pricetag-outline"></ion-icon> Đã báo giá</span>;
+            case 'PENDING': return <span className="status-badge order-status-badge" style={getStyle('yellow')}><ion-icon name="time-outline"></ion-icon> Chờ xử lý</span>;
+            case 'ACCEPTED': return <span className="status-badge order-status-badge" style={getStyle('green')}><ion-icon name="checkmark-circle-outline"></ion-icon> Đã nhận làm</span>;
+            case 'CONFIRMED': return <span className="status-badge order-status-badge" style={getStyle('green')}><ion-icon name="checkmark-done-circle-outline"></ion-icon> Đã xác nhận</span>;
+            case 'IN_PRODUCTION': return <span className="status-badge order-status-badge" style={getStyle('blue')}><ion-icon name="construct-outline"></ion-icon> Đang sản xuất</span>;
+            case 'QC': return <span className="status-badge order-status-badge" style={getStyle('orange')}><ion-icon name="flask-outline"></ion-icon> Kiểm định QC</span>;
+            case 'COMPLETED': return <span className="status-badge order-status-badge" style={getStyle('green')}><ion-icon name="checkmark-circle-outline"></ion-icon> Hoàn thành</span>;
+            case 'CANCELED': return <span className="status-badge order-status-badge" style={getStyle('red')}><ion-icon name="ban-outline"></ion-icon> Đã hủy</span>;
+            case 'REJECTED': return <span className="status-badge order-status-badge" style={getStyle('red')}><ion-icon name="close-circle-outline"></ion-icon> Bị từ chối</span>;
+            case 'SHIPPING': return <span className="status-badge order-status-badge" style={getStyle('blue')}><ion-icon name="car-outline"></ion-icon> Đang giao</span>;
+            case 'DELIVERED': return <span className="status-badge order-status-badge" style={getStyle('green')}><ion-icon name="cube-outline"></ion-icon> Đã giao</span>;
+            default: return <span className="status-badge order-status-badge" style={{ border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}>{order.status}</span>;
         }
     };
 
@@ -295,6 +286,37 @@ export default function OrderManagementPage() {
         if (from && to) return `${fmt(from)} → ${fmt(to)}`;
         if (from) return `Từ ${fmt(from)}`;
         return `Đến ${fmt(to!)}`;
+    };
+
+    const trustInfo = (score?: number) => {
+        const safeScore = Math.max(0, Math.min(100, Math.round(score ?? 100)));
+        if (safeScore >= 80) return { score: safeScore, label: 'Tốt', tone: 'good' };
+        if (safeScore >= 50) return { score: safeScore, label: 'Trung bình', tone: 'medium' };
+        return { score: safeScore, label: 'Rủi ro', tone: 'risk' };
+    };
+
+    const selectedBuyerTeam = myTeams.find(team => team.id === selectedTeam);
+    const ownTrust = trustInfo(
+        activeTab === 'outbound'
+            ? (selectedBuyerTeam?.trustScore ?? orders[0]?.buyerTrustScore ?? 100)
+            : undefined
+    );
+    const ownTrustTotalOrders = selectedBuyerTeam?.totalOrders ?? orders.length;
+    const ownTrustCompletedOrders = selectedBuyerTeam?.completedOrders;
+    const inboundAverageTrust = orders.length
+        ? Math.round(orders.reduce((sum, order) => sum + (order.buyerTrustScore ?? 100), 0) / orders.length)
+        : 100;
+    const inboundTrust = trustInfo(inboundAverageTrust);
+
+    const renderTrustBadge = (score?: number, compact = false) => {
+        const info = trustInfo(score);
+        return (
+            <span className={`order-trust-badge ${info.tone} ${compact ? 'compact' : ''}`}>
+                <ion-icon name={info.tone === 'good' ? 'shield-checkmark-outline' : info.tone === 'medium' ? 'shield-half-outline' : 'warning-outline'}></ion-icon>
+                <strong>{info.score}%</strong>
+                <span>{info.label}</span>
+            </span>
+        );
     };
 
 
@@ -332,15 +354,41 @@ export default function OrderManagementPage() {
                 </div>
             </div>
 
+            {activeTab === 'outbound' && (
+                <div className="order-trust-panel glass-panel">
+                    <div>
+                        <span className="order-trust-eyebrow">Uy tín của bạn khi đi đặt hàng</span>
+                        <h2>Điểm uy tín người đặt: {ownTrust.score}%</h2>
+                        <p>
+                            Điểm này được bên gia công nhìn thấy khi bạn gửi RFQ/đơn hàng. Hủy đơn hoặc giao dịch không hoàn tất sẽ làm điểm giảm.
+                        </p>
+                    </div>
+                    <div className="order-trust-panel-side">
+                        {renderTrustBadge(ownTrust.score)}
+                        <small>
+                            {selectedBuyerTeam
+                                ? `${ownTrustCompletedOrders ?? 0}/${ownTrustTotalOrders || 0} đơn hoàn tất`
+                                : `${ownTrustTotalOrders || 0} đơn đang theo dõi`}
+                        </small>
+                    </div>
+                </div>
+            )}
+
             {activeTab === 'inbound' && (
                 <div className="glass-panel" style={{ padding: '16px 20px', marginBottom: 20, border: '1px solid rgba(217, 156, 95, 0.28)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                         <div>
                             <h2 style={{ margin: 0, fontSize: 20, color: 'var(--text-primary)' }}>Đơn xưởng khác đặt</h2>
                             <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 13 }}>
-                                Quản lý đơn bán/gia công cho xưởng đang chọn.
+                                Quản lý đơn bán/gia công cho xưởng đang chọn. Cột uy tín cho biết bên đặt có đáng tin để nhận đơn hay không.
                             </p>
                         </div>
+                        {orders.length > 0 && (
+                            <div className="order-trust-panel-side compact">
+                                {renderTrustBadge(inboundTrust.score, true)}
+                                <small>Trung bình bên đặt</small>
+                            </div>
+                        )}
                         <button
                             className="btn btn-primary"
                             onClick={() => {
@@ -525,9 +573,7 @@ export default function OrderManagementPage() {
                                     </td>
                                     {activeTab === 'inbound' && (
                                         <td style={{ padding: '12px', textAlign: 'center' }}>
-                                            <span className={`status-badge ${(order.buyerTrustScore ?? 100) >= 80 ? 'status-completed' : (order.buyerTrustScore ?? 100) >= 50 ? 'status-pending' : 'status-rejected'}`}>
-                                                {(order.buyerTrustScore ?? 100) >= 80 ? 'Tốt' : (order.buyerTrustScore ?? 100) >= 50 ? 'TB' : 'Yếu'} {order.buyerTrustScore ?? 100}%
-                                            </span>
+                                            {renderTrustBadge(order.buyerTrustScore, true)}
                                         </td>
                                     )}
                                     <td style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold' }}>
@@ -569,7 +615,7 @@ export default function OrderManagementPage() {
                                             )}
                                             {/* Both: Cancel (PENDING or ACCEPTED) */}
                                             {(order.status === 'PENDING' || order.status === 'RFQ_CREATED' || order.status === 'ACCEPTED' || order.status === 'CONFIRMED') && !order.cancelRequested && (
-                                                <button className="btn btn-secondary" onClick={() => handleCancel(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}><ion-icon name="ban-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> {activeTab === 'outbound' ? 'Hủy / Xin hủy' : 'Hủy'}</button>
+                                                <button className="order-cancel-btn" onClick={() => handleCancel(order.id)}><ion-icon name="ban-outline"></ion-icon> {activeTab === 'outbound' ? 'Xin hủy' : 'Hủy'}</button>
                                             )}
                                             {/* Show canceller */}
                                             {order.status === 'CANCELED' && order.cancelledBy && (
@@ -589,6 +635,15 @@ export default function OrderManagementPage() {
                                                 padding: '16px 20px',
                                                 marginTop: 4,
                                             }}>
+                                                {activeTab === 'inbound' && (
+                                                    <div className="order-buyer-trust-detail">
+                                                        <div>
+                                                            <span className="order-trust-eyebrow">Độ tin cậy bên đặt</span>
+                                                            <p>Tham khảo trước khi chấp nhận đơn. Điểm thấp nghĩa là bên đặt từng hủy hoặc chưa hoàn tất nhiều giao dịch.</p>
+                                                        </div>
+                                                        {renderTrustBadge(order.buyerTrustScore)}
+                                                    </div>
+                                                )}
                                                 <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>
                                                     <ion-icon name="location-outline" style={{ fontSize: '16px' }}></ion-icon>
                                                     Thông tin giao nhận hàng

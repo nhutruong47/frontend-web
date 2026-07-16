@@ -255,6 +255,9 @@ export interface ChatMsg {
     recipientName?: string;
     content: string;
     createdAt: string;
+    attachmentUrl?: string;
+    attachmentName?: string;
+    attachmentType?: string;
 }
 
 export interface AiChatLogMsg {

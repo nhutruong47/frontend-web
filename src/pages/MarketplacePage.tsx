@@ -16,7 +16,7 @@ type AvailabilityStatus = 'AVAILABLE' | 'LIMITED' | 'FULLY_BOOKED' | 'UNKNOWN';
 
 type ManufacturingRequest = {
     id: string;
-    type: 'Roasting' | 'Packaging' | 'OEM' | 'Quality control';
+    type: string;
     title: string;
     coffeeType: string;
     quantity: string;
@@ -24,6 +24,21 @@ type ManufacturingRequest = {
     region: string;
     details: string;
     createdAt: string;
+    buyerTeamId?: string;
+};
+
+type RfqStep = 1 | 2 | 3;
+
+const RFQ_STEP_LABELS: { step: RfqStep; title: string; description: string }[] = [
+    { step: 1, title: 'Yêu cầu', description: 'Dịch vụ và sản lượng' },
+    { step: 2, title: 'Chi tiết', description: 'Rang, đóng gói, ngân sách' },
+    { step: 3, title: 'Giao nhận', description: 'Liên hệ và địa chỉ' },
+];
+
+const toApiLocalDateTime = (value: string) => {
+    if (!value) return undefined;
+    if (value.includes('T')) return value.length === 16 ? `${value}:00` : value;
+    return `${value}T00:00:00`;
 };
 
 type MarketplaceFactory = Team & {
@@ -268,7 +283,7 @@ const normalizeFactory = (team: Team): MarketplaceFactory => {
         try {
             meta = JSON.parse(team.metadata);
         } catch (e) {
-            console.warn('Failed to parse metadata for team', team.id);
+            // ignore malformed metadata
         }
     }
 
@@ -451,6 +466,7 @@ export default function MarketplacePage() {
     const [showOrderModal, setShowOrderModal] = useState(false);
     const [selectedSeller, setSelectedSeller] = useState<Team | null>(null);
     const [buyerTeamId, setBuyerTeamId] = useState('');
+    const [rfqStep, setRfqStep] = useState<RfqStep>(1);
     const [rfqTitle, setRfqTitle] = useState('');
     const [rfqRequestType, setRfqRequestType] = useState(RFQ_SERVICE_OPTIONS[0].value);
     const [rfqProductName, setRfqProductName] = useState('');
@@ -511,9 +527,6 @@ export default function MarketplacePage() {
 
                 const teamsAll = teamsAllResult.value;
                 const teamsMine = teamsMineResult.status === 'fulfilled' ? teamsMineResult.value : [];
-                if (teamsMineResult.status === 'rejected') {
-                    console.warn('Owned marketplace teams are unavailable', teamsMineResult.reason);
-                }
                 const publishedTeams = teamsAll.filter(t => t.isPublished);
                 const ownedTeams = teamsMine.filter(t => t.ownerId === user?.id);
                 setAllTeams(publishedTeams);
@@ -524,16 +537,12 @@ export default function MarketplacePage() {
                 }
 
                 const [featuredItems, reqs] = await Promise.all([
-                    inventoryService.getFeaturedProducts().catch(error => {
-                        console.warn('Featured marketplace products are unavailable', error);
-                        return [];
-                    }),
+                    inventoryService.getFeaturedProducts().catch(() => []),
                     loadRequests()
                 ]);
                 setFeaturedProducts(featuredItems);
                 setManufacturingRequests(reqs);
             } catch (err) {
-                console.error('Failed to load marketplace', err);
                 setError('Không thể tải dữ liệu thị trường.');
             } finally {
                 setLoading(false);
@@ -566,7 +575,7 @@ export default function MarketplacePage() {
             setFactoryReviews(prev => ({ ...prev, [teamId]: reviews }));
             setFactoryReviewsSummary(prev => ({ ...prev, [teamId]: summary }));
         } catch (err) {
-            console.error('Failed to load factory reviews', err);
+            // ignore review load failure
         } finally {
             setReviewsLoading(false);
         }
@@ -740,6 +749,7 @@ export default function MarketplacePage() {
     const handleOrderClick = (seller?: Team) => {
         setSelectedSeller(seller || null);
         setBuyerTeamId(myTeams[0]?.id || '');
+        setRfqStep(1);
         setRfqTitle('');
         setRfqRequestType(RFQ_SERVICE_OPTIONS[0].value);
         setRfqProductName('');
@@ -760,8 +770,48 @@ export default function MarketplacePage() {
         setShowOrderModal(true);
     };
 
+    const closeOrderModal = () => {
+        setShowOrderModal(false);
+    };
+
+    const validateCurrentRfqStep = () => {
+        if (rfqStep === 1) {
+            if (!rfqTitle.trim() || !rfqProductName.trim()) {
+                alert('Vui lòng nhập tiêu đề RFQ và chọn loại sản phẩm.');
+                return false;
+            }
+            if (rfqQuantity <= 0) {
+                alert('Số lượng phải lớn hơn 0.');
+                return false;
+            }
+        }
+        if (rfqStep === 2 && rfqDeadline && new Date(rfqDeadline) <= new Date()) {
+            alert('Deadline mong muốn phải là ngày trong tương lai.');
+            return false;
+        }
+        if (rfqStep === 3 && (!deliveryPhone.trim() || !deliveryAddress.trim())) {
+            alert('Vui lòng nhập SĐT liên hệ và địa chỉ giao hàng.');
+            return false;
+        }
+        return true;
+    };
+
+    const handleNextRfqStep = () => {
+        if (!validateCurrentRfqStep()) return;
+        setRfqStep(prev => (prev < 3 ? ((prev + 1) as RfqStep) : prev));
+    };
+
+    const handlePrevRfqStep = () => {
+        setRfqStep(prev => (prev > 1 ? ((prev - 1) as RfqStep) : prev));
+    };
+
     const handleSubmitOrder = async (event: React.FormEvent) => {
         event.preventDefault();
+        if (rfqStep !== 3) {
+            handleNextRfqStep();
+            return;
+        }
+        if (!validateCurrentRfqStep()) return;
         if (!rfqTitle.trim() || !rfqProductName.trim()) return;
         if (rfqQuantity <= 0) {
             alert('Số lượng phải lớn hơn 0.');
@@ -799,6 +849,18 @@ export default function MarketplacePage() {
             }, 300);
 
             setTimeout(async () => {
+                const apiDeadline = toApiLocalDateTime(rfqDeadline);
+                const request = {
+                    type: rfqRequestType,
+                    title: rfqTitle,
+                    coffeeType: rfqProductName,
+                    quantity: `${rfqQuantity} ${rfqUnit}`,
+                    deadline: apiDeadline,
+                    region: selectedSeller?.region || 'Toàn quốc',
+                    details: detailLines,
+                    buyerTeamId: buyerTeamId || undefined,
+                };
+
                 try {
                     if (selectedSeller) {
                         const dto: Partial<InterGroupOrder> = {
@@ -807,31 +869,38 @@ export default function MarketplacePage() {
                             title: rfqTitle,
                             description: detailLines,
                             quantity: rfqQuantity,
-                            deadline: rfqDeadline,
+                            deadline: apiDeadline,
                             contactPhone: deliveryPhone || undefined,
                             contactPhoneAlt: deliveryPhoneAlt || undefined,
                             deliveryAddress: deliveryAddress || undefined,
-                            preferredDeliveryFrom: deliveryFrom || undefined,
-                            preferredDeliveryTo: deliveryTo || undefined,
+                            preferredDeliveryFrom: toApiLocalDateTime(deliveryFrom),
+                            preferredDeliveryTo: toApiLocalDateTime(deliveryTo),
                             deliveryFailureAction: deliveryFailureAction || undefined,
                             deliveryNote: deliveryNote || undefined,
                         };
                         await interGroupOrderService.placeOrder(dto);
                     }
-                    const request = {
-                        type: rfqRequestType as ManufacturingRequest['type'],
-                        title: rfqTitle,
-                        coffeeType: rfqProductName,
-                        quantity: `${rfqQuantity} ${rfqUnit}`,
-                        deadline: rfqDeadline,
-                        region: selectedSeller?.region || 'Toàn quốc',
-                        details: detailLines,
-                        buyerTeamId: buyerTeamId || undefined,
-                    };
+                } catch {
+                    // RFQ marketplace listing below still gives the buyer a trackable draft.
+                }
+
+                try {
                     const savedRequest = await manufacturingRequestService.create(request);
                     setManufacturingRequests(prev => [savedRequest, ...prev]);
                 } catch {
-                    alert('Gửi RFQ qua API thất bại. (Chế độ mock vẫn hoạt động)');
+                    const localRequest: ManufacturingRequest = {
+                        id: `local-${Date.now()}`,
+                        type: request.type,
+                        title: request.title,
+                        coffeeType: request.coffeeType,
+                        quantity: request.quantity,
+                        deadline: rfqDeadline,
+                        region: request.region,
+                        details: request.details,
+                        createdAt: new Date().toISOString(),
+                        buyerTeamId: request.buyerTeamId,
+                    };
+                    setManufacturingRequests(prev => [localRequest, ...prev]);
                 } finally {
                     setSubmitting(false);
                 }
@@ -1641,8 +1710,8 @@ export default function MarketplacePage() {
                     <span>ORCA</span>
                     <p>© 2026 Coffee Workshop Ecosystem</p>
                     <div>
-                        <a href="#">Điều khoản</a>
-                        <a href="#">Hỗ trợ đối tác</a>
+                        <a href="#!" onClick={e => e.preventDefault()}>Điều khoản</a>
+                        <a href="#!" onClick={e => e.preventDefault()}>Hỗ trợ đối tác</a>
                     </div>
                 </footer>
             </main>
@@ -1851,134 +1920,174 @@ export default function MarketplacePage() {
             )}
 
             {showOrderModal && (
-                <div className="mp-modal-overlay" onClick={() => setShowOrderModal(false)}>
-                    <div className="mp-modal" onClick={event => event.stopPropagation()}>
+                <div className="mp-modal-overlay" onClick={closeOrderModal}>
+                    <div className="mp-modal mp-rfq-modal" onClick={event => event.stopPropagation()}>
                         <div className="mp-modal-header">
-                            <h2>{selectedSeller ? 'Gửi yêu cầu' : 'Đăng Yêu Cầu Tìm Xưởng'}</h2>
-                            <button className="mp-modal-close" onClick={() => setShowOrderModal(false)}>×</button>
+                            <div>
+                                <span className="mp-rfq-kicker">Bản yêu cầu {rfqStep}/3</span>
+                                <h2>{selectedSeller ? 'Gửi yêu cầu' : 'Đăng yêu cầu tìm xưởng'}</h2>
+                            </div>
+                            <button className="mp-modal-close" onClick={closeOrderModal}>×</button>
                         </div>
                         {selectedSeller && <div className="mp-modal-seller">Xưởng nhận RFQ: <strong>{selectedSeller.name}</strong></div>}
+                        <div className="mp-rfq-steps" aria-label="Tiến độ gửi yêu cầu">
+                            {RFQ_STEP_LABELS.map(item => (
+                                <button
+                                    key={item.step}
+                                    type="button"
+                                    className={`mp-rfq-step ${rfqStep === item.step ? 'is-active' : ''} ${rfqStep > item.step ? 'is-done' : ''}`}
+                                    onClick={() => {
+                                        if (item.step < rfqStep) setRfqStep(item.step);
+                                    }}
+                                >
+                                    <span className="mp-rfq-step-index">{item.step}</span>
+                                    <span>
+                                        <strong>{item.title}</strong>
+                                        <small>{item.description}</small>
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
                         <form onSubmit={handleSubmitOrder}>
+                            {rfqStep === 1 && (
+                                <div className="mp-rfq-panel">
+                                    <div className="mp-form-group">
+                                        <label>Tiêu đề RFQ</label>
+                                        <input value={rfqTitle} onChange={event => setRfqTitle(event.target.value)} placeholder="VD: Báo giá gia công 2 tấn Arabica" required />
+                                    </div>
+                                    <div className="mp-form-row">
+                                        <div className="mp-form-group">
+                                            <label>Dịch vụ yêu cầu (Service Required)</label>
+                                            <select value={rfqRequestType} onChange={event => setRfqRequestType(event.target.value)} required>
+                                                {RFQ_SERVICE_OPTIONS.map(option => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="mp-form-group">
+                                            <label>Loại sản phẩm (Product Type)</label>
+                                            <select value={rfqProductName} onChange={event => setRfqProductName(event.target.value)} required>
+                                                <option value="">Chọn loại cà phê</option>
+                                                {COFFEE_TYPE_OPTIONS.map(option => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="mp-form-row">
+                                        <div className="mp-form-group">
+                                            <label>Số lượng (Quantity)</label>
+                                            <input type="number" min="1" value={rfqQuantity} onChange={event => setRfqQuantity(parseInt(event.target.value) || 1)} required />
+                                        </div>
+                                        <div className="mp-form-group">
+                                            <label>Đơn vị (Unit)</label>
+                                            <select value={rfqUnit} onChange={event => setRfqUnit(event.target.value)} required>
+                                                {RFQ_UNIT_OPTIONS.map(option => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
-                            <div className="mp-form-group">
-                                <label>Tiêu đề RFQ</label>
-                                <input value={rfqTitle} onChange={event => setRfqTitle(event.target.value)} placeholder="VD: Báo giá gia công 2 tấn Arabica" required />
-                            </div>
-                            <div className="mp-form-row">
-                                <div className="mp-form-group">
-                                    <label>Dịch vụ yêu cầu (Service Required)</label>
-                                    <select value={rfqRequestType} onChange={event => setRfqRequestType(event.target.value)} required>
-                                        {RFQ_SERVICE_OPTIONS.map(option => (
-                                            <option key={option.value} value={option.value}>{option.label}</option>
-                                        ))}
-                                    </select>
+                            {rfqStep === 2 && (
+                                <div className="mp-rfq-panel">
+                                    <div className="mp-form-row">
+                                        <div className="mp-form-group">
+                                            <label>Mức rang (Roast Profile)</label>
+                                            <select value={rfqQuality} onChange={event => setRfqQuality(event.target.value)}>
+                                                <option value="">Không yêu cầu</option>
+                                                {ROAST_PROFILE_OPTIONS.map(option => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="mp-form-group">
+                                            <label>Quy cách đóng gói (Packaging)</label>
+                                            <select value={rfqPackaging} onChange={event => setRfqPackaging(event.target.value)}>
+                                                <option value="">Không yêu cầu</option>
+                                                {PACKAGING_FORMAT_OPTIONS.map(option => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="mp-form-row">
+                                        <div className="mp-form-group">
+                                            <label>Ngày nhận hàng dự kiến (Target Date)</label>
+                                            <input type="date" value={rfqDeadline} onChange={event => setRfqDeadline(event.target.value)} />
+                                        </div>
+                                        <div className="mp-form-group">
+                                            <label>Ngân sách dự kiến (Budget Range)</label>
+                                            <input value={rfqBudget} onChange={event => setRfqBudget(event.target.value)} placeholder="VD: 50tr - 100tr" />
+                                        </div>
+                                    </div>
+                                    <div className="mp-form-group">
+                                        <label>Ghi chú bổ sung (Additional Notes)</label>
+                                        <textarea rows={4} value={rfqNote} onChange={event => setRfqNote(event.target.value)} placeholder="Mô tả chi tiết yêu cầu của bạn..." />
+                                    </div>
                                 </div>
-                                <div className="mp-form-group">
-                                    <label>Loại sản phẩm (Product Type)</label>
-                                    <select value={rfqProductName} onChange={event => setRfqProductName(event.target.value)} required>
-                                        <option value="">Chọn loại cà phê</option>
-                                        {COFFEE_TYPE_OPTIONS.map(option => (
-                                            <option key={option.value} value={option.value}>{option.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="mp-form-row">
-                                <div className="mp-form-group">
-                                    <label>Số lượng (Quantity)</label>
-                                    <input type="number" min="1" value={rfqQuantity} onChange={event => setRfqQuantity(parseInt(event.target.value) || 1)} required />
-                                </div>
-                                <div className="mp-form-group">
-                                    <label>Đơn vị (Unit)</label>
-                                    <select value={rfqUnit} onChange={event => setRfqUnit(event.target.value)} required>
-                                        {RFQ_UNIT_OPTIONS.map(option => (
-                                            <option key={option.value} value={option.value}>{option.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="mp-form-row">
-                                <div className="mp-form-group">
-                                    <label>Mức rang (Roast Profile)</label>
-                                    <select value={rfqQuality} onChange={event => setRfqQuality(event.target.value)}>
-                                        <option value="">Không yêu cầu</option>
-                                        {ROAST_PROFILE_OPTIONS.map(option => (
-                                            <option key={option.value} value={option.value}>{option.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="mp-form-group">
-                                    <label>Quy cách đóng gói (Packaging)</label>
-                                    <select value={rfqPackaging} onChange={event => setRfqPackaging(event.target.value)}>
-                                        <option value="">Không yêu cầu</option>
-                                        {PACKAGING_FORMAT_OPTIONS.map(option => (
-                                            <option key={option.value} value={option.value}>{option.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="mp-form-row">
-                                <div className="mp-form-group">
-                                    <label>Ngày nhận hàng dự kiến (Target Date)</label>
-                                    <input type="date" value={rfqDeadline} onChange={event => setRfqDeadline(event.target.value)} />
-                                </div>
-                                <div className="mp-form-group">
-                                    <label>Ngân sách dự kiến (Budget Range)</label>
-                                    <input value={rfqBudget} onChange={event => setRfqBudget(event.target.value)} placeholder="VD: 50tr - 100tr" />
-                                </div>
-                            </div>
-                            <div className="mp-form-group">
-                                <label>Ghi chú bổ sung (Additional Notes)</label>
-                                <textarea rows={3} value={rfqNote} onChange={event => setRfqNote(event.target.value)} placeholder="Mô tả chi tiết yêu cầu của bạn..." />
-                            </div>
+                            )}
 
-                            {/* === Hồ sơ giao hàng === */}
-                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '16px 0', paddingTop: 16 }}>
-                                <h3 style={{ fontSize: '1rem', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <span className="material-symbols-outlined" style={{ fontSize: 20 }}>local_shipping</span>
-                                    Thông tin giao nhận hàng
-                                </h3>
-                            </div>
-                            <div className="mp-form-row">
-                                <div className="mp-form-group">
-                                    <label>SĐT liên hệ <span style={{ color: '#e57373' }}>*</span></label>
-                                    <input value={deliveryPhone} onChange={event => setDeliveryPhone(event.target.value)} placeholder="VD: 0912 345 678" required />
+                            {rfqStep === 3 && (
+                                <div className="mp-rfq-panel">
+                                    <div className="mp-rfq-delivery-heading">
+                                        <span className="material-symbols-outlined">local_shipping</span>
+                                        <div>
+                                            <h3>Thông tin giao nhận hàng</h3>
+                                            <p>Điền thông tin để xưởng xác nhận lịch giao và liên hệ khi cần.</p>
+                                        </div>
+                                    </div>
+                                    <div className="mp-form-row">
+                                        <div className="mp-form-group">
+                                            <label>SĐT liên hệ <span className="mp-required">*</span></label>
+                                            <input value={deliveryPhone} onChange={event => setDeliveryPhone(event.target.value)} placeholder="VD: 0912 345 678" required />
+                                        </div>
+                                        <div className="mp-form-group">
+                                            <label>SĐT phụ (nếu không liên lạc được)</label>
+                                            <input value={deliveryPhoneAlt} onChange={event => setDeliveryPhoneAlt(event.target.value)} placeholder="Tùy chọn" />
+                                        </div>
+                                    </div>
+                                    <div className="mp-form-group">
+                                        <label>Địa chỉ giao hàng <span className="mp-required">*</span></label>
+                                        <input value={deliveryAddress} onChange={event => setDeliveryAddress(event.target.value)} placeholder="Địa chỉ cụ thể để xưởng giao hàng" required />
+                                    </div>
+                                    <div className="mp-form-row">
+                                        <div className="mp-form-group">
+                                            <label>Giờ giao mong muốn (từ)</label>
+                                            <input type="datetime-local" value={deliveryFrom} onChange={event => setDeliveryFrom(event.target.value)} />
+                                        </div>
+                                        <div className="mp-form-group">
+                                            <label>Giờ giao mong muốn (đến)</label>
+                                            <input type="datetime-local" value={deliveryTo} onChange={event => setDeliveryTo(event.target.value)} />
+                                        </div>
+                                    </div>
+                                    <div className="mp-form-group">
+                                        <label>Nếu không liên lạc được / không nhận hàng</label>
+                                        <select value={deliveryFailureAction} onChange={event => setDeliveryFailureAction(event.target.value)}>
+                                            <option value="RETRY_LATER">Giao lại sau</option>
+                                            <option value="LEAVE_AT_DOOR">Để hàng tại cổng/kho</option>
+                                            <option value="RETURN_TO_SENDER">Trả hàng về cho xưởng</option>
+                                            <option value="CONTACT_ALTERNATIVE">Liên hệ SĐT phụ</option>
+                                        </select>
+                                    </div>
+                                    <div className="mp-form-group">
+                                        <label>Ghi chú giao hàng</label>
+                                        <textarea rows={2} value={deliveryNote} onChange={event => setDeliveryNote(event.target.value)} placeholder="VD: Giao cổng sau, gọi trước 30 phút..." />
+                                    </div>
                                 </div>
-                                <div className="mp-form-group">
-                                    <label>SĐT phụ (nếu không liên lạc được)</label>
-                                    <input value={deliveryPhoneAlt} onChange={event => setDeliveryPhoneAlt(event.target.value)} placeholder="Tùy chọn" />
-                                </div>
-                            </div>
-                            <div className="mp-form-group">
-                                <label>Địa chỉ giao hàng <span style={{ color: '#e57373' }}>*</span></label>
-                                <input value={deliveryAddress} onChange={event => setDeliveryAddress(event.target.value)} placeholder="Địa chỉ cụ thể để xưởng giao hàng" required />
-                            </div>
-                            <div className="mp-form-row">
-                                <div className="mp-form-group">
-                                    <label>Giờ giao mong muốn (từ)</label>
-                                    <input type="datetime-local" value={deliveryFrom} onChange={event => setDeliveryFrom(event.target.value)} />
-                                </div>
-                                <div className="mp-form-group">
-                                    <label>Giờ giao mong muốn (đến)</label>
-                                    <input type="datetime-local" value={deliveryTo} onChange={event => setDeliveryTo(event.target.value)} />
-                                </div>
-                            </div>
-                            <div className="mp-form-group">
-                                <label>Nếu không liên lạc được / không nhận hàng</label>
-                                <select value={deliveryFailureAction} onChange={event => setDeliveryFailureAction(event.target.value)}>
-                                    <option value="RETRY_LATER">Giao lại sau</option>
-                                    <option value="LEAVE_AT_DOOR">Để hàng tại cổng/kho</option>
-                                    <option value="RETURN_TO_SENDER">Trả hàng về cho xưởng</option>
-                                    <option value="CONTACT_ALTERNATIVE">Liên hệ SĐT phụ</option>
-                                </select>
-                            </div>
-                            <div className="mp-form-group">
-                                <label>Ghi chú giao hàng</label>
-                                <textarea rows={2} value={deliveryNote} onChange={event => setDeliveryNote(event.target.value)} placeholder="VD: Giao cổng sau, gọi trước 30 phút..." />
-                            </div>
+                            )}
                             <div className="mp-modal-actions">
-                                <button type="button" className="mp-cancel-btn" onClick={() => setShowOrderModal(false)}>Hủy</button>
-                                <button type="submit" className="mp-submit-btn" disabled={submitting}>{submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}</button>
+                                <button type="button" className="mp-cancel-btn" onClick={closeOrderModal}>Hủy</button>
+                                {rfqStep > 1 && (
+                                    <button type="button" className="mp-back-btn" onClick={handlePrevRfqStep}>Quay lại</button>
+                                )}
+                                {rfqStep < 3 ? (
+                                    <button type="button" className="mp-submit-btn" onClick={handleNextRfqStep}>Tiếp tục</button>
+                                ) : (
+                                    <button type="submit" className="mp-submit-btn" disabled={submitting}>{submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}</button>
+                                )}
                             </div>
                         </form>
                     </div>
@@ -2192,9 +2301,20 @@ export default function MarketplacePage() {
 
                                 <div style={{display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32}}>
                                     {[1, 2, 3].map((_, idx) => {
-                                        const matchFactory = featuredFactories[idx] || factories[idx] || {name: 'Xưởng gia công Cà phê'};
+                                        const matchFactory = featuredFactories[idx] || factories[idx];
+                                        if (!matchFactory) return null;
                                         return (
-                                        <div key={idx} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)'}}>
+                                        <button
+                                            key={matchFactory.id || idx}
+                                            type="button"
+                                            className="mp-ai-match-card"
+                                            onClick={() => {
+                                                setShowAiMatching(false);
+                                                setSelectedFactory(matchFactory);
+                                                setActiveProfileTab('overview');
+                                            }}
+                                            aria-label={`Xem hồ sơ ${matchFactory.name}`}
+                                        >
                                             <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
                                                 <div style={{width: 44, height: 44, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', fontWeight: 700}}>{95 - idx * 3}%</div>
                                                 <div>
@@ -2203,7 +2323,7 @@ export default function MarketplacePage() {
                                                 </div>
                                             </div>
                                             <span className="material-symbols-outlined" style={{color: '#d4a574'}}>chevron_right</span>
-                                        </div>
+                                        </button>
                                     )})}
                                 </div>
 

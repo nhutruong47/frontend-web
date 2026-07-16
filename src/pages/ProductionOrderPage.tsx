@@ -108,7 +108,7 @@ export default function ProductionOrderPage() {
             const data = await productionService.getOrders(teamId);
             setOrders(data || []);
         } catch (e) {
-            console.error(e);
+            // tolerate order load failure
         } finally {
             setLoading(false);
         }

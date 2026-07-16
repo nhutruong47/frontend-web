@@ -71,7 +71,6 @@ export default function Sidebar() {
                 if (!cancelled) setPendingOrderCount(nextCount);
             } catch (error) {
                 if (!cancelled) setPendingOrderCount(0);
-                console.error('Unable to load pending order count', error);
             }
         };
 

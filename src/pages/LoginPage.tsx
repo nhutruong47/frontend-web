@@ -110,7 +110,14 @@ export default function LoginPage() {
                 localStorage.removeItem('orca_remember_username');
                 localStorage.removeItem('orca_remember_password');
             }
-            navigate(returnUrl, { replace: true });
+            const savedUserStr = sessionStorage.getItem('user');
+            const savedUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+            let finalUrl = returnUrl;
+            if (finalUrl.startsWith('/admin') && savedUser?.role !== 'ADMIN') {
+                finalUrl = '/dashboard';
+            }
+            
+            navigate(finalUrl, { replace: true });
         } catch (err: unknown) {
             if (err && typeof err === 'object' && 'response' in err) {
                 const axiosErr = err as { response?: { data?: { error?: string } } };

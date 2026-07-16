@@ -87,7 +87,7 @@ export const taskService = {
     exportSalaryExcel: (teamId: string) =>
         api.get(`/api/tasks/salary/${teamId}/export-excel`, { responseType: 'blob' }),
     payoutSalary: (teamId: string) =>
-        api.post<{ message: string; totalEmployees: number; totalSalary: number; currency: string }>(
+        api.post<{ checkoutUrl: string; txnRef: string }>(
             `/api/tasks/salary/${teamId}/payout`
         ).then(r => r.data),
 };
@@ -194,13 +194,137 @@ export const workforceService = {
         api.put(`/api/workforce/members/${teamMemberId}/skills/${skillId}`, { level }).then(r => r.data),
 };
 
+export interface AiPlan {
+    id: string;
+    team: { id: string };
+    owner: { id: string };
+    sourceQuery: string;
+    intent: string;
+    goalTitle: string;
+    outputTarget?: string;
+    deadline?: string;
+    priority?: number;
+    tasksJson?: string;
+    referencedKnowledgeJson?: string;
+    suggestedActionsJson?: string;
+    reasoningSummary?: string;
+    confidenceScore?: number;
+    status: 'DRAFT' | 'REVISED' | 'APPROVED' | 'REJECTED' | 'PROMOTED' | 'EXPIRED';
+    createdAt: string;
+    updatedAt: string;
+    approvedAt?: string;
+    promotedGoalId?: string;
+}
+
+export interface AiPlanApiResponse {
+    planId?: string;
+    draft?: AiV2PlanDraft;
+    planStatus?: string;
+}
+
 export const aiPlanService = {
+    /** List every AI plan draft for a team (newest first). */
     getByTeam: (teamId: string) =>
-        api.get(`/api/ai-plans/teams/${teamId}`).then(r => r.data),
-    createDraft: (teamId: string, data: any) =>
-        api.post(`/api/ai-plans/teams/${teamId}`, data).then(r => r.data),
+        api.get<AiPlan[]>(`/api/ai-plans/teams/${teamId}`).then(r => r.data),
+
+    /** Generate a new AI plan via the RAG /assistant pipeline (no intent). */
+    generateDraft: (teamId: string, query: string, conversationId?: string) =>
+        api.post<AiPlan>(`/api/ai-plans/teams/${teamId}`, {
+            query,
+            conversationId,
+        }).then(r => r.data),
+
+    /** Generate a structured AI plan via /api/ai/v2/plan (intent + fields). */
+    generateStructuredPlan: (
+        teamId: string,
+        text: string,
+        intent: AiV2ExtractResponse['intent'],
+        fields: Record<string, any>
+    ) =>
+        api.post<AiPlanApiResponse>(`/api/ai/v2/plan`, {
+            teamId,
+            text,
+            intent,
+            fields,
+        }).then(r => r.data),
+
+    /** Get one AI plan by id. */
+    getOne: (planId: string) =>
+        api.get<AiPlan>(`/api/ai-plans/${planId}`).then(r => r.data),
+
+    /** Apply a revision instruction to a draft. */
+    revise: (planId: string, instruction: string) =>
+        api.post<AiPlan>(`/api/ai-plans/${planId}/revise`, { instruction }).then(r => r.data),
+
+    /** Update the plan status (DRAFT, REVISED, APPROVED, REJECTED). */
     updateStatus: (planId: string, status: string) =>
-        api.patch(`/api/ai-plans/${planId}/status`, { status }).then(r => r.data),
+        api.patch<AiPlan>(`/api/ai-plans/${planId}/status`, { status }).then(r => r.data),
+
+    /** Promote an APPROVED plan to a real Goal (goalId required). */
+    promote: (planId: string, goalId: string) =>
+        api.post<AiPlan>(`/api/ai-plans/${planId}/promote`, { goalId }).then(r => r.data),
+};
+
+// === RAG Assistant Service (used by the AI Assistant panel) ===
+
+export interface RagCitation {
+    document_id: string;
+    source: string;
+    source_id: string;
+    title: string;
+    category: string;
+    excerpt: string;
+    relevance_score: number;
+    rank?: number;
+    url?: string;
+    last_updated?: string;
+}
+
+export interface RagSuggestedAction {
+    label: string;
+    type: 'navigate' | 'create_task' | 'open_modal' | 'external';
+    payload?: Record<string, any>;
+}
+
+export interface RagAssistantResponse {
+    answer: string;
+    reasoning_summary?: string;
+    referenced_knowledge?: RagCitation[];
+    confidence?: { score: number; level: 'high' | 'medium' | 'low'; reasons?: string[] };
+    suggested_actions?: RagSuggestedAction[];
+    metadata?: Record<string, any>;
+}
+
+export const ragAssistantService = {
+    /** Send a free-form question to the AI assistant. */
+    query: (params: {
+        query: string;
+        teamId: string;
+        userId: string;
+        conversationId?: string;
+        sources?: string[];
+        maxDocuments?: number;
+    }) =>
+        api.post<RagAssistantResponse>('/api/ai/assistant/query', {
+            query: params.query,
+            team_id: params.teamId,
+            user_id: params.userId,
+            conversation_id: params.conversationId,
+            sources: params.sources,
+            max_documents: params.maxDocuments ?? 5,
+        }).then(r => r.data),
+
+    /** Read conversation memory on the frontend. */
+    getHistory: (conversationId: string, limit = 20) =>
+        api.get<{ conversation_id: string; messages: { role: string; content: string }[]; count: number }>(
+            `/api/rag/conversations/${conversationId}/messages`, { params: { limit } }
+        ).then(r => r.data),
+
+    /** Clear conversation memory. */
+    clearHistory: (conversationId: string) =>
+        api.delete<{ status: string; conversation_id: string }>(
+            `/api/rag/conversations/${conversationId}`
+        ).then(r => r.data),
 };
 
 // === Trial Status ===
@@ -257,7 +381,11 @@ export const aiWorkflowService = {
     extract: (teamId: string, text: string) =>
         api.post<AiV2ExtractResponse>('/api/ai/v2/extract', { teamId, text }).then(r => r.data),
     plan: (teamId: string, intent: AiV2ExtractResponse['intent'], fields: Record<string, any>) =>
-        api.post<AiV2PlanDraft>('/api/ai/v2/plan', { teamId, intent, fields }).then(r => r.data),
+        api.post<AiPlanApiResponse | AiV2PlanDraft>('/api/ai/v2/plan', { teamId, intent, fields }).then(r => {
+            const data = r.data as AiPlanApiResponse | AiV2PlanDraft;
+            if ('draft' in data && data.draft) return data.draft;
+            return data as AiV2PlanDraft;
+        }),
     revise: (teamId: string, instruction: string, draft: AiV2PlanDraft) =>
         api.post<AiV2PlanDraft>('/api/ai/v2/revise', { teamId, instruction, draft }).then(r => r.data),
 };
@@ -272,8 +400,8 @@ export const chatService = {
         api.get<ChatMsg[]>(`/api/teams/${teamId}/chat/dm/${userId}`).then(r => r.data),
     getDmPreviews: (teamId: string) =>
         api.get<ChatMsg[]>(`/api/teams/${teamId}/chat/dm-previews`).then(r => r.data),
-    sendMessage: (teamId: string, content: string, recipientId?: string) =>
-        api.post<ChatMsg>(`/api/teams/${teamId}/chat`, { content, recipientId }).then(r => r.data),
+    sendMessage: (teamId: string, content: string, recipientId?: string, attachmentUrl?: string, attachmentName?: string, attachmentType?: string) =>
+        api.post<ChatMsg>(`/api/teams/${teamId}/chat`, { content, recipientId, attachmentUrl, attachmentName, attachmentType }).then(r => r.data),
     getOnlineUsers: () =>
         api.get<string[]>('/api/presence/online').then(r => r.data),
 };

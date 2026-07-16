@@ -38,7 +38,7 @@ export default function ProductionCalendarPage() {
             const end = new Date(new Date(weekStart).getTime() + 13 * 86400000).toISOString().split('T')[0];
             const data = await productionService.getCalendarBoard(teamId, start, end);
             setCalendar(data || []);
-        } catch (e) { console.error(e); setCalendar([]); }
+        } catch (e) { setCalendar([]); }
         finally { setLoading(false); }
     };
 

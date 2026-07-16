@@ -282,8 +282,7 @@ export default function AdminPage() {
         setPlans(plansData || []);
         setSystemLogs(logsData.content || []);
       })
-      .catch((e) => {
-        console.error(e);
+      .catch(() => {
         setAdminError('Không tải được thống kê thật từ hệ thống.');
       })
       .finally(() => setAdminLoading(false));
@@ -294,7 +293,7 @@ export default function AdminPage() {
       .then(res => {
         setCosts(res.content ?? []);
         setCostTotalPages(res.totalPages || 1);
-      }).catch(console.error);
+      }).catch(() => { /* cost load failure handled by UI */ });
   };
 
   const loadCostDashboard = () => {
@@ -306,8 +305,7 @@ export default function AdminPage() {
     ]).then(([stats, categories]) => {
       setCostStats(stats);
       setCostCategories(categories ?? []);
-    }).catch(err => {
-      console.error(err);
+    }).catch(() => {
       setCostError('Không tải được dữ liệu chi phí. Vui lòng thử lại.');
     }).finally(() => {
       setCostLoading(false);
@@ -490,7 +488,20 @@ export default function AdminPage() {
             </div>
             <div className="admin-hero-actions">
               {active === 'users' && <button className="admin-button admin-button-primary" onClick={handleCreateUser}><Plus size={16} /> Thêm người dùng</button>}
-              {active === 'overview' && <button className="admin-button admin-button-secondary"><Download size={16} /> Xuất dữ liệu</button>}
+              {active === 'overview' && <button className="admin-button admin-button-secondary" onClick={async () => {
+                try {
+                  const res = await adminService.exportAdminReportExcel();
+                  const url = window.URL.createObjectURL(new Blob([res.data]));
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.setAttribute('download', 'admin-report.xlsx');
+                  document.body.appendChild(link);
+                  link.click();
+                  link.remove();
+                } catch (e) {
+                  alert('Lỗi xuất dữ liệu');
+                }
+              }}><Download size={16} /> Xuất dữ liệu</button>}
             </div>
           </header>
 
@@ -849,7 +860,20 @@ export default function AdminPage() {
                       <div className="admin-row-actions">
                         <button className="admin-button admin-button-secondary" onClick={() => setIsCostCategoryModalOpen(true)}>Quản lý Danh mục</button>
                         <button className="admin-button admin-button-primary" onClick={() => { setEditingCost(null); setIsCostModalOpen(true); }}><Plus size={16}/> Thêm khoản chi</button>
-                        <button className="admin-button admin-button-secondary"><Download size={16}/> Xuất Excel</button>
+                        <button className="admin-button admin-button-secondary" onClick={async () => {
+                            try {
+                                const res = await adminService.exportAdminReportExcel();
+                                const url = window.URL.createObjectURL(new Blob([res.data]));
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.setAttribute('download', 'admin-report.xlsx');
+                                document.body.appendChild(link);
+                                link.click();
+                                link.remove();
+                            } catch (e) {
+                                alert('Lỗi xuất báo cáo');
+                            }
+                        }}><Download size={16}/> Xuất Excel</button>
                       </div>
                     </div>
                     

@@ -34,7 +34,7 @@ export default function FactoryDashboardPage() {
             const data = await productionService.getDashboard(teamId);
             setDashboard(data);
         } catch (e) {
-            console.error('Loi dashboard:', e);
+            // tolerate dashboard load failure
         } finally {
             setLoading(false);
         }
@@ -51,7 +51,6 @@ export default function FactoryDashboardPage() {
                 ),
             }));
         } catch (e) {
-            console.error('Loi cap nhat tien do:', e);
             alert('Khong the cap nhat tien do');
         } finally {
             setUpdatingProgress(null);

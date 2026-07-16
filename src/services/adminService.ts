@@ -52,6 +52,8 @@ export const adminService = {
         api.get<Record<string, string>>('/api/admin/ai-configs').then(r => r.data),
     updateAiConfigs: (configs: Record<string, string>) =>
         api.put('/api/admin/ai-configs', configs).then(r => r.data),
+    exportAdminReportExcel: () =>
+        api.get('/api/admin/reports/excel', { responseType: 'blob' }),
 };
 
 export const adminCostService = {

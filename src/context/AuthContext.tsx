@@ -82,7 +82,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(userInfo);
             sessionStorage.setItem('user', JSON.stringify(userInfo));
         } catch (error) {
-            console.error('Failed to fetch user:', error);
+            setUser(null);
+            sessionStorage.removeItem('user');
         }
     }, []);
 

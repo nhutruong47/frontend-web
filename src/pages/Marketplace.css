@@ -493,6 +493,10 @@
     animation: slideUp 0.25s ease;
 }
 
+.mp-rfq-modal {
+    max-width: 820px;
+}
+
 @keyframes slideUp {
     from {
         transform: translateY(20px);
@@ -748,6 +752,127 @@
     color: var(--primary);
 }
 
+.mp-rfq-kicker {
+    display: block;
+    color: var(--primary);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+}
+
+.mp-rfq-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0 0 1.35rem;
+}
+
+.mp-rfq-step {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 70px;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-input);
+    color: var(--text-secondary);
+    text-align: left;
+    cursor: default;
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.mp-rfq-step.is-done {
+    cursor: pointer;
+}
+
+.mp-rfq-step.is-active,
+.mp-rfq-step.is-done:hover {
+    border-color: var(--primary);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.mp-rfq-step.is-active {
+    transform: translateY(-1px);
+}
+
+.mp-rfq-step-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    border-radius: 50%;
+    background: var(--bg-tertiary);
+    color: var(--primary);
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+
+.mp-rfq-step.is-active .mp-rfq-step-index,
+.mp-rfq-step.is-done .mp-rfq-step-index {
+    background: var(--accent-gradient);
+    color: var(--text-on-accent);
+}
+
+.mp-rfq-step strong {
+    display: block;
+    color: inherit;
+    font-size: 0.9rem;
+    line-height: 1.25;
+}
+
+.mp-rfq-step small {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    line-height: 1.25;
+    margin-top: 0.16rem;
+}
+
+.mp-rfq-panel {
+    min-height: 300px;
+}
+
+.mp-rfq-delivery-heading {
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+    padding: 1rem;
+    margin-bottom: 1.2rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-card);
+}
+
+.mp-rfq-delivery-heading .material-symbols-outlined {
+    color: var(--primary);
+    font-size: 1.45rem;
+}
+
+.mp-rfq-delivery-heading h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.mp-rfq-delivery-heading p {
+    margin: 0.25rem 0 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.mp-required {
+    color: var(--danger);
+}
+
 .mp-form-group {
     margin-bottom: 1.2rem;
 }
@@ -834,10 +959,27 @@
     border-color: var(--primary);
 }
 
+.mp-back-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 0.8rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mp-back-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--primary);
+}
+
 .mp-submit-btn {
     flex: 1;
     background: var(--accent-gradient);
-    color: #fff;
+    color: var(--text-on-accent);
     border: none;
     padding: 0.6rem;
     border-radius: 8px;
@@ -890,6 +1032,24 @@
 
     .mp-form-row {
         flex-direction: column;
+    }
+
+    .mp-rfq-steps {
+        grid-template-columns: 1fr;
+    }
+
+    .mp-rfq-step {
+        min-height: 58px;
+    }
+
+    .mp-modal-actions {
+        flex-wrap: wrap;
+    }
+
+    .mp-cancel-btn,
+    .mp-back-btn,
+    .mp-submit-btn {
+        flex: 1 1 140px;
     }
 }
 
@@ -3966,5 +4126,169 @@
     color: var(--text-muted, #9ca3af);
     font-size: 14px;
     font-weight: 500;
+}
+
+.mp-ai-match-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.mp-ai-match-card:hover,
+.mp-ai-match-card:focus-visible {
+    background: rgba(212, 165, 116, 0.08);
+    border-color: rgba(212, 165, 116, 0.32);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.mp-ai-match-card .material-symbols-outlined {
+    transition: transform 0.2s ease;
+}
+
+.mp-ai-match-card:hover .material-symbols-outlined,
+.mp-ai-match-card:focus-visible .material-symbols-outlined {
+    transform: translateX(3px);
+}
+
+/* Light theme fixes for the manufacturing marketplace.
+   The roastery layout is dark by default, so these scoped overrides restore
+   readable light-mode surfaces without changing dark mode. */
+[data-theme="light"] .mp-body.mp-manufacturing-market {
+    --mp-bg: #fff8e8;
+    --mp-surface: #fffdf7;
+    --mp-surface-low: #fff1c9;
+    --mp-surface-high: #fff6df;
+    --mp-outline: rgba(121, 73, 22, 0.16);
+    --mp-outline-strong: rgba(177, 116, 36, 0.38);
+    --mp-text: #24160a;
+    --mp-heading: #3a210d;
+    --mp-muted: #76583b;
+    --mp-primary: #b97820;
+    --mp-primary-strong: #8a4f12;
+    --mp-success: #15803d;
+    background: var(--mp-bg);
+    color: var(--mp-text);
+}
+
+[data-theme="light"] .mp-manufacturing-market .sidebar {
+    background: #fff7e6;
+    border-right-color: rgba(121, 73, 22, 0.14);
+    box-shadow: 12px 0 32px rgba(121, 73, 22, 0.07);
+}
+
+[data-theme="light"] .mp-manufacturing-market .sidebar-logo,
+[data-theme="light"] .mp-manufacturing-market .mp-topbar {
+    border-bottom-color: rgba(121, 73, 22, 0.12);
+}
+
+[data-theme="light"] .mp-manufacturing-market .nav-label,
+[data-theme="light"] .mp-manufacturing-market .nav-item {
+    color: #8a6b4c;
+}
+
+[data-theme="light"] .mp-manufacturing-market .nav-item:hover,
+[data-theme="light"] .mp-manufacturing-market .nav-item.active {
+    color: #6f3d0b;
+    background: rgba(245, 183, 76, 0.18);
+    border-color: rgba(177, 116, 36, 0.34);
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-topbar {
+    background: rgba(255, 250, 238, 0.92);
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-top-search input {
+    background: #fffdf7;
+    border-color: rgba(121, 73, 22, 0.16);
+    color: var(--mp-text);
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-top-search input::placeholder {
+    color: #94a3b8;
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-top-actions button {
+    color: #6f5538;
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-user-avatar {
+    background: #ffe9b6;
+    border-color: rgba(177, 116, 36, 0.28);
+    color: #7a430f;
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-main {
+    background: var(--mp-bg);
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-section-title-row h2,
+[data-theme="light"] .mp-manufacturing-market .mp-factory-card h3 {
+    color: var(--mp-heading);
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-section-title-row p,
+[data-theme="light"] .mp-manufacturing-market .mp-factory-card-head p,
+[data-theme="light"] .mp-manufacturing-market .mp-fcard-location,
+[data-theme="light"] .mp-manufacturing-market .mp-fcard-type,
+[data-theme="light"] .mp-manufacturing-market .mp-fcard-capacity span,
+[data-theme="light"] .mp-manufacturing-market .mp-metric span:last-child {
+    color: var(--mp-muted) !important;
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-factory-card {
+    background: #fffdf8;
+    border-color: rgba(121, 73, 22, 0.14);
+    box-shadow: 0 12px 32px rgba(121, 73, 22, 0.1);
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-factory-image {
+    background: #f8e6b8;
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-fcard-metrics {
+    border-top-color: rgba(121, 73, 22, 0.14) !important;
+    border-bottom-color: rgba(121, 73, 22, 0.14) !important;
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-fcard-tags span,
+[data-theme="light"] .mp-manufacturing-market .mp-card-tags span {
+    background: #fff4d6 !important;
+    border-color: rgba(177, 116, 36, 0.22) !important;
+    color: #5b3a18 !important;
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-factory-actions button {
+    background: #fff5dc !important;
+    border-color: rgba(177, 116, 36, 0.2) !important;
+    color: #3a210d !important;
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-factory-actions button:last-child {
+    background: #e6ac5a !important;
+    border-color: transparent !important;
+    color: #241204 !important;
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-filter-select,
+[data-theme="light"] .mp-manufacturing-market .mp-pagination button {
+    background: #fffdf7;
+    border-color: rgba(121, 73, 22, 0.16);
+    color: #24160a;
+}
+
+[data-theme="light"] .mp-manufacturing-market .mp-page-info,
+[data-theme="light"] .mp-manufacturing-market .mp-view-all-btn,
+[data-theme="light"] .mp-manufacturing-market .mp-section-title-row > button {
+    color: var(--mp-primary-strong);
 }
 

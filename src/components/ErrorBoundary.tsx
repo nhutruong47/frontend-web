@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import { logger } from '../utils/logger';
 
 interface Props {
     children: ReactNode;
@@ -20,8 +21,10 @@ export class ErrorBoundary extends Component<Props, State> {
         return { hasError: true, error };
     }
 
-    componentDidCatch(error: Error, errorInfo: any) {
-        console.error('Uncaught error:', error, errorInfo);
+    componentDidCatch(error: Error, errorInfo: unknown) {
+        // Surface the failure to the centralised logger so production
+        // deployments keep a record without polluting the user's console.
+        logger.error('UI crashed:', error, errorInfo);
     }
 
     handleReset = () => {

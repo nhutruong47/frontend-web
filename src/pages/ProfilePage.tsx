@@ -50,7 +50,6 @@ export default function ProfilePage() {
             setIsEditing(false);
             setFeedback({ type: 'success', message: 'Cập nhật hồ sơ thành công.' });
         } catch (error) {
-            console.error('Update profile failed', error);
             const message = (error as any)?.response?.data?.error || 'Có lỗi xảy ra khi cập nhật hồ sơ.';
             setFeedback({ type: 'error', message });
         } finally {
@@ -114,7 +113,6 @@ export default function ProfilePage() {
                 sessionStorage.setItem('token', profileRes.token);
                 await fetchUser();
             } catch (error) {
-                console.error("Lỗi upload avatar", error);
                 alert('Có lỗi khi upload ảnh');
             } finally {
                 setUploadingAvatar(false);
@@ -131,7 +129,6 @@ export default function ProfilePage() {
                 videoRef.current.srcObject = stream;
             }
         } catch (err) {
-            console.error("Camera access denied", err);
             alert("Không thể truy cập camera. Vui lòng cấp quyền.");
             setShowWebcam(false);
         }
@@ -166,7 +163,6 @@ export default function ProfilePage() {
                             sessionStorage.setItem('token', profileRes.token);
                             await fetchUser();
                         } catch (error) {
-                            console.error("Lỗi upload avatar từ camera", error);
                             alert('Có lỗi khi upload ảnh từ camera');
                         } finally {
                             setUploadingAvatar(false);

@@ -17,6 +17,23 @@
     if (typeof process === 'undefined') {
       window.process = { env: {} };
     }
+    // Apply theme synchronously before React hydration to prevent FOUC.
+    (function () {
+      try {
+        var saved = localStorage.getItem('orca-theme');
+        var mode = (saved === 'light' || saved === 'dark' || saved === 'system') ? saved : 'dark';
+        var resolved = mode;
+        if (mode === 'system') {
+          try {
+            resolved = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light' : 'dark';
+          } catch (e) { resolved = 'dark'; }
+        }
+        document.documentElement.setAttribute('data-theme', resolved);
+        document.documentElement.style.colorScheme = resolved;
+        document.documentElement.setAttribute('data-theme-mode', mode);
+      } catch (e) { /* ignore */ }
+    })();
   </script>
 </head>
 

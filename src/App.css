@@ -1,4 +1,4 @@
-﻿/* ===================================================
+/* ===================================================
    ORCA Management System - Component Styles
    All colors are token-based (see index.css).
    =================================================== */
@@ -3507,6 +3507,175 @@
   border: 1px solid var(--border);
 }
 
+.order-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 132px;
+  max-width: 100%;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.order-status-badge ion-icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+}
+
+.order-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 92px;
+  min-height: 36px;
+  padding: 8px 14px;
+  border: 1px solid rgba(220, 38, 38, 0.26);
+  border-radius: 10px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.order-cancel-btn:hover {
+  border-color: var(--danger);
+  background: rgba(220, 38, 38, 0.16);
+  transform: translateY(-1px);
+}
+
+.order-cancel-btn ion-icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+}
+
+.order-trust-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 22px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(185, 120, 32, 0.24);
+}
+
+.order-trust-eyebrow {
+  display: block;
+  color: var(--primary);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.order-trust-panel h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+}
+
+.order-trust-panel p {
+  margin: 6px 0 0;
+  max-width: 640px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.order-trust-panel-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 150px;
+}
+
+.order-trust-panel-side.compact {
+  min-width: 120px;
+}
+
+.order-trust-panel-side small {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.order-trust-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 142px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.order-trust-badge.compact {
+  min-width: 112px;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+}
+
+.order-trust-badge ion-icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+}
+
+.order-trust-badge.good {
+  background: var(--success-soft);
+  border-color: rgba(5, 150, 105, 0.24);
+  color: var(--success);
+}
+
+.order-trust-badge.medium {
+  background: var(--warning-soft);
+  border-color: rgba(217, 119, 6, 0.28);
+  color: var(--warning);
+}
+
+.order-trust-badge.risk {
+  background: var(--danger-soft);
+  border-color: rgba(220, 38, 38, 0.28);
+  color: var(--danger);
+}
+
+.order-buyer-trust-detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-input);
+}
+
+.order-buyer-trust-detail p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
 .profile-header {
   position: relative;
   overflow: hidden;
@@ -3540,6 +3709,14 @@
 @media (max-width: 768px) {
   .layout-content {
     padding: 20px 16px;
+  }
+  .order-trust-panel,
+  .order-buyer-trust-detail {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .order-trust-panel-side {
+    align-items: flex-start;
   }
   .topbar {
     border-radius: 0;
@@ -3949,38 +4126,6 @@
   color: rgba(255, 238, 214, 0.9) !important;
 }
 
-.login-split .login-input-wrap input {
-  color: #fffaf2 !important;
-  -webkit-text-fill-color: #fffaf2 !important;
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(255, 238, 214, 0.28) !important;
-}
-
-.login-split .login-input-wrap input::placeholder {
-  color: rgba(255, 238, 214, 0.76) !important;
-}
-
-.login-split .login-input-wrap input:focus {
-  color: #fffaf2 !important;
-  -webkit-text-fill-color: #fffaf2 !important;
-  background: rgba(255, 255, 255, 0.14) !important;
-  border-color: rgba(245, 197, 139, 0.78) !important;
-}
-
-.login-split .remember-row {
-  color: rgba(255, 247, 236, 0.88) !important;
-}
-
-.login-split .login-input-wrap input:not(:placeholder-shown),
-.login-split .login-input-wrap input:-webkit-autofill,
-.login-split .login-input-wrap input:-webkit-autofill:hover, 
-.login-split .login-input-wrap input:-webkit-autofill:focus, 
-.login-split .login-input-wrap input:-webkit-autofill:active {
-  color: #fffaf2 !important;
-  -webkit-text-fill-color: #fffaf2 !important;
-  -webkit-box-shadow: 0 0 0px 1000px var(--bg-card) inset !important;
-  transition: background-color 5000s ease-in-out 0s;
-}
 
 .login-split .login-link {
   color: #fffaf2 !important;

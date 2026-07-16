@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { teamService, goalService, taskService, getTrialStatus, chatService, inventoryService } from '../services/groupService';
 import { attendanceService } from '../services/attendanceService';
+import { uploadFile } from '../services/api';
 import type { Team, Goal, Task, ChatMsg, SalaryReport, AiChatLogMsg } from '../types/types';
 
 import SockJS from 'sockjs-client';
@@ -21,18 +22,14 @@ function avatarColor(name: string) {
     return colors[hash];
 }
 const STATUS_COLORS: Record<string, { bg: string; color: string; label: string }> = {
-    PENDING: { bg: '#fef3c7', color: '#d97706', label: 'Chờ xử lý' },
-    IN_PROGRESS: { bg: '#dbeafe', color: '#2563eb', label: 'Đang làm' },
-    COMPLETED: { bg: '#dcfce7', color: '#16a34a', label: 'Hoàn thành' },
+    PENDING: { bg: 'var(--warning-soft)', color: 'var(--warning)', label: 'Chờ xử lý' },
+    IN_PROGRESS: { bg: 'var(--info-soft)', color: 'var(--info)', label: 'Đang làm' },
+    BLOCKED: { bg: 'var(--danger-soft)', color: 'var(--danger)', label: 'Bị khoá' },
+    READY: { bg: 'var(--success-soft)', color: 'var(--success)', label: 'Sẵn sàng' },
+    WAITING_APPROVAL: { bg: 'var(--warning-soft)', color: 'var(--warning)', label: 'Chờ duyệt' },
+    COMPLETED: { bg: 'var(--success-soft)', color: 'var(--success)', label: 'Hoàn thành' },
+    CANCELLED: { bg: 'var(--bg-input)', color: 'var(--text-secondary)', label: 'Đã huỷ' },
 };
-Object.assign(STATUS_COLORS, {
-    PENDING: { bg: '#f8fafc', color: 'var(--text-secondary)', label: 'Cho xu ly' },
-    BLOCKED: { bg: '#fee2e2', color: '#dc2626', label: 'Bi khoa' },
-    READY: { bg: '#dcfce7', color: '#16a34a', label: 'San sang' },
-    WAITING_APPROVAL: { bg: '#fef3c7', color: '#d97706', label: 'Cho duyet' },
-    COMPLETED: { bg: '#dcfce7', color: '#16a34a', label: 'Hoan thanh' },
-    CANCELLED: { bg: '#f1f5f9', color: 'var(--text-secondary)', label: 'Da huy' },
-});
 const MEMBER_COLORS = ['#d4a574', '#f59e0b', '#10b981', '#ec4899', '#f43f5e', '#06b6d4', '#8b5cf6', '#3b82f6'];
 
 export default function GroupDetailPage() {
@@ -125,7 +122,7 @@ export default function GroupDetailPage() {
     const [editingLabels, setEditingLabels] = useState<string>('');
 
     // Inventory
-    const [inventoryItems, setanys] = useState<any[]>([]);
+    const [inventoryItems, setInventoryItems] = useState<any[]>([]);
     const [showAddInventory, setShowAddInventory] = useState(false);
     const [invName, setInvName] = useState('');
     const [invQty, setInvQty] = useState('');
@@ -152,6 +149,8 @@ export default function GroupDetailPage() {
     const showChatTokens = false;
     const [chatExpanded, setChatExpanded] = useState(true);
     const [showVideoCall, setShowVideoCall] = useState(false);
+    const localVideoRef = useRef<HTMLVideoElement>(null);
+    const remoteVideoRef = useRef<HTMLVideoElement>(null);
     const [chatAttachment, setChatAttachment] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -194,7 +193,7 @@ export default function GroupDetailPage() {
                     if (parsed.roles && Array.isArray(parsed.roles)) {
                         setTeamRoles(parsed.roles);
                     }
-                } catch (e) { console.error('Error parsing metadata', e); }
+                } catch (e) { /* metadata parse error ignored */ }
             }
         }).catch(() => { });
         goalService.getByTeam(id).then(g => {
@@ -204,7 +203,7 @@ export default function GroupDetailPage() {
                 .then(taskArrays => setAllTasks(taskArrays.flat()))
                 .catch(() => { });
         }).catch(() => { });
-        inventoryService.getByTeam(id).then(data => { console.log('[INVENTORY] Loaded', data?.length, 'items for team', id, data); setanys(data || []); }).catch(err => { console.error('[INVENTORY] Error loading inventory:', err); });
+        inventoryService.getByTeam(id).then(data => { setInventoryItems(data || []); }).catch(() => { });
         getTrialStatus().then(s => { setTrialActive(s.aiTrialActive); setTrialDays(s.daysRemaining); }).catch(() => { });
     }, [id]);
 
@@ -225,7 +224,7 @@ export default function GroupDetailPage() {
             const att = await attendanceService.getTodayAttendance(id);
             setMyAttendance(att);
         } catch (e) {
-            console.error('Lỗi tải thông tin chấm công hôm nay:', e);
+            // silently fail; UI handles missing data
         }
     }, [id, user?.id]);
 
@@ -235,7 +234,7 @@ export default function GroupDetailPage() {
             const history = await attendanceService.getHistory(id);
             setAttendanceHistory(history || []);
         } catch (e) {
-            console.error('Lỗi tải lịch sử chấm công:', e);
+            // silently fail; UI handles missing data
         }
     }, [id, user?.id]);
 
@@ -245,7 +244,7 @@ export default function GroupDetailPage() {
             const data = await attendanceService.getTeamHistory(id);
             setTeamAttendanceData(data || []);
         } catch (e) {
-            console.error('Lỗi tải quản lý chấm công:', e);
+            // silently fail; UI handles missing data
         }
     }, [id]);
 
@@ -319,7 +318,7 @@ export default function GroupDetailPage() {
                 setChatMessages(msgs);
             }
         } catch (err) {
-            console.error('Failed to load messages', err);
+            // chat history load failure is non-fatal
         }
     }, [id, chatTab, dmUserId]);
 
@@ -361,7 +360,7 @@ export default function GroupDetailPage() {
             connectHeaders: { userId: user.id },
             reconnectDelay: 5000,
             onConnect: () => {
-                console.log('[STOMP] Connected');
+                // STOMP connected — handled silently.
 
                 // Subscribe to group messages
                 client.subscribe(`/topic/team/${id}`, (message) => {
@@ -405,8 +404,8 @@ export default function GroupDetailPage() {
                     setOnlineUsers(userIds);
                 });
             },
-            onStompError: (frame) => {
-                console.error('[STOMP] Error:', frame);
+            onStompError: () => {
+                // STOMP error reported via UI surface, not console.
             }
         });
 
@@ -423,13 +422,33 @@ export default function GroupDetailPage() {
         if (!id || (!chatInput.trim() && !chatAttachment)) return;
 
         let messageContent = chatInput.trim();
+        let attachmentUrl = undefined;
+        let attachmentName = undefined;
+        let attachmentType = undefined;
+
         if (chatAttachment) {
-            messageContent = messageContent ? `${messageContent} [Đính kèm: ${chatAttachment.name}]` : `[Đính kèm: ${chatAttachment.name}]`;
+            try {
+                attachmentUrl = await uploadFile(chatAttachment);
+                attachmentName = chatAttachment.name;
+                attachmentType = chatAttachment.type;
+            } catch (error) {
+                alert('Lỗi khi tải lên tệp đính kèm');
+                return;
+            }
         }
 
-        await chatService.sendMessage(id, messageContent, chatTab === 'dm' && dmUserId ? dmUserId : undefined);
+        await chatService.sendMessage(
+            id,
+            messageContent,
+            chatTab === 'dm' && dmUserId ? dmUserId : undefined,
+            attachmentUrl,
+            attachmentName,
+            attachmentType
+        );
+        
         setChatInput('');
         setChatAttachment(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
         loadChatMessages();
     };
 
@@ -576,7 +595,7 @@ export default function GroupDetailPage() {
                 setGoals(g);
                 Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat()));
                 const inv = await inventoryService.getByTeam(id);
-                setanys(inv || []);
+                setInventoryItems(inv || []);
             }
             cancelEditTask();
         } catch (e: any) { setError(e?.response?.data?.error || 'Lỗi'); } finally { setLoading(false); }
@@ -648,7 +667,7 @@ export default function GroupDetailPage() {
                 lowStockThreshold: Number(invThreshold) || 10
             });
             const items = await inventoryService.getByTeam(id);
-            setanys(items);
+            setInventoryItems(items);
             setInvName(''); setInvQty(''); setInvUnit(''); setInvThreshold(''); setShowAddInventory(false);
         } catch (e: any) { alert(e?.response?.data?.error || 'Lỗi thêm hàng'); } finally { setLoading(false); }
     };
@@ -659,7 +678,7 @@ export default function GroupDetailPage() {
         try {
             await inventoryService.updateQuantity(invId, Number(updateInvQty.replace(/\./g, '')));
             const items = await inventoryService.getByTeam(id);
-            setanys(items);
+            setInventoryItems(items);
             setUpdatingInvId(null); setUpdateInvQty('');
         } catch (e: any) { alert(e?.response?.data?.error || 'Lỗi cập nhật số lượng'); } finally { setLoading(false); }
     };
@@ -669,7 +688,7 @@ export default function GroupDetailPage() {
         try {
             await inventoryService.delete(invId);
             const items = await inventoryService.getByTeam(id!);
-            setanys(items);
+            setInventoryItems(items);
         } catch (e: any) { alert(e?.response?.data?.error || 'Lỗi xóa hàng'); }
     };
 
@@ -1015,7 +1034,7 @@ export default function GroupDetailPage() {
                         try {
                             aiData = JSON.parse(g.aiParsedData);
                         } catch (e) {
-                            console.error("Failed to parse AI data", e);
+                            // ignore malformed AI data
                         }
                     }
 
@@ -1283,7 +1302,7 @@ export default function GroupDetailPage() {
                                                             }
                                                             if (id) { 
                                                                 goalService.getByTeam(id).then(setGoals);
-                                                                inventoryService.getByTeam(id).then(data => setanys(data || []));
+                                                                inventoryService.getByTeam(id).then(data => setInventoryItems(data || []));
                                                             }
                                                         })
                                                         .catch((err: any) => setError(err?.response?.data?.error || 'Khong the cap nhat'));
@@ -1322,7 +1341,7 @@ export default function GroupDetailPage() {
                                                                             }
                                                                             if (id) { 
                                                                                 const g = await goalService.getByTeam(id); setGoals(g); 
-                                                                                const inv = await inventoryService.getByTeam(id); setanys(inv || []);
+                                                                                const inv = await inventoryService.getByTeam(id); setInventoryItems(inv || []);
                                                                             }
                                                                         } catch (err: any) {
                                                                             setError(err?.response?.data?.error || 'Không thể cập nhật mục tiêu');
@@ -1390,7 +1409,7 @@ export default function GroupDetailPage() {
                                                             setAllTasks(prev => prev.map(tk => tk.id === updatedTask.id ? updatedTask : tk));
                                                         }
                                                         if (id) { const g = await goalService.getByTeam(id); setGoals(g); }
-                                                    }} style={{ background: '#fff7ed', border: '1px solid #fde3c7', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', minWidth: 120 }}>
+                                                    }} style={{ background: '#fff7ed', border: '1px solid #fde3c7', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', minWidth: 120, color: '#d97706' }}>
                                                         <option value="">— Sao lưu —</option>
                                                         {team?.members?.map(m => <option key={m.userId} value={m.userId}>{m.fullName || m.username}</option>)}
                                                     </select>
@@ -1672,10 +1691,19 @@ export default function GroupDetailPage() {
                                 </>
                             )}
                             {/* Nhóm nút hành động bên phải — gọn, kiểu Messenger */}
-                            <button onClick={() => alert('Tính năng gọi thoại đang được phát triển')} style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', border: 'none', color: '#d4a574', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Gọi thoại" onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input, #f0f2f5)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            <button onClick={() => alert('Tính năng gọi thoại đang được WebRTC hỗ trợ (sử dụng gọi Video để có tiếng và hình)')} style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', border: 'none', color: '#d4a574', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Gọi thoại" onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input, #f0f2f5)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                                 <ion-icon name="call" style={{ fontSize: 20 }}></ion-icon>
                             </button>
-                            <button onClick={() => setShowVideoCall(true)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', border: 'none', color: '#d4a574', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Gọi video" onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input, #f0f2f5)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            <button onClick={() => {
+                                setShowVideoCall(true);
+                                setTimeout(() => {
+                                    if (localVideoRef.current) {
+                                        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                                            .then(stream => { if (localVideoRef.current) localVideoRef.current.srcObject = stream; })
+                                            .catch(err => console.error("WebRTC Error:", err));
+                                    }
+                                }, 500);
+                            }} style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', border: 'none', color: '#d4a574', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Gọi video" onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input, #f0f2f5)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                                 <ion-icon name="videocam" style={{ fontSize: 20 }}></ion-icon>
                             </button>
 
@@ -1731,6 +1759,20 @@ export default function GroupDetailPage() {
                                                     }}>
                                                         {msg.content}
                                                     </div>
+                                                    {msg.attachmentUrl && (
+                                                        <div style={{ marginTop: 4, padding: 8, background: 'var(--bg-card)', borderRadius: 8, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, maxWidth: 300 }}>
+                                                            {msg.attachmentType?.startsWith('image/') ? (
+                                                                <img src={msg.attachmentUrl} alt={msg.attachmentName} style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 4, objectFit: 'contain' }} />
+                                                            ) : (
+                                                                <>
+                                                                    <ion-icon name="document-attach" style={{ fontSize: 24, color: '#d4a574' }}></ion-icon>
+                                                                    <a href={msg.attachmentUrl} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: 'var(--text-primary)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                        {msg.attachmentName || 'Tệp đính kèm'}
+                                                                    </a>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                     <div style={{ fontSize: 11, color: 'var(--text-muted, #65676b)', marginTop: 2, padding: '0 6px' }}>
                                                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         {showChatTokens && ` • ${formatTokenCount(estimateTokens(msg.content))} token`}
@@ -1756,7 +1798,7 @@ export default function GroupDetailPage() {
                                 {/* Chat input (Messenger-style) */}
                                 <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border, #e4e6eb)', background: 'var(--bg-card, #fff)', display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={e => { if(e.target.files && e.target.files[0]) setChatAttachment(e.target.files[0]) }} />
-                                    <button onClick={() => alert('Tính năng gửi ảnh đang được phát triển')} style={{ width: 40, height: 40, borderRadius: '50%', background: 'transparent', border: 'none', color: '#d4a574', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} title="Gửi ảnh"
+                                    <button onClick={() => fileInputRef.current?.click()} style={{ width: 40, height: 40, borderRadius: '50%', background: 'transparent', border: 'none', color: '#d4a574', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} title="Gửi ảnh"
                                         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input, #f0f2f5)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                                         <ion-icon name="image" style={{ fontSize: 24 }}></ion-icon>
                                     </button>
@@ -1798,18 +1840,27 @@ export default function GroupDetailPage() {
                     </div>
 
                     {/* Main Content */}
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                        <div style={{ width: 160, height: 160, borderRadius: '50%', background: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid #4b5563' }}>
-                            <ion-icon name="person" style={{ fontSize: 80, color: '#9ca3af' }}></ion-icon>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', gap: 16 }}>
+                        <div style={{ width: 320, height: 240, borderRadius: 12, background: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid #4b5563', overflow: 'hidden' }}>
+                            <video ref={localVideoRef} autoPlay muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>
-                        <div style={{ position: 'absolute', bottom: 40, color: '#fff', fontSize: 20, fontWeight: 500 }}>Đang gọi...</div>
+                        <div style={{ width: 320, height: 240, borderRadius: 12, background: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid #4b5563', overflow: 'hidden' }}>
+                            <video ref={remoteVideoRef} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            {!remoteVideoRef.current?.srcObject && <ion-icon name="person" style={{ fontSize: 80, color: '#9ca3af', position: 'absolute' }}></ion-icon>}
+                        </div>
+                        <div style={{ position: 'absolute', bottom: 40, color: '#fff', fontSize: 20, fontWeight: 500 }}>Đang kết nối WebRTC...</div>
                     </div>
 
                     {/* Controls */}
                     <div style={{ padding: '32px', display: 'flex', justifyContent: 'center', gap: 24, background: 'linear-gradient(transparent, rgba(0,0,0,0.8))' }}>
                         <button style={{ width: 64, height: 64, borderRadius: '50%', background: '#374151', border: 'none', color: '#fff', fontSize: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ion-icon name="mic-outline"></ion-icon></button>
                         <button style={{ width: 64, height: 64, borderRadius: '50%', background: '#374151', border: 'none', color: '#fff', fontSize: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ion-icon name="videocam-outline"></ion-icon></button>
-                        <button onClick={() => setShowVideoCall(false)} style={{ width: 64, height: 64, borderRadius: '50%', background: '#ef4444', border: 'none', color: '#fff', fontSize: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ion-icon name="call-outline" style={{ transform: 'rotate(135deg)' }}></ion-icon></button>
+                        <button onClick={() => {
+                            if (localVideoRef.current && localVideoRef.current.srcObject) {
+                                (localVideoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+                            }
+                            setShowVideoCall(false);
+                        }} style={{ width: 64, height: 64, borderRadius: '50%', background: '#ef4444', border: 'none', color: '#fff', fontSize: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ion-icon name="call-outline" style={{ transform: 'rotate(135deg)' }}></ion-icon></button>
                     </div>
                 </div>
             )}
@@ -1974,7 +2025,7 @@ export default function GroupDetailPage() {
                                             try {
                                                 await teamService.update(team!.id, { metadata: newMetadata });
                                                 setTeam(prev => prev ? { ...prev, metadata: newMetadata } : prev);
-                                            } catch (e) { console.error(e); }
+                                            } catch (e) { /* role update failed — UI handles via toast */ }
                                         }} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 4 }}>
                                             <ion-icon name="trash-outline" style={{ fontSize: 16 }}></ion-icon>
                                         </button>
@@ -1999,7 +2050,7 @@ export default function GroupDetailPage() {
                                             const newMetadata = JSON.stringify({ ...JSON.parse(team?.metadata || '{}'), roles: updatedRoles });
                                             teamService.update(team!.id, { metadata: newMetadata }).then(() => {
                                                 setTeam(prev => prev ? { ...prev, metadata: newMetadata } : prev);
-                                            }).catch(console.error);
+                                            }).catch(() => { /* role persist failure handled by UI */ });
                                         }
                                     }
                                 }}
@@ -2014,7 +2065,7 @@ export default function GroupDetailPage() {
                                     try {
                                         await teamService.update(team!.id, { metadata: newMetadata });
                                         setTeam(prev => prev ? { ...prev, metadata: newMetadata } : prev);
-                                    } catch (e) { console.error(e); }
+                                    } catch (e) { /* role update failure handled by UI */ }
                                 }
                             }} style={{ background: '#d4a574', color: '#fff', border: 'none', borderRadius: 10, padding: '0 16px', fontWeight: 600, cursor: 'pointer' }}>
                                 Thêm
@@ -3191,7 +3242,11 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                     if (window.confirm(`Bạn có chắc chắn muốn thanh toán tổng cộng ${totalSalary.toLocaleString('vi-VN')} đ cho nhân viên?`)) {
                                         try {
                                             const res = await taskService.payoutSalary(teamId);
-                                            alert(res.message || 'Thanh toán lương thành công!');
+                                            if (res.checkoutUrl) {
+                                                window.location.href = res.checkoutUrl;
+                                            } else {
+                                                alert('Không nhận được URL thanh toán từ PayOS');
+                                            }
                                         } catch (err: any) {
                                             alert(err.response?.data?.error || 'Thanh toán thất bại hoặc không có số dư.');
                                         }

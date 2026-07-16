@@ -228,7 +228,7 @@ export default function CreateTaskPage() {
                 }
             }
         } catch (e) {
-            console.error("Failed to map saved chat history", e);
+            // mapping failure returns empty list, UI tolerates it.
         }
         return [];
     });
@@ -310,17 +310,19 @@ export default function CreateTaskPage() {
         }
     };
 
+    const hasDraftTasks = (result?: AiParseResult) =>
+        Boolean(result && !result.needsClarification && (result.tasks?.length || 0) > 0);
+
     const findActiveDraftMessage = (items: ChatMessage[]) =>
         [...items].reverse().find(msg =>
-            msg.result
-            && !msg.result.needsClarification
+            hasDraftTasks(msg.result)
             && !msg.isConfirmed
             && !msg.isCancelled
             && !msg.isArchived
         );
 
     const isStoredDraft = (message: ChatMessage) =>
-        Boolean(message.result && !message.result.needsClarification);
+        hasDraftTasks(message.result);
 
     const handleSend = async () => {
         if (!input.trim() || !trialActive || loading) return;

@@ -1,9 +1,15 @@
-import { useTheme } from '../context/ThemeContext';
+import { useTheme, type ThemeMode } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import './SettingsPage.css';
 
+const THEME_OPTIONS: { value: ThemeMode; label: string; description: string; icon: string }[] = [
+    { value: 'light', label: 'Sáng', description: 'Giao diện sáng, phù hợp ban ngày', icon: 'sunny-outline' },
+    { value: 'dark', label: 'Tối', description: 'Giao diện tối, dễ chịu cho mắt', icon: 'moon-outline' },
+    { value: 'system', label: 'Theo hệ thống', description: 'Tự động theo cài đặt thiết bị', icon: 'desktop-outline' },
+];
+
 export default function SettingsPage() {
-    const { theme, toggleTheme } = useTheme();
+    const { theme, resolvedTheme, setTheme } = useTheme();
     const { user } = useAuth();
     const displayName = user?.fullName || user?.username || 'ORCA Roaster';
     const displayEmail = user?.email || (user?.username ? `${user.username}@orca-roastery.vn` : 'member@orca-roastery.vn');
@@ -121,16 +127,31 @@ export default function SettingsPage() {
                 <div>
                     <span className="settings-pill">Giao diện</span>
                     <h2>Chế độ hiển thị</h2>
-                    <p>{theme === 'dark' ? 'Đang dùng giao diện tối' : 'Đang dùng giao diện sáng'}</p>
+                    <p>
+                        {theme === 'system'
+                            ? `Đang theo hệ thống (${resolvedTheme === 'dark' ? 'tối' : 'sáng'})`
+                            : theme === 'dark'
+                                ? 'Đang dùng giao diện tối'
+                                : 'Đang dùng giao diện sáng'}
+                    </p>
                 </div>
-                <button className={`theme-toggle-btn ${theme}`} onClick={toggleTheme}>
-                    <span className="toggle-icon">
-                        {theme === 'dark'
-                            ? <ion-icon name="moon-outline" style={{ fontSize: '14px' }}></ion-icon>
-                            : <ion-icon name="sunny-outline" style={{ fontSize: '14px' }}></ion-icon>}
-                    </span>
-                    <span className="toggle-knob" />
-                </button>
+                <div className="settings-theme-options" role="radiogroup" aria-label="Chế độ hiển thị">
+                    {THEME_OPTIONS.map(opt => (
+                        <button
+                            key={opt.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={theme === opt.value}
+                            className={`settings-theme-option ${theme === opt.value ? 'active' : ''}`}
+                            onClick={() => setTheme(opt.value)}>
+                            <ion-icon name={opt.icon} style={{ fontSize: '18px' }}></ion-icon>
+                            <span>
+                                <strong>{opt.label}</strong>
+                                <small>{opt.description}</small>
+                            </span>
+                        </button>
+                    ))}
+                </div>
             </section>
         </div>
     );

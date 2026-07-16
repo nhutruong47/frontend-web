@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { productionService, goalService, taskService, teamService } from '../services/groupService';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { useChartPalette } from '../utils/chartTheme';
 
 function MetricPill({ label, value, unit, color }: { label: string; value: string | number; unit?: string; color?: string }) {
     return (
@@ -26,6 +27,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
 export default function ProductivityAnalyticsPage() {
     const { id } = useParams<{ id: string }>();
     const teamId = id || '';
+    const palette = useChartPalette();
 
     const today = new Date();
     const defaultStart = new Date(today);
@@ -81,8 +83,12 @@ export default function ProductivityAnalyticsPage() {
     const orderAnalytics = data?.orderAnalytics || [];
     const dailyTrend = data?.dailyTrend || [];
 
-    const MEMBER_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#f97316', '#14b8a6'];
-    const DONUT_COLORS = ['#16a34a', '#eab308', '#94a3b8'];
+    const MEMBER_COLORS = palette.categorical;
+    const DONUT_COLORS = [
+        palette.categorical[1] ?? palette.successSoft,
+        palette.categorical[2] ?? palette.warningSoft,
+        palette.muted,
+    ];
 
     const totalTasks = allTasks.length;
     const inProgressTasks = allTasks.filter(t => t.status === 'IN_PROGRESS').length;
@@ -131,7 +137,13 @@ export default function ProductivityAnalyticsPage() {
         'Thuc te': s.totalActualKg || 0,
     }));
 
-    const RISK_COLOR: Record<string, string> = { NONE: '#10b981', LOW: '#10b981', MEDIUM: '#f59e0b', HIGH: '#ef4444', CRITICAL: '#dc2626' };
+    const RISK_COLOR: Record<string, string> = {
+        NONE: palette.categorical[1] ?? palette.successSoft,
+        LOW: palette.categorical[1] ?? palette.successSoft,
+        MEDIUM: palette.categorical[2] ?? palette.warningSoft,
+        HIGH: palette.categorical[3] ?? palette.dangerSoft,
+        CRITICAL: '#dc2626',
+    };
 
     return (
         <div style={{ padding: '24px 28px', margin: '0 auto' }}>
@@ -177,9 +189,9 @@ export default function ProductivityAnalyticsPage() {
                         <SectionCard title="Hiệu suất nhân viên trong tuần">
                             <ResponsiveContainer width="100%" height={220}>
                                 <LineChart data={lineData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                    <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#94a3b8' }} />
-                                    <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} domain={[0, 100]} tickFormatter={v => `${v}%`} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} />
+                                    <XAxis dataKey="day" tick={{ fontSize: 12, fill: palette.muted }} />
+                                    <YAxis tick={{ fontSize: 12, fill: palette.muted }} domain={[0, 100]} tickFormatter={v => `${v}%`} />
                                     <Tooltip formatter={(v: any) => `${v}%`} />
                                     <Legend />
                                     {memberStats.map((m: any) => (
@@ -218,12 +230,12 @@ export default function ProductivityAnalyticsPage() {
                         <SectionCard title="So sánh thành viên">
                             <ResponsiveContainer width="100%" height={140}>
                                 <BarChart data={barData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} />
+                                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: palette.muted }} />
+                                    <YAxis tick={{ fontSize: 11, fill: palette.muted }} />
                                     <Tooltip />
-                                    <Bar dataKey="completed" fill="#d4a574" radius={[4, 4, 0, 0]} name="Hoàn thành" />
-                                    <Bar dataKey="tasks" fill="#e2e8f0" radius={[4, 4, 0, 0]} name="Tổng" />
+                                    <Bar dataKey="completed" fill={palette.primary} radius={[4, 4, 0, 0]} name="Hoàn thành" />
+                                    <Bar dataKey="tasks" fill={palette.grid} radius={[4, 4, 0, 0]} name="Tổng" />
                                 </BarChart>
                             </ResponsiveContainer>
                         </SectionCard>
@@ -238,13 +250,13 @@ export default function ProductivityAnalyticsPage() {
                     <SectionCard title="Xu huong San Xuat">
                         <ResponsiveContainer width="100%" height={220}>
                             <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                                <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-                                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-                                <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13 }} />
+                                <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} />
+                                <XAxis dataKey="date" tick={{ fontSize: 11, fill: palette.muted }} />
+                                <YAxis tick={{ fontSize: 11, fill: palette.muted }} />
+                                <Tooltip contentStyle={{ background: 'var(--bg-card)', border: `1px solid ${palette.grid}`, borderRadius: 10, fontSize: 13 }} />
                                 <Legend />
-                                <Line type="monotone" dataKey="Muc tieu (kg)" stroke="#94a3b8" strokeWidth={2} dot={false} />
-                                <Line type="monotone" dataKey="Thuc te (kg)" stroke="#10b981" strokeWidth={2} dot={false} />
+                                <Line type="monotone" dataKey="Muc tieu (kg)" stroke={palette.muted} strokeWidth={2} dot={false} />
+                                <Line type="monotone" dataKey="Thuc te (kg)" stroke={palette.categorical[1] ?? '#10b981'} strokeWidth={2} dot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                     </SectionCard>
@@ -257,13 +269,13 @@ export default function ProductivityAnalyticsPage() {
                     {stageData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={200}>
                             <BarChart data={stageData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                                <YAxis tick={{ fontSize: 11 }} />
-                                <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13 }} />
+                                <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} />
+                                <XAxis dataKey="name" tick={{ fontSize: 12, fill: palette.muted }} />
+                                <YAxis tick={{ fontSize: 11, fill: palette.muted }} />
+                                <Tooltip contentStyle={{ background: 'var(--bg-card)', border: `1px solid ${palette.grid}`, borderRadius: 10, fontSize: 13 }} />
                                 <Legend />
-                                <Bar dataKey="Muc tieu" fill="#e5e7eb" />
-                                <Bar dataKey="Thuc te" fill="#10b981" />
+                                <Bar dataKey="Muc tieu" fill={palette.grid} />
+                                <Bar dataKey="Thuc te" fill={palette.categorical[1] ?? '#10b981'} />
                             </BarChart>
                         </ResponsiveContainer>
                     ) : (

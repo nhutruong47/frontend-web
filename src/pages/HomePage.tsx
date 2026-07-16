@@ -814,11 +814,11 @@ export default function HomePage() {
             <div className="orca-footer-links">
               <h3 className="footer-heading">Hỗ trợ</h3>
               <ul>
-                <li><a href="#">Trung tâm trợ giúp</a></li>
-                <li><a href="#">Hướng dẫn sử dụng</a></li>
-                <li><a href="#">Cộng đồng ORCA</a></li>
-                <li><a href="#">Chính sách bảo mật</a></li>
-                <li><a href="#">Điều khoản dịch vụ</a></li>
+                <li><a href="#!" onClick={e => e.preventDefault()}>Trung tâm trợ giúp</a></li>
+                <li><a href="#!" onClick={e => e.preventDefault()}>Hướng dẫn sử dụng</a></li>
+                <li><a href="#!" onClick={e => e.preventDefault()}>Cộng đồng ORCA</a></li>
+                <li><a href="#!" onClick={e => e.preventDefault()}>Chính sách bảo mật</a></li>
+                <li><a href="#!" onClick={e => e.preventDefault()}>Điều khoản dịch vụ</a></li>
               </ul>
             </div>
 

@@ -41,9 +41,9 @@ export default function Layout() {
                     isActive: false
                 }));
                 setMessageGroups(mapped);
-            }).catch(console.error);
+            }).catch(() => { /* tolerated */ });
 
-            notificationService.getAll().then(setNotifications).catch(console.error);
+            notificationService.getAll().then(setNotifications).catch(() => { /* tolerated */ });
         }
     }, [user]);
 
@@ -178,7 +178,7 @@ export default function Layout() {
                                                     if (!notif.read) {
                                                         notificationService.markAsRead(notif.id).then(() => {
                                                             setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
-                                                        }).catch(console.error);
+                                                        }).catch(() => { /* tolerated */ });
                                                     }
                                                     if (notif.taskId) {
                                                         // Example navigation if there's a taskId
