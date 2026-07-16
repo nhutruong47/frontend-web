@@ -1878,10 +1878,10 @@ export default function MarketplacePage() {
                             </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <button className="fb-chat-action-btn" onClick={(e) => { e.stopPropagation(); alert('Tính năng gọi thoại đang được phát triển'); }}>
+                            <button className="fb-chat-action-btn" onClick={(e) => e.stopPropagation()} title="Tính năng gọi thoại sắp ra mắt" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
                                 <span className="material-symbols-outlined" style={{fontSize: 20}}>call</span>
                             </button>
-                            <button className="fb-chat-action-btn" onClick={(e) => { e.stopPropagation(); alert('Tính năng gọi video đang được phát triển'); }}>
+                            <button className="fb-chat-action-btn" onClick={(e) => e.stopPropagation()} title="Tính năng gọi video sắp ra mắt" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
                                 <span className="material-symbols-outlined" style={{fontSize: 20}}>videocam</span>
                             </button>
                             <button className="fb-chat-close" onClick={(e) => { e.stopPropagation(); setShowChatModal(false); }}>
@@ -1899,8 +1899,8 @@ export default function MarketplacePage() {
                         ))}
                     </div>
                     <div className="fb-chat-footer">
-                        <span className="material-symbols-outlined" style={{color: '#d4a574', cursor: 'pointer', fontSize: 24}} onClick={() => alert('Tính năng gửi file đang được phát triển')}>attach_file</span>
-                        <span className="material-symbols-outlined" style={{color: '#d4a574', cursor: 'pointer', fontSize: 24}} onClick={() => alert('Tính năng gửi ảnh đang được phát triển')}>image</span>
+                        <span className="material-symbols-outlined" style={{color: '#d4a574', opacity: 0.5, cursor: 'not-allowed', fontSize: 24}} title="Tính năng gửi file sắp ra mắt">attach_file</span>
+                        <span className="material-symbols-outlined" style={{color: '#d4a574', opacity: 0.5, cursor: 'not-allowed', fontSize: 24}} title="Tính năng gửi ảnh sắp ra mắt">image</span>
                         <input
                             className="fb-chat-input"
                             placeholder="Nhập tin nhắn..."

@@ -1691,19 +1691,10 @@ export default function GroupDetailPage() {
                                 </>
                             )}
                             {/* Nhóm nút hành động bên phải — gọn, kiểu Messenger */}
-                            <button onClick={() => alert('Tính năng gọi thoại đang được WebRTC hỗ trợ (sử dụng gọi Video để có tiếng và hình)')} style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', border: 'none', color: '#d4a574', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Gọi thoại" onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input, #f0f2f5)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            <button title="Tính năng gọi thoại sắp ra mắt" style={{ opacity: 0.5, cursor: 'not-allowed', width: 36, height: 36, borderRadius: '50%', background: 'transparent', border: 'none', color: '#d4a574', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <ion-icon name="call" style={{ fontSize: 20 }}></ion-icon>
                             </button>
-                            <button onClick={() => {
-                                setShowVideoCall(true);
-                                setTimeout(() => {
-                                    if (localVideoRef.current) {
-                                        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-                                            .then(stream => { if (localVideoRef.current) localVideoRef.current.srcObject = stream; })
-                                            .catch(err => console.error("WebRTC Error:", err));
-                                    }
-                                }, 500);
-                            }} style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', border: 'none', color: '#d4a574', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Gọi video" onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input, #f0f2f5)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            <button title="Tính năng gọi video sắp ra mắt" style={{ opacity: 0.5, cursor: 'not-allowed', width: 36, height: 36, borderRadius: '50%', background: 'transparent', border: 'none', color: '#d4a574', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <ion-icon name="videocam" style={{ fontSize: 20 }}></ion-icon>
                             </button>
 
@@ -3225,7 +3216,8 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                         link.click();
                                         link.remove();
                                     } catch (err) {
-                                        alert('Không thể xuất file Excel bảng lương.');
+                                        console.error(err);
+                                        alert('Lỗi: ' + (err instanceof Error ? err.message : 'Không thể xuất file Excel bảng lương.'));
                                     }
                                 }}
                                 style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
@@ -3242,8 +3234,9 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                     if (window.confirm(`Bạn có chắc chắn muốn thanh toán tổng cộng ${totalSalary.toLocaleString('vi-VN')} đ cho nhân viên?`)) {
                                         try {
                                             const res = await taskService.payoutSalary(teamId);
-                                            if (res.checkoutUrl) {
-                                                window.location.href = res.checkoutUrl;
+                                            const checkoutUrl = res.data?.checkoutUrl || (res as any).checkoutUrl;
+                                            if (checkoutUrl) {
+                                                window.open(checkoutUrl, '_blank');
                                             } else {
                                                 alert('Không nhận được URL thanh toán từ PayOS');
                                             }
