@@ -746,9 +746,7 @@ export default function MarketplacePage() {
         }, 1500);
     };
 
-    const handleOrderClick = (seller?: Team) => {
-        setSelectedSeller(seller || null);
-        setBuyerTeamId(myTeams[0]?.id || '');
+    const resetRfqForm = () => {
         setRfqStep(1);
         setRfqTitle('');
         setRfqRequestType(RFQ_SERVICE_OPTIONS[0].value);
@@ -767,6 +765,13 @@ export default function MarketplacePage() {
         setDeliveryTo('');
         setDeliveryFailureAction('RETRY_LATER');
         setDeliveryNote('');
+    };
+
+    const handleOrderClick = (seller?: Team) => {
+        setSelectedSeller(seller || null);
+        if (!buyerTeamId) {
+            setBuyerTeamId(myTeams[0]?.id || '');
+        }
         setShowOrderModal(true);
     };
 
@@ -903,6 +908,13 @@ export default function MarketplacePage() {
                     setManufacturingRequests(prev => [localRequest, ...prev]);
                 } finally {
                     setSubmitting(false);
+                    clearInterval(interval);
+                    setAiMatchingProgress(100);
+                    setTimeout(() => {
+                        setShowAiMatching(false);
+                        resetRfqForm();
+                        navigate('/orders');
+                    }, 1000);
                 }
             }, 2500);
 

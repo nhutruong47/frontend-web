@@ -45,6 +45,11 @@ export default function RegisterPage() {
             return;
         }
 
+        if (username.trim().length < 3) {
+            setError('Tên đăng nhập phải có ít nhất 3 ký tự!');
+            return;
+        }
+
         if (password.length < 6) {
             setError('Mật khẩu phải có ít nhất 6 ký tự!');
             return;
@@ -72,8 +77,13 @@ export default function RegisterPage() {
             navigate(finalUrl);
         } catch (err: unknown) {
             if (err && typeof err === 'object' && 'response' in err) {
-                const axiosErr = err as { response?: { data?: { error?: string } } };
-                setError(friendlyRegisterError(axiosErr.response?.data?.error));
+                const axiosErr = err as { response?: { data?: { error?: string, fields?: Record<string, string> } } };
+                if (axiosErr.response?.data?.fields && Object.keys(axiosErr.response.data.fields).length > 0) {
+                    const firstFieldErr = Object.values(axiosErr.response.data.fields)[0];
+                    setError(firstFieldErr);
+                } else {
+                    setError(friendlyRegisterError(axiosErr.response?.data?.error));
+                }
             } else {
                 setError('Không thể kết nối đến server!');
             }

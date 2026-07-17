@@ -426,6 +426,8 @@ export const inventoryService = {
         api.get<InventoryItem[]>(`/api/inventory?teamId=${teamId}`).then(r => r.data),
     create: (data: Partial<InventoryItem>) =>
         api.post<InventoryItem>('/api/inventory', data).then(r => r.data),
+    update: (id: string, data: Partial<InventoryItem>) =>
+        api.put<InventoryItem>(`/api/inventory/${id}`, data).then(r => r.data),
     updateQuantity: (id: string, quantity: number) =>
         api.patch<InventoryItem>(`/api/inventory/${id}/quantity`, { quantity }).then(r => r.data),
     delete: (id: string) =>

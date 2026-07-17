@@ -124,13 +124,16 @@ export default function GroupDetailPage() {
     // Inventory
     const [inventoryItems, setInventoryItems] = useState<any[]>([]);
     const [showAddInventory, setShowAddInventory] = useState(false);
+    const [showStockIn, setShowStockIn] = useState(false);
+    const [stockInItemId, setStockInItemId] = useState('');
+    const [stockInQty, setStockInQty] = useState('');
     const [invName, setInvName] = useState('');
     const [invQty, setInvQty] = useState('');
     const [invUnit, setInvUnit] = useState('');
     const [invThreshold, setInvThreshold] = useState('');
-    // For updating quantity inline
-    const [updatingInvId, setUpdatingInvId] = useState<string | null>(null);
-    const [updateInvQty, setUpdateInvQty] = useState('');
+    
+    // For editing inventory product info
+    const [editItem, setEditItem] = useState<any | null>(null);
 
     // Task Filtering
     const [taskFilter, setTaskFilter] = useState<'my' | 'all'>('all');
@@ -656,31 +659,51 @@ export default function GroupDetailPage() {
     };
 
     const handleAddInventory = async () => {
-        if (!id || !invName.trim() || !invQty) return;
+        if (!id || !invName.trim()) return;
         setLoading(true);
         try {
             await inventoryService.create({
                 teamId: id,
-                name: invName,
-                quantity: Number(invQty.replace(/\./g, '')),
+                displayName: invName,
+                productType: invName,
+                quantity: 0,
                 unit: invUnit || 'Cái',
                 lowStockThreshold: Number(invThreshold) || 10
             });
             const items = await inventoryService.getByTeam(id);
             setInventoryItems(items);
-            setInvName(''); setInvQty(''); setInvUnit(''); setInvThreshold(''); setShowAddInventory(false);
-        } catch (e: any) { alert(e?.response?.data?.error || 'Lỗi thêm hàng'); } finally { setLoading(false); }
+            setInvName(''); setInvUnit(''); setInvThreshold(''); setShowAddInventory(false);
+        } catch (e: any) { alert(e?.response?.data?.message || e?.response?.data?.error || 'Lỗi thêm hàng'); } finally { setLoading(false); }
     };
 
-    const handleUpdateInvQty = async (invId: string) => {
-        if (!id || !updateInvQty) return;
+    const handleStockIn = async () => {
+        if (!id || !stockInItemId || !stockInQty) return;
         setLoading(true);
         try {
-            await inventoryService.updateQuantity(invId, Number(updateInvQty.replace(/\./g, '')));
+            const item = inventoryItems.find(i => i.id === stockInItemId);
+            if (!item) return;
+            const newTotal = Number(item.quantity) + Number(stockInQty);
+            await inventoryService.updateQuantity(stockInItemId, newTotal);
             const items = await inventoryService.getByTeam(id);
             setInventoryItems(items);
-            setUpdatingInvId(null); setUpdateInvQty('');
-        } catch (e: any) { alert(e?.response?.data?.error || 'Lỗi cập nhật số lượng'); } finally { setLoading(false); }
+            setStockInItemId(''); setStockInQty(''); setShowStockIn(false);
+        } catch (e: any) { alert(e?.response?.data?.message || e?.response?.data?.error || 'Lỗi nhập kho'); } finally { setLoading(false); }
+    };
+
+    const handleEditInventory = async () => {
+        if (!id || !editItem || !editItem.name.trim()) return;
+        setLoading(true);
+        try {
+            await inventoryService.update(editItem.id, {
+                displayName: editItem.name,
+                quantity: Number(editItem.quantity),
+                unit: editItem.unit || 'Cái',
+                lowStockThreshold: Number(editItem.lowStockThreshold) || 10
+            });
+            const items = await inventoryService.getByTeam(id);
+            setInventoryItems(items);
+            setEditItem(null);
+        } catch (e: any) { alert(e?.response?.data?.message || e?.response?.data?.error || 'Lỗi cập nhật hàng'); } finally { setLoading(false); }
     };
 
     const handleDeleteInventory = async (invId: string) => {
@@ -1387,28 +1410,37 @@ export default function GroupDetailPage() {
                                                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                                                     <select value={t.memberId || ''} onChange={async e => {
                                                         const nextMemberId = e.target.value;
-                                                        if (!nextMemberId) return;
-                                                        let updatedTask;
-                                                        if (t.memberId && t.memberId !== nextMemberId) {
-                                                            const reason = window.prompt('Lý do chuyển giao công việc?', 'Điều phối lại nhân sự') || 'Điều phối lại nhân sự';
-                                                            updatedTask = await taskService.transfer(t.id, nextMemberId, reason);
-                                                        } else {
-                                                            updatedTask = await taskService.assign(t.id, nextMemberId);
+                                                        try {
+                                                            let updatedTask;
+                                                            if (!nextMemberId) {
+                                                                updatedTask = await taskService.assign(t.id, '');
+                                                            } else if (t.memberId && t.memberId !== nextMemberId) {
+                                                                const reason = window.prompt('Lý do chuyển giao công việc?', 'Điều phối lại nhân sự') || 'Điều phối lại nhân sự';
+                                                                updatedTask = await taskService.transfer(t.id, nextMemberId, reason);
+                                                            } else {
+                                                                updatedTask = await taskService.assign(t.id, nextMemberId);
+                                                            }
+                                                            if (updatedTask && updatedTask.id) {
+                                                                setAllTasks(prev => prev.map(tk => tk.id === updatedTask.id ? updatedTask : tk));
+                                                            }
+                                                            if (id) { const g = await goalService.getByTeam(id); setGoals(g); }
+                                                        } catch (error: any) {
+                                                            alert(error.response?.data?.message || error.message || 'Không thể giao việc');
                                                         }
-                                                        if (updatedTask && updatedTask.id) {
-                                                            setAllTasks(prev => prev.map(tk => tk.id === updatedTask.id ? updatedTask : tk));
-                                                        }
-                                                        if (id) { const g = await goalService.getByTeam(id); setGoals(g); }
                                                     }} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', minWidth: 100 }}>
                                                         <option value="">— Giao —</option>
                                                         {team?.members?.map(m => <option key={m.userId} value={m.userId}>{m.fullName || m.username}</option>)}
                                                     </select>
                                                     <select value={t.backupMemberId || ''} onChange={async e => {
-                                                        const updatedTask = await taskService.setBackup(t.id, e.target.value);
-                                                        if (updatedTask && updatedTask.id) {
-                                                            setAllTasks(prev => prev.map(tk => tk.id === updatedTask.id ? updatedTask : tk));
+                                                        try {
+                                                            const updatedTask = await taskService.setBackup(t.id, e.target.value);
+                                                            if (updatedTask && updatedTask.id) {
+                                                                setAllTasks(prev => prev.map(tk => tk.id === updatedTask.id ? updatedTask : tk));
+                                                            }
+                                                            if (id) { const g = await goalService.getByTeam(id); setGoals(g); }
+                                                        } catch (error: any) {
+                                                            alert(error.response?.data?.message || error.message || 'Không thể chọn người sao lưu');
                                                         }
-                                                        if (id) { const g = await goalService.getByTeam(id); setGoals(g); }
                                                     }} style={{ background: '#fff7ed', border: '1px solid #fde3c7', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', minWidth: 120, color: '#d97706' }}>
                                                         <option value="">— Sao lưu —</option>
                                                         {team?.members?.map(m => <option key={m.userId} value={m.userId}>{m.fullName || m.username}</option>)}
@@ -1467,9 +1499,14 @@ export default function GroupDetailPage() {
                 <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}><ion-icon name="cube-outline" style={{ fontSize: 18, verticalAlign: 'middle', marginRight: 6, color: '#d4a574' }}></ion-icon> KHO HÀNG ({inventoryItems.length})</h3>
                     {isAdmin && (
-                        <button onClick={() => setShowAddInventory(!showAddInventory)} style={{ background: '#d4a574', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <ion-icon name="add"></ion-icon> Nhập kho
-                        </button>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button onClick={() => setShowStockIn(true)} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <ion-icon name="add-circle"></ion-icon> Nhập kho
+                            </button>
+                            <button onClick={() => setShowAddInventory(true)} style={{ background: '#d4a574', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <ion-icon name="add"></ion-icon> Thêm sản phẩm
+                            </button>
+                        </div>
                     )}
                 </div>
 
@@ -1492,13 +1529,12 @@ export default function GroupDetailPage() {
                                     <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>Chưa có sản phẩm trong kho</p>
                                     <p style={{ fontSize: 14, marginBottom: 24 }}>Khi bạn nhập kho hoặc tạo sản phẩm mới, dữ liệu sẽ xuất hiện tại đây.</p>
                                     <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-                                        <button onClick={() => setShowAddInventory(true)} style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, cursor: 'pointer' }}>+ Nhập kho</button>
-                                        <button style={{ background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', fontWeight: 600, cursor: 'pointer' }}>+ Thêm sản phẩm</button>
+                                        <button onClick={() => setShowStockIn(true)} style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, cursor: 'pointer' }}>+ Nhập kho</button>
+                                        <button onClick={() => setShowAddInventory(true)} style={{ background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', fontWeight: 600, cursor: 'pointer' }}>+ Thêm sản phẩm</button>
                                     </div>
                                 </td>
                             </tr>
                         ) : inventoryItems.map(item => {
-                            const isUpdating = updatingInvId === item.id;
                             let statusColor = '#16a34a'; let statusBg = 'rgba(22, 163, 74, 0.15)'; let statusLabel = 'Còn hàng';
                             if (item.status === 'OUT_OF_STOCK') { statusColor = '#ef4444'; statusBg = 'rgba(239, 68, 68, 0.15)'; statusLabel = 'Hết hàng'; }
                             else if (item.status === 'LOW_STOCK') { statusColor = '#f59e0b'; statusBg = 'rgba(245, 158, 11, 0.15)'; statusLabel = 'Sắp hết'; }
@@ -1525,15 +1561,7 @@ export default function GroupDetailPage() {
                                         </div>
                                     </td>
                                     <td style={{ padding: '12px 16px' }}>
-                                        {isUpdating ? (
-                                            <div style={{ display: 'flex', gap: 6 }}>
-                                                <input type="text" value={updateInvQty} onChange={e => { const val = e.target.value.replace(/\./g, ''); if (!isNaN(Number(val))) setUpdateInvQty(val === '' ? '' : Number(val).toLocaleString('de-DE')); }} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)', width: 70, fontSize: 12 }} autoFocus />
-                                                <button onClick={() => handleUpdateInvQty(item.id)} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 6, padding: '0 8px', fontSize: 11, cursor: 'pointer' }}>OK</button>
-                                                <button onClick={() => setUpdatingInvId(null)} style={{ background: 'var(--bg-input)', color: 'var(--text-secondary)', border: 'none', borderRadius: 6, padding: '0 8px', fontSize: 11, cursor: 'pointer' }}>Hủy</button>
-                                            </div>
-                                        ) : (
-                                            <button onClick={() => { setUpdatingInvId(item.id); setUpdateInvQty(Number(item.quantity).toLocaleString('de-DE')); }} style={{ background: 'var(--bg-input)', color: 'var(--primary)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Chỉnh sửa</button>
-                                        )}
+                                        <button onClick={() => setEditItem({ ...item, name: item.displayName || item.name })} style={{ background: 'var(--bg-input)', color: 'var(--primary)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Chỉnh sửa</button>
                                     </td>
                                     <td style={{ padding: '12px 16px' }}>
                                         {isAdmin && <button onClick={() => handleDeleteInventory(item.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 16, opacity: 0.6 }}><ion-icon name="trash-outline"></ion-icon></button>}
@@ -2076,21 +2104,15 @@ export default function GroupDetailPage() {
             {showAddInventory && isAdmin && (
                 <div className="modal-overlay" onClick={() => setShowAddInventory(false)} style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 600, width: '90%', background: 'var(--bg-panel, #fff)', color: 'var(--text-primary, #1a1a1a)', borderRadius: 16, padding: '32px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
-                        <h2 style={{ margin: '0 0 24px', fontSize: 20 }}>Nhập hàng hóa mới</h2>
+                        <h2 style={{ margin: '0 0 24px', fontSize: 20 }}>Thêm sản phẩm mới</h2>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                             <div>
                                 <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Tên hàng hóa <span style={{ color: '#dc2626' }}>*</span></label>
                                 <input value={invName} onChange={e => setInvName(e.target.value)} placeholder="Ví dụ: Cà phê hạt loại A..." style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} autoFocus />
                             </div>
-                            <div style={{ display: 'flex', gap: 16 }}>
-                                <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Số lượng <span style={{ color: '#dc2626' }}>*</span></label>
-                                    <input type="text" value={invQty} onChange={e => { const val = e.target.value.replace(/\./g, ''); if (!isNaN(Number(val))) setInvQty(val === '' ? '' : Number(val).toLocaleString('de-DE')); }} placeholder="0" style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} />
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Đơn vị</label>
-                                    <input value={invUnit} onChange={e => setInvUnit(e.target.value)} placeholder="VD: kg, hộp..." style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} />
-                                </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Đơn vị</label>
+                                <input value={invUnit} onChange={e => setInvUnit(e.target.value)} placeholder="VD: kg, hộp..." style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} />
                             </div>
                             <div>
                                 <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Mức báo sắp hết</label>
@@ -2099,7 +2121,37 @@ export default function GroupDetailPage() {
                         </div>
                         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 32 }}>
                             <button onClick={() => setShowAddInventory(false)} style={{ padding: '12px 24px', borderRadius: 10, border: '1px solid var(--border, #e2e8f0)', background: 'transparent', color: 'var(--text-primary, #64748b)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
-                            <button onClick={handleAddInventory} disabled={loading || !invName.trim() || !invQty} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (loading || !invName.trim() || !invQty) ? 0.6 : 1 }}>
+                            <button onClick={handleAddInventory} disabled={loading || !invName.trim()} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (loading || !invName.trim()) ? 0.6 : 1 }}>
+                                {loading ? 'Đang lưu...' : 'Thêm sản phẩm'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Stock In Modal */}
+            {showStockIn && isAdmin && (
+                <div className="modal-overlay" onClick={() => setShowStockIn(false)} style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500, width: '90%', background: 'var(--bg-panel, #fff)', color: 'var(--text-primary, #1a1a1a)', borderRadius: 16, padding: '32px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                        <h2 style={{ margin: '0 0 24px', fontSize: 20 }}>Nhập kho</h2>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Chọn hàng hóa <span style={{ color: '#dc2626' }}>*</span></label>
+                                <select value={stockInItemId} onChange={e => setStockInItemId(e.target.value)} style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)' }}>
+                                    <option value="">-- Chọn hàng hóa --</option>
+                                    {inventoryItems.map(item => (
+                                        <option key={item.id} value={item.id}>{item.displayName || item.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Số lượng nhập thêm <span style={{ color: '#dc2626' }}>*</span></label>
+                                <input type="number" step="any" value={stockInQty} onChange={e => setStockInQty(e.target.value)} placeholder="0" style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)' }} autoFocus />
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 32 }}>
+                            <button onClick={() => setShowStockIn(false)} style={{ padding: '12px 24px', borderRadius: 10, border: '1px solid var(--border, #e2e8f0)', background: 'transparent', color: 'var(--text-primary, #64748b)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
+                            <button onClick={handleStockIn} disabled={loading || !stockInItemId || !stockInQty} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (loading || !stockInItemId || !stockInQty) ? 0.6 : 1 }}>
                                 {loading ? 'Đang lưu...' : 'Lưu vào kho'}
                             </button>
                         </div>
@@ -2127,6 +2179,41 @@ export default function GroupDetailPage() {
                     </div>
                 </div>
             )}
+            {/* Edit Inventory Modal */}
+            {editItem && isAdmin && (
+                <div className="modal-overlay" onClick={() => setEditItem(null)} style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 600, width: '90%', background: 'var(--bg-panel, #fff)', color: 'var(--text-primary, #1a1a1a)', borderRadius: 16, padding: '32px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                        <h2 style={{ margin: '0 0 24px', fontSize: 20 }}>Chỉnh sửa thông tin hàng hóa</h2>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Tên hàng hóa <span style={{ color: '#dc2626' }}>*</span></label>
+                                <input value={editItem.name} onChange={e => setEditItem({ ...editItem, name: e.target.value })} style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} autoFocus />
+                            </div>
+                            <div style={{ display: 'flex', gap: 16 }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Số lượng <span style={{ color: '#dc2626' }}>*</span></label>
+                                    <input type="number" step="any" value={editItem.quantity} onChange={e => setEditItem({ ...editItem, quantity: e.target.value })} style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Đơn vị</label>
+                                    <input value={editItem.unit} onChange={e => setEditItem({ ...editItem, unit: e.target.value })} style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} />
+                                </div>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Mức báo sắp hết</label>
+                                <input type="number" value={editItem.lowStockThreshold} onChange={e => setEditItem({ ...editItem, lowStockThreshold: e.target.value })} style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border, #cbd5e1)', fontSize: 15, outline: 'none', background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} />
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 32 }}>
+                            <button onClick={() => setEditItem(null)} style={{ padding: '12px 24px', borderRadius: 10, border: '1px solid var(--border, #e2e8f0)', background: 'transparent', color: 'var(--text-primary, #64748b)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
+                            <button onClick={handleEditInventory} disabled={loading || !editItem.name.trim()} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (loading || !editItem.name.trim()) ? 0.6 : 1 }}>
+                                {loading ? 'Đang lưu...' : 'Lưu thay đổi'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Stats Modal */}
             {showStatsModal && (
                 <div className="modal-overlay" onClick={() => setShowStatsModal(false)} style={{ background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(12px)', zIndex: 10000, position: 'fixed', inset: 0, display: 'grid', placeItems: 'center', transition: 'all 0.3s ease' }}>
