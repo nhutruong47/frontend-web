@@ -2,9 +2,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import LoadingFallback from './components/LoadingFallback';
+import ToastContainer from './components/ToastContainer';
 
 // Lazy-loaded route bundles.
 // Group key/large pages into a single chunk to keep the initial JS lean.
@@ -33,40 +35,43 @@ function App() {
         <BrowserRouter>
             <ThemeProvider>
                 <AuthProvider>
-                    <Suspense fallback={<LoadingFallback />}>
-                        <Routes>
-                            <Route path="/login" element={<LoginPage />} />
-                            <Route path="/register" element={<RegisterPage />} />
-                            <Route path="/oauth2/callback" element={<OAuth2Callback />} />
-                            <Route path="/invite" element={<InviteAcceptPage />} />
-                            <Route path="/invite/:code" element={<InviteAcceptPage />} />
+                    <ToastProvider>
+                        <Suspense fallback={<LoadingFallback />}>
+                            <Routes>
+                                <Route path="/login" element={<LoginPage />} />
+                                <Route path="/register" element={<RegisterPage />} />
+                                <Route path="/oauth2/callback" element={<OAuth2Callback />} />
+                                <Route path="/invite" element={<InviteAcceptPage />} />
+                                <Route path="/invite/:code" element={<InviteAcceptPage />} />
 
-                            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-                                <Route path="/dashboard" element={<DashboardPage />} />
-                                <Route path="/profile" element={<ProfilePage />} />
-                                <Route path="/groups" element={<GroupsPage />} />
-                                <Route path="/groups/:id" element={<GroupDetailPage />} />
-                                <Route path="/groups/:id/create-task" element={<CreateTaskPage />} />
-                                <Route path="/orders" element={<OrderManagementPage />} />
-                                <Route path="/admin" element={<AdminPage />} />
-                                <Route path="/settings" element={<SettingsPage />} />
-                                <Route path="/upgrade" element={<UpgradePlanPage />} />
-                                <Route path="/nang-cap-goi" element={<UpgradePlanPage />} />
-                                <Route path="/payment-result" element={<PaymentResultPage />} />
-                                <Route path="/vnpay-mock-checkout" element={<VnpayMockCheckoutPage />} />
-                            </Route>
+                                <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                                    <Route path="/dashboard" element={<DashboardPage />} />
+                                    <Route path="/profile" element={<ProfilePage />} />
+                                    <Route path="/groups" element={<GroupsPage />} />
+                                    <Route path="/groups/:id" element={<GroupDetailPage />} />
+                                    <Route path="/groups/:id/create-task" element={<CreateTaskPage />} />
+                                    <Route path="/orders" element={<OrderManagementPage />} />
+                                    <Route path="/admin" element={<AdminPage />} />
+                                    <Route path="/settings" element={<SettingsPage />} />
+                                    <Route path="/upgrade" element={<UpgradePlanPage />} />
+                                    <Route path="/nang-cap-goi" element={<UpgradePlanPage />} />
+                                    <Route path="/payment-result" element={<PaymentResultPage />} />
+                                    <Route path="/vnpay-mock-checkout" element={<VnpayMockCheckoutPage />} />
+                                </Route>
 
-                            <Route path="/marketplace" element={<ProtectedRoute><MarketplacePage /></ProtectedRoute>} />
-                            <Route path="/dat-hang" element={<ProtectedRoute><MarketplacePage /></ProtectedRoute>} />
-                            <Route path="/thi-truong-dat-hang" element={<ProtectedRoute><MarketplacePage /></ProtectedRoute>} />
-                            <Route path="/" element={<HomePage />} />
-                            <Route path="/ban-sac" element={<HomePage />} />
-                            <Route path="/san-pham" element={<Navigate to="/ban-sac#products" replace />} />
-                            <Route path="/cong-nghe" element={<Navigate to="/ban-sac#process" replace />} />
-                            <Route path="/lien-he" element={<Navigate to="/ban-sac#footer" replace />} />
-                            <Route path="*" element={<Navigate to="/" replace />} />
-                        </Routes>
-                    </Suspense>
+                                <Route path="/marketplace" element={<ProtectedRoute><MarketplacePage /></ProtectedRoute>} />
+                                <Route path="/dat-hang" element={<ProtectedRoute><MarketplacePage /></ProtectedRoute>} />
+                                <Route path="/thi-truong-dat-hang" element={<ProtectedRoute><MarketplacePage /></ProtectedRoute>} />
+                                <Route path="/" element={<HomePage />} />
+                                <Route path="/ban-sac" element={<HomePage />} />
+                                <Route path="/san-pham" element={<Navigate to="/ban-sac#products" replace />} />
+                                <Route path="/cong-nghe" element={<Navigate to="/ban-sac#process" replace />} />
+                                <Route path="/lien-he" element={<Navigate to="/ban-sac#footer" replace />} />
+                                <Route path="*" element={<Navigate to="/" replace />} />
+                            </Routes>
+                        </Suspense>
+                        <ToastContainer />
+                    </ToastProvider>
                 </AuthProvider>
             </ThemeProvider>
         </BrowserRouter>
