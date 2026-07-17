@@ -585,8 +585,8 @@ export default function OrderManagementPage() {
                                     <td style={{ padding: '12px' }}>
                                         {getStatusBadge(order)}
                                     </td>
-                                    <td style={{ padding: '12px', textAlign: 'right' }}>
-                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
+                                    <td className="order-actions-cell" style={{ padding: '12px', textAlign: 'right' }}>
+                                        <div className="order-actions" onClick={e => e.stopPropagation()}>
                                             {/* Inbound PENDING: Accept/Reject */}
                                             {activeTab === 'inbound' && (order.status === 'PENDING' || order.status === 'RFQ_CREATED') && !order.cancelRequested && (
                                                 <>

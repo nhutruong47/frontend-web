@@ -905,7 +905,7 @@ export default function CreateTaskPage() {
                                                     <strong>Mô tả:</strong> {msg.result?.description || msg.content}
                                                 </div>
                                                 {msg.isArchived || msg.isConfirmed || msg.isCancelled ? (
-                                                    <button onClick={(e) => { e.stopPropagation(); handleRevertDraft(msg.result!); }} style={{ width: '100%', padding: '8px', background: '#d4a574', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleRevertDraft(msg.result!); }} style={{ width: '100%', padding: '8px', background: '#b97820', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                                                         Tạo lại từ bản này
                                                     </button>
                                                 ) : (
@@ -1714,7 +1714,7 @@ export default function CreateTaskPage() {
                                     style={{
                                         flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 600,
                                         border: 'none', borderRight: level !== 'Cao' ? '1px solid var(--border)' : 'none',
-                                        background: priority === level ? '#d4a574' : 'transparent',
+                                        background: priority === level ? '#b97820' : 'transparent',
                                         color: priority === level ? '#ffffff' : 'var(--text-secondary)',
                                         cursor: 'pointer', transition: 'all 0.2s'
                                     }}
@@ -2420,7 +2420,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk, isConfirmed
                                         style={{
                                             flex: 1, padding: '12px 0', fontSize: 13, fontWeight: 700,
                                             border: 'none', borderRight: p !== 'High' ? '1px solid #f1f5f9' : 'none',
-                                            background: (editedResult.priority?.toLowerCase() || 'medium') === p.toLowerCase() ? '#d4a574' : 'transparent',
+                                            background: (editedResult.priority?.toLowerCase() || 'medium') === p.toLowerCase() ? '#b97820' : 'transparent',
                                             color: (editedResult.priority?.toLowerCase() || 'medium') === p.toLowerCase() ? '#fff' : '#64748b',
                                             cursor: 'pointer', transition: 'all 0.2s'
                                         }}
@@ -2471,7 +2471,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk, isConfirmed
                         </button>
                         <button
                             onClick={() => onConfirm(editedResult)}
-                            style={{ padding: '12px 32px', borderRadius: '12px', border: 'none', background: '#d4a574', color: '#fff', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(212,165,116,0.3)' }}
+                            style={{ padding: '12px 32px', borderRadius: '12px', border: 'none', background: '#b97820', color: '#fff', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(185,120,32,0.24)' }}
                         >
                             Lưu thay đổi
                         </button>

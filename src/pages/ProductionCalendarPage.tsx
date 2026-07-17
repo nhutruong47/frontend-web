@@ -1,13 +1,79 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { productionService } from '../services/groupService';
+import './ProductionCalendarPage.css';
 
-function ProgressBar({ value, max = 100, color }: { value: number; max?: number; color?: string }) {
-    const pct = Math.min(100, Math.max(0, (value / max) * 100));
-    const barColor = color || (pct >= 100 ? '#10b981' : pct >= 80 ? '#f59e0b' : '#ef4444');
+type CalendarStage = {
+    actualKg?: number;
+    targetKg?: number;
+    completionRate?: number;
+};
+
+type CalendarOrderRow = {
+    orderId: string;
+    orderCode?: string;
+    title?: string;
+    customerName?: string;
+    outputTarget?: number;
+    completedQuantity?: number;
+    remainingQuantity?: number;
+    progressPercent?: number;
+    riskLevel?: string;
+};
+
+type CalendarDay = {
+    date?: string;
+    totalActualKg?: number;
+    totalTargetKg?: number;
+    totalWorkerHours?: number;
+    totalWorkers?: number;
+    roast?: CalendarStage;
+    qc?: CalendarStage;
+    packaging?: CalendarStage;
+    orderRows?: CalendarOrderRow[];
+};
+
+type StageCell = {
+    value: number;
+    subValue: number;
+    progress: number;
+    suffix: string;
+    subSuffix?: string;
+};
+
+type StageRow = {
+    key: string;
+    label: string;
+    caption: string;
+    tone: string;
+    render: (day: CalendarDay) => StageCell;
+};
+
+const DAY_MS = 86400000;
+const numberFormat = new Intl.NumberFormat('vi-VN');
+
+const toDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const addDays = (date: Date, days: number) => new Date(date.getTime() + days * DAY_MS);
+
+const getMonday = (date: Date) => {
+    const start = new Date(date);
+    const day = start.getDay();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - (day === 0 ? 6 : day - 1));
+    return start;
+};
+
+function ProgressBar({ value, tone = 'good' }: { value: number; tone?: 'good' | 'warn' | 'bad' }) {
+    const pct = Math.min(100, Math.max(0, value || 0));
     return (
-        <div style={{ background: 'var(--bg-input)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
-            <div style={{ width: `${pct}%`, height: '100%', background: barColor, borderRadius: 4, transition: 'width 0.4s' }} />
+        <div className={`production-progress tone-${tone}`} aria-hidden="true">
+            <span style={{ width: `${pct}%` }} />
         </div>
     );
 }
@@ -15,331 +81,313 @@ function ProgressBar({ value, max = 100, color }: { value: number; max?: number;
 export default function ProductionCalendarPage() {
     const { id } = useParams<{ id: string }>();
     const teamId = id || '';
-
-    const today = new Date();
-    const defaultStart = new Date(today);
-    defaultStart.setDate(today.getDate() - today.getDay() + 1);
-    const defaultEnd = new Date(defaultStart);
-    defaultEnd.setDate(defaultStart.getDate() + 13);
-
-    const [weekStart, setWeekStart] = useState(() => defaultStart.toISOString().split('T')[0]);
-    const [calendar, setCalendar] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
+    const [weekStart, setWeekStart] = useState(() => toDateKey(getMonday(new Date())));
+    const [calendar, setCalendar] = useState<CalendarDay[]>([]);
+    const [loading, setLoading] = useState(true);
+
     useEffect(() => {
+        let mounted = true;
+
+        const loadCalendar = async () => {
+            setLoading(true);
+            try {
+                const start = weekStart;
+                const end = toDateKey(addDays(new Date(weekStart), 13));
+                const data = await productionService.getCalendarBoard(teamId, start, end);
+                if (mounted) setCalendar(data || []);
+            } catch {
+                if (mounted) setCalendar([]);
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        };
+
         loadCalendar();
+
+        return () => {
+            mounted = false;
+        };
     }, [teamId, weekStart]);
 
-    const loadCalendar = async () => {
-        setLoading(true);
-        try {
-            const start = weekStart;
-            const end = new Date(new Date(weekStart).getTime() + 13 * 86400000).toISOString().split('T')[0];
-            const data = await productionService.getCalendarBoard(teamId, start, end);
-            setCalendar(data || []);
-        } catch (e) { setCalendar([]); }
-        finally { setLoading(false); }
-    };
-
-    const prevWeek = () => {
-        const d = new Date(new Date(weekStart).getTime() - 14 * 86400000);
-        setWeekStart(d.toISOString().split('T')[0]);
-    };
-    const nextWeek = () => {
-        const d = new Date(new Date(weekStart).getTime() + 14 * 86400000);
-        setWeekStart(d.toISOString().split('T')[0]);
-    };
-    const thisWeek = () => {
-        const d = new Date();
-        d.setDate(today.getDate() - today.getDay() + 1);
-        setWeekStart(d.toISOString().split('T')[0]);
-    };
-
-    const formatWeekRange = () => {
+    const days = useMemo(() => {
         const start = new Date(weekStart);
-        const end = new Date(new Date(weekStart).getTime() + 13 * 86400000);
-        const fmt = (d: Date) => d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+        return Array.from({ length: 14 }, (_, index) => {
+            const date = addDays(start, index);
+            const key = toDateKey(date);
+            const data = calendar.find(item => item?.date?.startsWith(key)) || calendar[index] || {};
+            return { date, key, data };
+        });
+    }, [calendar, weekStart]);
+
+    const orderRows = useMemo(() => {
+        const rows = days.flatMap(day => day.data.orderRows || []);
+        return rows.filter((row, index, arr) => arr.findIndex(item => item.orderId === row.orderId) === index);
+    }, [days]);
+
+    const totals = useMemo(() => {
+        const target = days.reduce((sum, day) => sum + (day.data.totalTargetKg || 0), 0);
+        const actual = days.reduce((sum, day) => sum + (day.data.totalActualKg || 0), 0);
+        const hours = days.reduce((sum, day) => sum + (day.data.totalWorkerHours || 0), 0);
+        const risks = orderRows.filter(row => row.riskLevel && row.riskLevel !== 'NONE').length;
+        return {
+            target,
+            actual,
+            hours,
+            risks,
+            completion: target ? Math.round((actual / target) * 100) : 0,
+        };
+    }, [days, orderRows]);
+
+    const moveRange = (offset: number) => {
+        setWeekStart(toDateKey(addDays(new Date(weekStart), offset * 14)));
+    };
+
+    const thisWeek = () => setWeekStart(toDateKey(getMonday(new Date())));
+
+    const formatRange = () => {
+        const start = new Date(weekStart);
+        const end = addDays(start, 13);
+        const fmt = (date: Date) => date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
         return `${fmt(start)} - ${fmt(end)}`;
     };
 
-    const dayName = (d: Date) => ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][d.getDay()];
-    const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
-    const isToday = (d: Date) => {
-        const t = new Date();
-        return d.toDateString() === t.toDateString();
+    const stageRows: StageRow[] = [
+        {
+            key: 'total',
+            label: 'Tổng sản lượng',
+            caption: 'Thực tế / mục tiêu',
+            tone: 'neutral',
+            render: (day: CalendarDay) => ({
+                value: day.totalActualKg || 0,
+                subValue: day.totalTargetKg || 0,
+                progress: day.totalTargetKg ? ((day.totalActualKg || 0) / day.totalTargetKg) * 100 : 0,
+                suffix: 'kg',
+            }),
+        },
+        {
+            key: 'roast',
+            label: 'Công đoạn rang',
+            caption: 'Sản lượng hoàn thành',
+            tone: 'amber',
+            render: (day: CalendarDay) => ({
+                value: day.roast?.actualKg || 0,
+                subValue: day.roast?.targetKg || 0,
+                progress: day.roast?.completionRate || 0,
+                suffix: 'kg',
+            }),
+        },
+        {
+            key: 'qc',
+            label: 'Kiểm định QC',
+            caption: 'Đạt kiểm định',
+            tone: 'blue',
+            render: (day: CalendarDay) => ({
+                value: day.qc?.actualKg || 0,
+                subValue: day.qc?.targetKg || 0,
+                progress: day.qc?.completionRate || 0,
+                suffix: 'kg',
+            }),
+        },
+        {
+            key: 'packaging',
+            label: 'Đóng gói',
+            caption: 'Sẵn sàng xuất kho',
+            tone: 'violet',
+            render: (day: CalendarDay) => ({
+                value: day.packaging?.actualKg || 0,
+                subValue: day.packaging?.targetKg || 0,
+                progress: day.packaging?.completionRate || 0,
+                suffix: 'kg',
+            }),
+        },
+        {
+            key: 'workforce',
+            label: 'Nhân sự',
+            caption: 'Giờ công / số người',
+            tone: 'teal',
+            render: (day: CalendarDay) => ({
+                value: day.totalWorkerHours || 0,
+                subValue: day.totalWorkers || 0,
+                progress: 0,
+                suffix: 'giờ',
+                subSuffix: 'người',
+            }),
+        },
+    ];
+
+    const riskMeta: Record<string, { label: string; className: string }> = {
+        NONE: { label: 'Ổn định', className: 'risk-low' },
+        LOW: { label: 'Thấp', className: 'risk-low' },
+        MEDIUM: { label: 'Trung bình', className: 'risk-medium' },
+        HIGH: { label: 'Cao', className: 'risk-high' },
+        CRITICAL: { label: 'Khẩn cấp', className: 'risk-critical' },
     };
 
     return (
-        <div style={{ padding: 24, margin: '0 auto' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <button onClick={() => navigate(`/groups/${teamId}`)} style={{
-                        background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10,
-                        width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: 'var(--text-secondary)', fontSize: 18,
-                    }}>
+        <main className="production-calendar-page">
+            <header className="production-calendar-header">
+                <div className="production-calendar-title">
+                    <button type="button" onClick={() => navigate(`/groups/${teamId}`)} aria-label="Quay lại nhóm">
                         <ion-icon name="chevron-back-outline" />
                     </button>
                     <div>
-                        <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>Lich San Xuat</h1>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{formatWeekRange()}</p>
+                        <span>Lịch sản xuất</span>
+                        <h1>Kế hoạch 14 ngày</h1>
+                        <p>{formatRange()}</p>
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={prevWeek} style={{
-                        padding: '8px 16px', borderRadius: 10, border: '1px solid var(--border)',
-                        background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer'
-                    }}>← Truoc</button>
-                    <button onClick={thisWeek} style={{
-                        padding: '8px 16px', borderRadius: 10, border: '1px solid var(--border)',
-                        background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer', fontWeight: 600
-                    }}>Tuan nay</button>
-                    <button onClick={nextWeek} style={{
-                        padding: '8px 16px', borderRadius: 10, border: '1px solid var(--border)',
-                        background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer'
-                    }}>Sau →</button>
+
+                <div className="production-calendar-actions">
+                    <button type="button" onClick={() => moveRange(-1)}>
+                        <ion-icon name="chevron-back-outline" />
+                        Kỳ trước
+                    </button>
+                    <button type="button" className="is-primary" onClick={thisWeek}>
+                        Tuần này
+                    </button>
+                    <button type="button" onClick={() => moveRange(1)}>
+                        Kỳ sau
+                        <ion-icon name="chevron-forward-outline" />
+                    </button>
                 </div>
-            </div>
+            </header>
+
+            <section className="production-calendar-summary">
+                <article>
+                    <span>Mục tiêu</span>
+                    <strong>{numberFormat.format(totals.target)} kg</strong>
+                </article>
+                <article>
+                    <span>Thực tế</span>
+                    <strong>{numberFormat.format(totals.actual)} kg</strong>
+                </article>
+                <article>
+                    <span>Hoàn thành</span>
+                    <strong>{totals.completion}%</strong>
+                </article>
+                <article className={totals.risks > 0 ? 'has-risk' : ''}>
+                    <span>Đơn rủi ro</span>
+                    <strong>{totals.risks}</strong>
+                </article>
+                <article>
+                    <span>Giờ công</span>
+                    <strong>{totals.hours.toFixed(1)}</strong>
+                </article>
+            </section>
 
             {loading ? (
-                <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Dang tai...</div>
+                <section className="production-calendar-state">
+                    <ion-icon name="sync-outline" />
+                    <strong>Đang tải lịch sản xuất</strong>
+                </section>
             ) : (
-                <div style={{ overflowX: 'auto' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(14, minmax(120px, 1fr))', gap: 8, minWidth: 800 }}>
-                        {/* Header row */}
-                        {Array.from({ length: 14 }, (_, i) => {
-                            const d = new Date(new Date(weekStart).getTime() + i * 86400000);
-                            const day = calendar[i];
-                            return (
-                                <div key={i} style={{
-                                    background: isToday(d) ? 'rgba(139,92,246,0.1)' : isWeekend(d) ? 'rgba(0,0,0,0.03)' : 'var(--bg-card)',
-                                    border: `1px solid ${isToday(d) ? '#8b5cf6' : 'var(--border)'}`,
-                                    borderRadius: 10, padding: '12px 10px', textAlign: 'center'
-                                }}>
-                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{dayName(d)}</div>
-                                    <div style={{ fontSize: 16, fontWeight: 800, color: isToday(d) ? '#8b5cf6' : 'var(--text-primary)' }}>
-                                        {d.getDate()}
-                                    </div>
-                                    {day && (
-                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#10b981', marginTop: 4 }}>
-                                            {(day.totalActualKg || 0).toLocaleString('vi-VN')} kg
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-
-                        {/* Row 1: Tong target */}
-                        <div style={{ gridColumn: '1 / -1', marginTop: 8 }}>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Tong san luong (kg)</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(14, minmax(120px, 1fr))', gap: 8 }}>
-                                {Array.from({ length: 14 }, (_, i) => {
-                                    const d = new Date(new Date(weekStart).getTime() + i * 86400000);
-                                    const day = calendar[i];
-                                    const target = day?.totalTargetKg || 0;
-                                    const actual = day?.totalActualKg || 0;
-                                    const isSat = d.getDay() === 6 || d.getDay() === 0;
+                <>
+                    <section className="production-board" aria-label="Bảng lịch sản xuất 14 ngày">
+                        <div className="production-board__scroller">
+                            <div className="production-board__grid">
+                                <div className="production-board__corner">Công đoạn</div>
+                                {days.map(day => {
+                                    const isToday = toDateKey(new Date()) === day.key;
+                                    const isWeekend = day.date.getDay() === 0 || day.date.getDay() === 6;
                                     return (
-                                        <div key={i} style={{
-                                            background: isSat ? 'rgba(0,0,0,0.03)' : 'var(--bg-input)',
-                                            borderRadius: 8, padding: '8px 10px', minHeight: 60
-                                        }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>
-                                                <span>Muc tieu</span>
-                                            </div>
-                                            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
-                                                {target.toLocaleString('vi-VN')}
-                                            </div>
-                                            <div style={{ fontSize: 12, color: '#10b981', fontWeight: 600 }}>
-                                                Thuc te: {actual.toLocaleString('vi-VN')}
-                                            </div>
+                                        <div className={`production-day-head${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}`} key={day.key}>
+                                            <span>{day.date.toLocaleDateString('vi-VN', { weekday: 'short' })}</span>
+                                            <strong>{day.date.getDate()}</strong>
+                                            <em>{numberFormat.format(day.data.totalActualKg || 0)} kg</em>
                                         </div>
                                     );
                                 })}
-                            </div>
-                        </div>
 
-                        {/* Row 2: Cong doan Rang */}
-                        <div style={{ gridColumn: '1 / -1', marginTop: 8 }}>
-                            <div style={{ fontSize: 11, color: '#d97706', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Cong doan Rang</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(14, minmax(120px, 1fr))', gap: 8 }}>
-                                {Array.from({ length: 14 }, (_, i) => {
-                                    const d = new Date(new Date(weekStart).getTime() + i * 86400000);
-                                    const day = calendar[i];
-                                    const roast = day?.roast || {};
-                                    const isSat = d.getDay() === 6 || d.getDay() === 0;
-                                    return (
-                                        <div key={i} style={{
-                                            background: isSat ? 'rgba(0,0,0,0.03)' : 'rgba(217,119,6,0.05)',
-                                            border: '1px solid rgba(217,119,6,0.15)',
-                                            borderRadius: 8, padding: '8px 10px', minHeight: 60
-                                        }}>
-                                            <div style={{ fontSize: 14, fontWeight: 800, color: '#d97706' }}>
-                                                {(roast.actualKg || 0).toLocaleString('vi-VN')}
-                                            </div>
-                                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                                                / {(roast.targetKg || 0).toLocaleString('vi-VN')} kg
-                                            </div>
-                                            {roast.completionRate > 0 && (
-                                                <ProgressBar value={roast.completionRate} max={100} />
-                                            )}
+                                {stageRows.map(row => (
+                                    <div className="production-board__row" key={row.key}>
+                                        <div className={`production-stage-label tone-${row.tone}`}>
+                                            <strong>{row.label}</strong>
+                                            <span>{row.caption}</span>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Row 3: Cong doan QC */}
-                        <div style={{ gridColumn: '1 / -1', marginTop: 8 }}>
-                            <div style={{ fontSize: 11, color: '#3b82f6', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Cong doan QC</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(14, minmax(120px, 1fr))', gap: 8 }}>
-                                {Array.from({ length: 14 }, (_, i) => {
-                                    const d = new Date(new Date(weekStart).getTime() + i * 86400000);
-                                    const day = calendar[i];
-                                    const qc = day?.qc || {};
-                                    const isSat = d.getDay() === 6 || d.getDay() === 0;
-                                    return (
-                                        <div key={i} style={{
-                                            background: isSat ? 'rgba(0,0,0,0.03)' : 'rgba(59,130,246,0.05)',
-                                            border: '1px solid rgba(59,130,246,0.15)',
-                                            borderRadius: 8, padding: '8px 10px', minHeight: 60
-                                        }}>
-                                            <div style={{ fontSize: 14, fontWeight: 800, color: '#3b82f6' }}>
-                                                {(qc.actualKg || 0).toLocaleString('vi-VN')}
-                                            </div>
-                                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                                                / {(qc.targetKg || 0).toLocaleString('vi-VN')} kg
-                                            </div>
-                                            {qc.completionRate > 0 && (
-                                                <ProgressBar value={qc.completionRate} max={100} />
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Row 4: Cong doan Dong goi */}
-                        <div style={{ gridColumn: '1 / -1', marginTop: 8 }}>
-                            <div style={{ fontSize: 11, color: '#8b5cf6', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Cong doan Dong goi</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(14, minmax(120px, 1fr))', gap: 8 }}>
-                                {Array.from({ length: 14 }, (_, i) => {
-                                    const d = new Date(new Date(weekStart).getTime() + i * 86400000);
-                                    const day = calendar[i];
-                                    const pkg = day?.packaging || {};
-                                    const isSat = d.getDay() === 6 || d.getDay() === 0;
-                                    return (
-                                        <div key={i} style={{
-                                            background: isSat ? 'rgba(0,0,0,0.03)' : 'rgba(139,92,246,0.05)',
-                                            border: '1px solid rgba(139,92,246,0.15)',
-                                            borderRadius: 8, padding: '8px 10px', minHeight: 60
-                                        }}>
-                                            <div style={{ fontSize: 14, fontWeight: 800, color: '#8b5cf6' }}>
-                                                {(pkg.actualKg || 0).toLocaleString('vi-VN')}
-                                            </div>
-                                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                                                / {(pkg.targetKg || 0).toLocaleString('vi-VN')} kg
-                                            </div>
-                                            {pkg.completionRate > 0 && (
-                                                <ProgressBar value={pkg.completionRate} max={100} />
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Row 5: Gio cong */}
-                        <div style={{ gridColumn: '1 / -1', marginTop: 8 }}>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Gio cong & Nhan su</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(14, minmax(120px, 1fr))', gap: 8 }}>
-                                {Array.from({ length: 14 }, (_, i) => {
-                                    const d = new Date(new Date(weekStart).getTime() + i * 86400000);
-                                    const day = calendar[i];
-                                    const isSat = d.getDay() === 6 || d.getDay() === 0;
-                                    return (
-                                        <div key={i} style={{
-                                            background: isSat ? 'rgba(0,0,0,0.03)' : 'var(--bg-card)',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: 8, padding: '8px 10px', minHeight: 60
-                                        }}>
-                                            <div style={{ fontSize: 14, fontWeight: 800, color: '#8b5cf6' }}>
-                                                {(day?.totalWorkerHours || 0).toFixed(1)}
-                                            </div>
-                                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>gio</div>
-                                            <div style={{ fontSize: 12, color: '#10b981', fontWeight: 600, marginTop: 4 }}>
-                                                {day?.totalWorkers || 0} nguoi
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Don hang table */}
-            {calendar.length > 0 && (
-                <div style={{ marginTop: 32 }}>
-                    <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: 'var(--text-primary)' }}>Tong hop don hang trong tuan</h2>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: 'var(--bg-card)', borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                            <thead>
-                                <tr style={{ background: 'var(--bg-input)' }}>
-                                    {['Don hang', 'Khach hang', 'San luong', 'Da xong', 'Con lai', 'Tien do', 'Rui ro'].map(h => (
-                                        <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>{h}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {calendar.flatMap((day: any) => day?.orderRows || []).filter((v: any, i: number, arr: any[]) =>
-                                    arr.findIndex((r: any) => r.orderId === v.orderId) === i
-                                ).map((row: any) => {
-                                    const riskColors: Record<string, { bg: string; color: string }> = {
-                                        NONE: { bg: '#dcfce7', color: '#16a34a' },
-                                        LOW: { bg: '#dcfce7', color: '#16a34a' },
-                                        MEDIUM: { bg: '#fef3c7', color: '#d97706' },
-                                        HIGH: { bg: '#fee2e2', color: '#dc2626' },
-                                        CRITICAL: { bg: '#dc2626', color: '#fff' },
-                                    };
-                                    const risk = riskColors[row.riskLevel] || riskColors.LOW;
-                                    return (
-                                        <tr key={row.orderId} style={{ borderBottom: '1px solid var(--border)' }}>
-                                            <td style={{ padding: '12px 16px' }}>
-                                                <div style={{ fontWeight: 700, color: '#8b5cf6', fontSize: 12 }}>{row.orderCode}</div>
-                                                <div style={{ fontWeight: 600 }}>{row.title}</div>
-                                            </td>
-                                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{row.customerName || '-'}</td>
-                                            <td style={{ padding: '12px 16px', fontWeight: 600 }}>{row.outputTarget?.toLocaleString('vi-VN')} kg</td>
-                                            <td style={{ padding: '12px 16px', color: '#10b981', fontWeight: 700 }}>{row.completedQuantity?.toLocaleString('vi-VN')} kg</td>
-                                            <td style={{ padding: '12px 16px', color: '#ef4444', fontWeight: 600 }}>{row.remainingQuantity?.toLocaleString('vi-VN')} kg</td>
-                                            <td style={{ padding: '12px 16px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                    <div style={{ width: 60, background: 'var(--bg-input)', borderRadius: 4, height: 6 }}>
-                                                        <div style={{ width: `${row.progressPercent}%`, height: '100%', background: '#10b981', borderRadius: 4 }} />
-                                                    </div>
-                                                    <span style={{ fontWeight: 700, color: '#10b981', fontSize: 12 }}>{row.progressPercent?.toFixed(0)}%</span>
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '12px 16px' }}>
-                                                {row.riskLevel !== 'NONE' && (
-                                                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: risk.bg, color: risk.color }}>
-                                                        {row.riskLevel}
+                                        {days.map(day => {
+                                            const cell = row.render(day.data);
+                                            const progressTone = cell.progress >= 90 ? 'good' : cell.progress >= 65 ? 'warn' : 'bad';
+                                            return (
+                                                <article className={`production-cell tone-${row.tone}`} key={`${row.key}-${day.key}`}>
+                                                    <strong>
+                                                        {numberFormat.format(cell.value)}
+                                                        <small>{cell.suffix}</small>
+                                                    </strong>
+                                                    <span>
+                                                        / {numberFormat.format(cell.subValue)} {cell.subSuffix || cell.suffix}
                                                     </span>
-                                                )}
-                                                {row.riskLevel === 'NONE' && <span style={{ color: '#10b981', fontSize: 12 }}>On dinh</span>}
-                                            </td>
+                                                    {row.key !== 'workforce' && <ProgressBar value={cell.progress} tone={progressTone} />}
+                                                </article>
+                                            );
+                                        })}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="production-orders">
+                        <div className="production-orders__head">
+                            <div>
+                                <span>Đơn hàng</span>
+                                <h2>Tổng hợp trong kỳ</h2>
+                            </div>
+                            <strong>{orderRows.length} đơn</strong>
+                        </div>
+
+                        {orderRows.length === 0 ? (
+                            <div className="production-calendar-state is-compact">
+                                <ion-icon name="file-tray-outline" />
+                                <strong>Chưa có đơn hàng trong kỳ này</strong>
+                            </div>
+                        ) : (
+                            <div className="production-orders__table-wrap">
+                                <table className="production-orders__table">
+                                    <thead>
+                                        <tr>
+                                            <th>Đơn hàng</th>
+                                            <th>Khách hàng</th>
+                                            <th>Sản lượng</th>
+                                            <th>Tiến độ</th>
+                                            <th>Rủi ro</th>
                                         </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                                    </thead>
+                                    <tbody>
+                                        {orderRows.map(row => {
+                                            const risk = riskMeta[row.riskLevel || 'NONE'] || riskMeta.LOW;
+                                            const progress = row.progressPercent || 0;
+                                            return (
+                                                <tr key={row.orderId}>
+                                                    <td>
+                                                        <strong>{row.orderCode || 'Chưa có mã'}</strong>
+                                                        <span>{row.title || 'Đơn sản xuất'}</span>
+                                                    </td>
+                                                    <td>{row.customerName || '-'}</td>
+                                                    <td>
+                                                        <strong>{numberFormat.format(row.outputTarget || 0)} kg</strong>
+                                                        <span>Còn {numberFormat.format(row.remainingQuantity || 0)} kg</span>
+                                                    </td>
+                                                    <td>
+                                                        <div className="production-order-progress">
+                                                            <ProgressBar value={progress} tone={progress >= 90 ? 'good' : progress >= 65 ? 'warn' : 'bad'} />
+                                                            <span>{progress.toFixed(0)}%</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <mark className={risk.className}>{risk.label}</mark>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </section>
+                </>
             )}
-        </div>
+        </main>
     );
 }

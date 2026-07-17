@@ -4,7 +4,6 @@ import { inventoryService } from '../services/groupService';
 import { teamService } from '../services/groupService';
 import { useToast } from '../context/ToastContext';
 import type { InventoryItem, Team } from '../types/types';
-import EmptyState from '../components/EmptyState';
 
 const PRODUCT_TYPES = [
     'Arabica',

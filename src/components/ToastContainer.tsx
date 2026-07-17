@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
+import type { ReactElement } from 'react';
 import { createPortal } from 'react-dom';
 import { useToast, type Toast as ToastType } from '../context/ToastContext';
 
-const ICONS: Record<string, JSX.Element> = {
+const ICONS: Record<string, ReactElement> = {
   success: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />

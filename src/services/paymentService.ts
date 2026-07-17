@@ -1,6 +1,22 @@
 import api from './api';
 import type { SubscriptionPlan } from '../types/types';
 
+export function normalizeSubscriptionPlan(plan: SubscriptionPlan): SubscriptionPlan {
+    const normalized: SubscriptionPlan = {
+        ...plan,
+        users: plan.users ?? plan.maxUsers ?? 0,
+        orders: plan.orders ?? plan.maxOrders ?? 0,
+        workshops: plan.workshops ?? plan.maxWorkshops ?? 0,
+        ai: plan.ai ?? plan.aiLimit ?? 0,
+    };
+
+    if (!normalized.period) {
+        normalized.period = 'Tháng';
+    }
+
+    return normalized;
+}
+
 export interface CreateVnpayPaymentResponse {
     paymentUrl: string;
     txnRef: string;
@@ -48,7 +64,7 @@ export interface VirtualQrPaymentResponse {
 export const paymentService = {
     async getPlans(): Promise<SubscriptionPlan[]> {
         const response = await api.get<SubscriptionPlan[]>('/api/payments/plans');
-        return response.data;
+        return response.data.map(normalizeSubscriptionPlan);
     },
 
     async createVnpayPayment(planId: string): Promise<CreateVnpayPaymentResponse> {

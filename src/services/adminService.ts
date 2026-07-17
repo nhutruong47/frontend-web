@@ -1,5 +1,6 @@
 import api from './api';
 import type { AdminOrder, AdminOverview, AdminPayment, AdminTask, AdminTeam, AdminUser, PageResponse, SubscriptionPlan, SystemLog } from '../types/types';
+import { normalizeSubscriptionPlan } from './paymentService';
 
 export const adminService = {
     getOverview: () =>
@@ -27,7 +28,7 @@ export const adminService = {
     updateTaskStatus: (id: string, status: string) =>
         api.patch(`/api/admin/tasks/${id}/status`, { status }).then(r => r.data),
     getPlans: () =>
-        api.get<SubscriptionPlan[]>('/api/admin/plans').then(r => r.data),
+        api.get<SubscriptionPlan[]>('/api/admin/plans').then(r => r.data.map(normalizeSubscriptionPlan)),
     createPlan: (plan: SubscriptionPlan) =>
         api.post<SubscriptionPlan>('/api/admin/plans', plan).then(r => r.data),
     updatePlan: (id: string, plan: SubscriptionPlan) =>

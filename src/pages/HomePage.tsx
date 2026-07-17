@@ -198,11 +198,11 @@ const workshops = [
 
 const pricingPlans = [
   {
-    id: 'starter',
-    name: 'Cơ bản',
+    id: 'free',
+    name: 'Free',
     price: '0đ',
     priceNote: '/tháng',
-    subTitle: 'AI quản lý công việc',
+    subTitle: 'AI quản lý công việc miễn phí',
     description: 'Dành cho xưởng nhỏ',
     features: [
       'AI tạo task từ đơn hàng',
@@ -211,11 +211,11 @@ const pricingPlans = [
       'Quản lý đơn hàng và batch',
       'Báo cáo vận hành cơ bản',
     ],
-    accent: 'starter',
+    accent: 'free',
   },
   {
-    id: 'professional',
-    name: 'Chuyên nghiệp',
+    id: 'plus',
+    name: 'Plus',
     price: '129.000đ',
     priceNote: '/tháng',
     subTitle: 'AI điều phối sản xuất',
@@ -727,7 +727,7 @@ export default function HomePage() {
                 className="plan-action"
                 onClick={() => navigate('/login?returnUrl=/upgrade')}
               >
-                {plan.id === 'starter' ? 'Bắt đầu' : 'Nâng cấp ngay'}
+                {plan.id === 'free' ? 'Bắt đầu' : 'Nâng cấp ngay'}
               </button>
 
               <ul className="plan-features">

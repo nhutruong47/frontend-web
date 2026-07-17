@@ -18,6 +18,7 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const GroupsPage = lazy(() => import('./pages/GroupsPage'));
 const GroupDetailPage = lazy(() => import('./pages/GroupDetailPage'));
 const CreateTaskPage = lazy(() => import('./pages/CreateTaskPage'));
+const ProductionCalendarPage = lazy(() => import('./pages/ProductionCalendarPage'));
 const InviteAcceptPage = lazy(() => import('./pages/InviteAcceptPage'));
 const MarketplacePage = lazy(() => import('./pages/MarketplacePage'));
 const OrderManagementPage = lazy(() => import('./pages/OrderManagementPage'));
@@ -50,6 +51,7 @@ function App() {
                                     <Route path="/groups" element={<GroupsPage />} />
                                     <Route path="/groups/:id" element={<GroupDetailPage />} />
                                     <Route path="/groups/:id/create-task" element={<CreateTaskPage />} />
+                                    <Route path="/groups/:id/calendar" element={<ProductionCalendarPage />} />
                                     <Route path="/orders" element={<OrderManagementPage />} />
                                     <Route path="/admin" element={<AdminPage />} />
                                     <Route path="/settings" element={<SettingsPage />} />

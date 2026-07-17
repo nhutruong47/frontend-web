@@ -40,6 +40,9 @@ export default function UpgradePlanPage() {
     }
 
     const formatPrice = (price: number) => {
+        if (price === 0) {
+            return 'Free';
+        }
         return price.toLocaleString('vi-VN') + 'đ';
     };
 
@@ -73,12 +76,12 @@ export default function UpgradePlanPage() {
                             
                             <div className="pricing-price">
                                 <strong>{formatPrice(plan.price)}</strong>
-                                <span>/{plan.period || 'Tháng'}</span>
+                                {plan.price > 0 && <span>/{plan.period || 'Tháng'}</span>}
                             </div>
 
                             <div className="pricing-subtitle">
                                 <strong>Giới hạn: {plan.users} NV, {plan.workshops} Xưởng</strong>
-                                <span>{plan.ai > 0 ? `+${plan.ai} AI Tokens` : ''}</span>
+                                <span>{plan.ai > 0 ? `+${plan.ai} AI Tokens` : 'Bao gồm lượt AI miễn phí'}</span>
                             </div>
 
                             <button
@@ -86,7 +89,7 @@ export default function UpgradePlanPage() {
                                 className="pricing-action"
                                 onClick={() => handleSelectPlan(plan)}
                             >
-                                {plan.price === 0 ? 'Bắt đầu' : 'Nâng cấp ngay'}
+                                {plan.price === 0 ? 'Gói mặc định' : 'Nâng cấp ngay'}
                             </button>
 
                             <ul className="pricing-features">
@@ -108,4 +111,3 @@ export default function UpgradePlanPage() {
         </div>
     );
 }
-

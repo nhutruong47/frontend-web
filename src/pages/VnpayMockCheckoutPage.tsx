@@ -6,7 +6,9 @@ import { paymentService, type PaymentMethod, type VirtualQrPaymentResponse } fro
 import './VnpayMockCheckoutPage.css';
 
 const planMap: Record<string, { name: string; amount: number }> = {
-    professional: { name: 'Chuyên nghiệp', amount: 129000 },
+    free: { name: 'Free', amount: 0 },
+    plus: { name: 'Plus', amount: 129000 },
+    professional: { name: 'Plus', amount: 129000 },
     enterprise: { name: 'Doanh nghiệp', amount: 249000 },
 };
 
@@ -82,8 +84,8 @@ function RealQr({ payload, label }: { payload: string; label: string }) {
 export default function VnpayMockCheckoutPage() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const planId = searchParams.get('planId') || 'professional';
-    const plan = planMap[planId] ?? planMap.professional;
+    const planId = searchParams.get('planId') || 'plus';
+    const plan = planMap[planId] ?? planMap.plus;
     const methodParam = searchParams.get('method')?.toUpperCase();
     const method: PaymentMethod = methodParam === 'MB_BANK' ? 'MB_BANK' : 'VNPAY';
     const config = methodConfig[method];

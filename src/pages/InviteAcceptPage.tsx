@@ -236,9 +236,9 @@ export default function InviteAcceptPage() {
                         onClick={() => navigate('/login')}
                         style={{
                             width: '100%', padding: '14px', borderRadius: 12,
-                            border: 'none', background: '#d4a574',
+                            border: 'none', background: '#b97820',
                             color: '#ffffff', fontWeight: 700, fontSize: 15, cursor: 'pointer',
-                            boxShadow: '0 10px 15px -3px rgba(212,165,116,0.3)'
+                            boxShadow: '0 10px 15px -3px rgba(185,120,32,0.24)'
                         }}
                     >
                         <ion-icon name="arrow-back-outline" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: 6 }}></ion-icon> Về trang đăng nhập

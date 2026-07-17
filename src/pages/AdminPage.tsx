@@ -201,7 +201,7 @@ function StatusBadge({ value }: { value: string }) {
   if (['active', 'paid', 'approved', 'published', 'completed', 'success'].includes(lower)) type = 'success';
   if (['pending', 'trial', 'processing'].includes(lower)) type = 'warning';
   if (['locked', 'failed', 'rejected', 'suspended', 'canceled', 'rejected_order'].includes(lower)) type = 'danger';
-  if (['admin', 'professional', 'enterprise', 'factory_owner'].includes(lower)) type = 'info';
+  if (['admin', 'plus', 'professional', 'enterprise', 'factory_owner'].includes(lower)) type = 'info';
 
   const labels: Record<string, string> = {
     Active: 'Đang hoạt động', Trial: 'Dùng thử', Locked: 'Đã khóa',
@@ -210,7 +210,7 @@ function StatusBadge({ value }: { value: string }) {
     PAID: 'Đã thanh toán', FAILED: 'Thất bại', REFUNDED: 'Hoàn tiền',
     Published: 'Công khai', Private: 'Nội bộ',
     ADMIN: 'Admin Nền Tảng', MEMBER: 'Thành viên', FACTORY_OWNER: 'Chủ xưởng',
-    free: 'Miễn phí', professional: 'Chuyên nghiệp', enterprise: 'Doanh nghiệp',
+    free: 'Miễn phí', plus: 'Plus', professional: 'Plus', enterprise: 'Doanh nghiệp',
     SUCCESS: 'Thành công'
   };
 
@@ -350,7 +350,7 @@ export default function AdminPage() {
       .sort((a, b) => a.time - b.time);
       
     const planMap = paidPayments.reduce<Record<string, number>>((acc, item) => {
-      const planName = !item.planId || item.planId === 'free' ? 'Dùng thử' : item.planId === 'professional' ? 'Chuyên nghiệp' : item.planId === 'enterprise' ? 'Doanh nghiệp' : item.planId;
+      const planName = !item.planId || item.planId === 'free' ? 'Free' : (item.planId === 'professional' || item.planId === 'plus') ? 'Plus' : item.planId === 'enterprise' ? 'Doanh nghiệp' : item.planId;
       acc[planName] = (acc[planName] || 0) + Number(item.amount);
       return acc;
     }, {});

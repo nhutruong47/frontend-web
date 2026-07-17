@@ -3528,6 +3528,36 @@
   flex: 0 0 14px;
 }
 
+.order-actions-cell {
+  min-width: 150px;
+  vertical-align: middle;
+}
+
+.order-actions {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  justify-content: end;
+  align-items: center;
+  gap: 6px;
+}
+
+.order-actions .btn,
+.order-actions .order-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 12px !important;
+  font-size: 0.8rem !important;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.order-actions .order-cancel-btn {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+
 .order-cancel-btn {
   display: inline-flex;
   align-items: center;
@@ -4056,9 +4086,34 @@
   min-height: 66px;
   padding-left: 54px;
   font-size: 1.08rem;
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.17);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.24);
   border-radius: 8px;
+  color: #fff7ec !important;
+  caret-color: #f4b879;
+  -webkit-text-fill-color: #fff7ec;
+}
+
+.login-split .login-input-wrap input::placeholder {
+  color: rgba(255, 247, 236, 0.58) !important;
+  -webkit-text-fill-color: rgba(255, 247, 236, 0.58);
+}
+
+.login-split .login-input-wrap input:focus {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(244, 184, 121, 0.72);
+  box-shadow: 0 0 0 3px rgba(244, 184, 121, 0.18);
+  color: #fffaf2 !important;
+  -webkit-text-fill-color: #fffaf2;
+}
+
+.login-split .login-input-wrap input:-webkit-autofill,
+.login-split .login-input-wrap input:-webkit-autofill:hover,
+.login-split .login-input-wrap input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #fffaf2;
+  caret-color: #f4b879;
+  box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.1) inset;
+  transition: background-color 9999s ease-out;
 }
 
 .login-btn-primary,

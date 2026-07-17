@@ -402,6 +402,9 @@ export interface InventoryItem {
     id: string;
     teamId: string;
     name: string;
+    displayName?: string;
+    productType?: string;
+    productState?: string;
     quantity: number;
     unit: string;
     lowStockThreshold: number;
@@ -449,6 +452,11 @@ export interface SubscriptionPlan {
     orders: number;
     workshops: number;
     ai: number;
+    maxUsers?: number;
+    maxOrders?: number;
+    maxBatches?: number;
+    maxWorkshops?: number;
+    aiLimit?: number;
     features: string;
 }
 

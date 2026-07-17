@@ -11,6 +11,7 @@ import { Client } from '@stomp/stompjs';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { estimateTokens, formatTokenCount } from '../utils/tokenUsage';
+import './GroupDetailPage.css';
 
 function getInitials(name: string) {
     return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -128,7 +129,6 @@ export default function GroupDetailPage() {
     const [stockInItemId, setStockInItemId] = useState('');
     const [stockInQty, setStockInQty] = useState('');
     const [invName, setInvName] = useState('');
-    const [invQty, setInvQty] = useState('');
     const [invUnit, setInvUnit] = useState('');
     const [invThreshold, setInvThreshold] = useState('');
     
@@ -140,8 +140,21 @@ export default function GroupDetailPage() {
 
     const [showStatsModal, setShowStatsModal] = useState(false);
     const [showScheduleModal, setShowScheduleModal] = useState(false);
-    const [calendarDate, setCalendarDate] = useState(new Date(2026, 5, 20));
-    const [selectedCalendarDay, setSelectedCalendarDay] = useState<number>(20);
+    const [calendarDate, setCalendarDate] = useState(() => {
+        const today = new Date();
+        return new Date(today.getFullYear(), today.getMonth(), 1);
+    });
+    const [selectedCalendarDate, setSelectedCalendarDate] = useState(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return today;
+    });
+    const selectedCalendarDay = selectedCalendarDate.getDate();
+    const setSelectedCalendarDay = (day: number) => {
+        const next = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), day);
+        next.setHours(0, 0, 0, 0);
+        setSelectedCalendarDate(next);
+    };
 
     // Chat
     const [chatTab, setChatTab] = useState<'group' | 'dm'>('group');
@@ -206,9 +219,17 @@ export default function GroupDetailPage() {
                 .then(taskArrays => setAllTasks(taskArrays.flat()))
                 .catch(() => { });
         }).catch(() => { });
-        inventoryService.getByTeam(id).then(data => { setInventoryItems(data || []); }).catch(() => { });
         getTrialStatus().then(s => { setTrialActive(s.aiTrialActive); setTrialDays(s.daysRemaining); }).catch(() => { });
     }, [id]);
+
+    useEffect(() => {
+        if (!id || !team) return;
+        if (!isAdmin) {
+            setInventoryItems([]);
+            return;
+        }
+        inventoryService.getByTeam(id).then(data => { setInventoryItems(data || []); }).catch(() => { });
+    }, [id, team?.id, isAdmin]);
 
     // Attendance state
     const [myAttendance, setMyAttendance] = useState<any>(null);
@@ -597,8 +618,10 @@ export default function GroupDetailPage() {
                 const g = await goalService.getByTeam(id);
                 setGoals(g);
                 Promise.all(g.map(goal => taskService.getByGoal(goal.id))).then(a => setAllTasks(a.flat()));
-                const inv = await inventoryService.getByTeam(id);
-                setInventoryItems(inv || []);
+                if (isAdmin) {
+                    const inv = await inventoryService.getByTeam(id);
+                    setInventoryItems(inv || []);
+                }
             }
             cancelEditTask();
         } catch (e: any) { setError(e?.response?.data?.error || 'Lỗi'); } finally { setLoading(false); }
@@ -659,7 +682,7 @@ export default function GroupDetailPage() {
     };
 
     const handleAddInventory = async () => {
-        if (!id || !invName.trim()) return;
+        if (!isAdmin || !id || !invName.trim()) return;
         setLoading(true);
         try {
             await inventoryService.create({
@@ -677,7 +700,7 @@ export default function GroupDetailPage() {
     };
 
     const handleStockIn = async () => {
-        if (!id || !stockInItemId || !stockInQty) return;
+        if (!isAdmin || !id || !stockInItemId || !stockInQty) return;
         setLoading(true);
         try {
             const item = inventoryItems.find(i => i.id === stockInItemId);
@@ -691,7 +714,7 @@ export default function GroupDetailPage() {
     };
 
     const handleEditInventory = async () => {
-        if (!id || !editItem || !editItem.name.trim()) return;
+        if (!isAdmin || !id || !editItem || !editItem.name.trim()) return;
         setLoading(true);
         try {
             await inventoryService.update(editItem.id, {
@@ -707,6 +730,7 @@ export default function GroupDetailPage() {
     };
 
     const handleDeleteInventory = async (invId: string) => {
+        if (!isAdmin) return;
         if (!confirm('Xóa mặt hàng này khỏi kho?')) return;
         try {
             await inventoryService.delete(invId);
@@ -834,9 +858,14 @@ export default function GroupDetailPage() {
                                 <ion-icon name="exit-outline"></ion-icon> Tan ca
                             </button>
                         ) : (
-                            <span style={{ fontSize: 12, fontWeight: 700, color: '#10b981', padding: '6px 12px', background: 'rgba(16,185,129,0.1)', borderRadius: 8 }}>
-                                ✓ Đã hoàn thành ca
-                            </span>
+                            <button
+                                onClick={handleCheckIn}
+                                disabled={loadingAttendance}
+                                title="Ca trước đã hoàn thành, bấm để vào ca mới"
+                                style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.35)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: '#059669' }}
+                            >
+                                <ion-icon name="enter-outline"></ion-icon> Vào ca lại
+                            </button>
                         )
                     )}
 
@@ -864,7 +893,13 @@ export default function GroupDetailPage() {
                         </button>
                     )}
 
-                    <button onClick={() => setShowScheduleModal(true)} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }} id="btn-schedule-modal"><ion-icon name="calendar-outline"></ion-icon> Lịch sản xuất</button>
+                    <button onClick={() => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        setCalendarDate(new Date(today.getFullYear(), today.getMonth(), 1));
+                        setSelectedCalendarDate(today);
+                        setShowScheduleModal(true);
+                    }} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }} id="btn-schedule-modal"><ion-icon name="calendar-outline"></ion-icon> Lịch sản xuất</button>
                     <button onClick={() => setShowChat(!showChat)} style={{ position: 'relative', background: unreadTotal > 0 ? '#fff7ed' : 'var(--bg-input)', border: unreadTotal > 0 ? '1px solid #fed7aa' : '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)' }}><ion-icon name={unreadTotal > 0 ? 'chatbubbles' : 'chatbubbles-outline'}></ion-icon> Nhắn tin {renderUnreadBadge(unreadTotal)}</button>
                     {isAdmin && <button onClick={() => setShowMemberRoles(!showMemberRoles)} style={{ background: showMemberRoles ? '#fff7ed' : 'var(--bg-input)', border: showMemberRoles ? '1px solid #fed7aa' : '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: showMemberRoles ? '#d97706' : 'var(--text-secondary)' }}><ion-icon name="id-card-outline"></ion-icon> Phân vai trò</button>}
 
@@ -1123,7 +1158,7 @@ export default function GroupDetailPage() {
                                         <ion-icon name="time-outline"></ion-icon> Lịch sử xác nhận
                                     </button>
                                 )}
-                                <button onClick={() => { if (!selectedGoalId && goals.length > 0) setSelectedGoalId(goals[0].id); setShowAddTask(!showAddTask); }} style={{ background: '#d4a574', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <button onClick={() => { if (!selectedGoalId && goals.length > 0) setSelectedGoalId(goals[0].id); setShowAddTask(!showAddTask); }} style={{ background: '#b97820', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                                     <ion-icon name="add"></ion-icon> Thêm mới
                                 </button>
                             </div>
@@ -1141,7 +1176,7 @@ export default function GroupDetailPage() {
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
                                 border: 'none',
-                                background: taskFilter === 'my' ? '#d4a574' : '#f1f5f9',
+                                background: taskFilter === 'my' ? '#b97820' : '#f1f5f9',
                                 color: taskFilter === 'my' ? '#fff' : '#64748b',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -1171,7 +1206,7 @@ export default function GroupDetailPage() {
                                     cursor: 'pointer',
                                     transition: 'all 0.2s',
                                     border: 'none',
-                                    background: taskFilter === 'all' ? '#d4a574' : '#f1f5f9',
+                                    background: taskFilter === 'all' ? '#b97820' : '#f1f5f9',
                                     color: taskFilter === 'all' ? '#fff' : '#64748b',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -1253,7 +1288,7 @@ export default function GroupDetailPage() {
                             </div>
                             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 28 }}>
                                 <button onClick={() => setShowAddTask(false)} style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid var(--border, #e2e8f0)', background: 'transparent', color: 'var(--text-primary, #64748b)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
-                                <button onClick={handleAddTask} disabled={loading || !newTaskTitle.trim()} style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (loading || !newTaskTitle.trim()) ? 0.6 : 1 }}>
+                                <button onClick={handleAddTask} disabled={loading || !newTaskTitle.trim()} style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#b97820', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (loading || !newTaskTitle.trim()) ? 0.6 : 1 }}>
                                     {loading ? 'Đang tạo...' : 'Tạo công việc'}
                                 </button>
                             </div>
@@ -1276,6 +1311,133 @@ export default function GroupDetailPage() {
                                 return <tr><td colSpan={5} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Chưa có công việc nào trong danh sách này</td></tr>;
                             }
                             return filtered.map(t => {
+                                if (editingTaskId === t.id) {
+                                    const target = Number(t.outputTarget ?? t.workload ?? 0);
+                                    const actual = Number(t.actualOutput ?? 0);
+                                    const unit = editTaskUnit || t.unit || inferUnitFromText(`${editTaskTitle} ${editTaskDesc}`, editTaskStage);
+                                    const pct = target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : (t.completionPercentage || 0);
+
+                                    return (
+                                        <tr key={t.id} className="task-edit-table-row">
+                                            <td colSpan={5}>
+                                                <div className="task-edit-panel">
+                                                    <div className="task-edit-panel__header">
+                                                        <div>
+                                                            <span>Chỉnh sửa công việc</span>
+                                                            <strong>{t.taskCode || t.title}</strong>
+                                                        </div>
+                                                        <div className="task-edit-panel__actions">
+                                                            <button
+                                                                type="button"
+                                                                className="task-edit-action task-edit-action--ghost"
+                                                                onClick={cancelEditTask}
+                                                            >
+                                                                Hủy
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="task-edit-action task-edit-action--save"
+                                                                onClick={() => handleUpdateTask(t.id)}
+                                                                disabled={loading || !editTaskTitle.trim()}
+                                                            >
+                                                                <ion-icon name="checkmark-outline"></ion-icon>
+                                                                Lưu thay đổi
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="task-edit-grid">
+                                                        <label className="task-edit-field task-edit-field--wide">
+                                                            <span>Tên công việc</span>
+                                                            <input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)} placeholder="Tên công việc" autoFocus />
+                                                        </label>
+                                                        <label className="task-edit-field task-edit-field--wide">
+                                                            <span>Mô tả</span>
+                                                            <input value={editTaskDesc} onChange={e => setEditTaskDesc(e.target.value)} placeholder="Mô tả ngắn cho nhân viên" />
+                                                        </label>
+                                                        <label className="task-edit-field">
+                                                            <span>Giai đoạn</span>
+                                                            <select value={editTaskStage} onChange={e => setEditTaskStage(e.target.value)}>
+                                                                {['Roasting', 'Cooling', 'Grinding', 'Packaging', 'Quality Check', 'Inventory'].map(stage => <option key={stage} value={stage}>{stage}</option>)}
+                                                            </select>
+                                                        </label>
+                                                        <label className="task-edit-field">
+                                                            <span>Ưu tiên</span>
+                                                            <select value={editTaskPriority} onChange={e => setEditTaskPriority(Number(e.target.value))}>
+                                                                <option value={1}>Thấp</option>
+                                                                <option value={2}>Trung bình</option>
+                                                                <option value={3}>Cao</option>
+                                                            </select>
+                                                        </label>
+                                                        <label className="task-edit-field">
+                                                            <span>Hạn chót</span>
+                                                            <input value={editTaskDueTime} onChange={e => setEditTaskDueTime(e.target.value)} type="datetime-local" />
+                                                        </label>
+                                                        <label className="task-edit-field">
+                                                            <span>Đơn vị</span>
+                                                            <input value={unit} onChange={e => setEditTaskUnit(e.target.value)} placeholder="kg, gói, chai..." />
+                                                        </label>
+                                                        <label className="task-edit-field">
+                                                            <span>Phụ trách</span>
+                                                            <select value={t.memberId || ''} onChange={async e => {
+                                                                const nextMemberId = e.target.value;
+                                                                try {
+                                                                    let updatedTask;
+                                                                    if (!nextMemberId) {
+                                                                        updatedTask = await taskService.assign(t.id, '');
+                                                                    } else if (t.memberId && t.memberId !== nextMemberId) {
+                                                                        const reason = window.prompt('Lý do chuyển giao công việc?', 'Điều phối lại nhân sự') || 'Điều phối lại nhân sự';
+                                                                        updatedTask = await taskService.transfer(t.id, nextMemberId, reason);
+                                                                    } else {
+                                                                        updatedTask = await taskService.assign(t.id, nextMemberId);
+                                                                    }
+                                                                    if (updatedTask && updatedTask.id) {
+                                                                        setAllTasks(prev => prev.map(tk => tk.id === updatedTask.id ? updatedTask : tk));
+                                                                    }
+                                                                    if (id) { const g = await goalService.getByTeam(id); setGoals(g); }
+                                                                } catch (error: any) {
+                                                                    alert(error.response?.data?.message || error.message || 'Không thể giao việc');
+                                                                }
+                                                            }}>
+                                                                <option value="">Chưa giao</option>
+                                                                {team?.members?.map(m => <option key={m.userId} value={m.userId}>{m.fullName || m.username}</option>)}
+                                                            </select>
+                                                        </label>
+                                                        <label className="task-edit-field">
+                                                            <span>Sao lưu</span>
+                                                            <select value={t.backupMemberId || ''} onChange={async e => {
+                                                                try {
+                                                                    const updatedTask = await taskService.setBackup(t.id, e.target.value);
+                                                                    if (updatedTask && updatedTask.id) {
+                                                                        setAllTasks(prev => prev.map(tk => tk.id === updatedTask.id ? updatedTask : tk));
+                                                                    }
+                                                                    if (id) { const g = await goalService.getByTeam(id); setGoals(g); }
+                                                                } catch (error: any) {
+                                                                    alert(error.response?.data?.message || error.message || 'Không thể chọn người sao lưu');
+                                                                }
+                                                            }}>
+                                                                <option value="">Không có</option>
+                                                                {team?.members?.map(m => <option key={m.userId} value={m.userId}>{m.fullName || m.username}</option>)}
+                                                            </select>
+                                                        </label>
+                                                    </div>
+
+                                                    <div className="task-edit-progress">
+                                                        <div>
+                                                            <span>Tiến độ hiện tại</span>
+                                                            <strong>{actual.toLocaleString('vi-VN')} / {target.toLocaleString('vi-VN')} {unit}</strong>
+                                                        </div>
+                                                        <div className="task-edit-progress__bar">
+                                                            <i style={{ width: `${pct}%` }} />
+                                                        </div>
+                                                        <em>{pct}%</em>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                }
+
                                 return (
                                     <tr key={t.id} style={{ borderBottom: '1px solid var(--border)' }}>
                                         <td style={{ padding: '12px 16px' }}>
@@ -1325,7 +1487,9 @@ export default function GroupDetailPage() {
                                                             }
                                                             if (id) { 
                                                                 goalService.getByTeam(id).then(setGoals);
-                                                                inventoryService.getByTeam(id).then(data => setInventoryItems(data || []));
+                                                                if (isAdmin) {
+                                                                    inventoryService.getByTeam(id).then(data => setInventoryItems(data || []));
+                                                                }
                                                             }
                                                         })
                                                         .catch((err: any) => setError(err?.response?.data?.error || 'Khong the cap nhat'));
@@ -1364,7 +1528,9 @@ export default function GroupDetailPage() {
                                                                             }
                                                                             if (id) { 
                                                                                 const g = await goalService.getByTeam(id); setGoals(g); 
-                                                                                const inv = await inventoryService.getByTeam(id); setInventoryItems(inv || []);
+                                                                                if (isAdmin) {
+                                                                                    const inv = await inventoryService.getByTeam(id); setInventoryItems(inv || []);
+                                                                                }
                                                                             }
                                                                         } catch (err: any) {
                                                                             setError(err?.response?.data?.error || 'Không thể cập nhật mục tiêu');
@@ -1495,6 +1661,7 @@ export default function GroupDetailPage() {
             )}
 
             {/* ===== BẢNG KHO HÀNG (INVENTORY) ===== */}
+            {isAdmin && (
             <div style={{ background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden', marginBottom: 18 }}>
                 <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}><ion-icon name="cube-outline" style={{ fontSize: 18, verticalAlign: 'middle', marginRight: 6, color: '#d4a574' }}></ion-icon> KHO HÀNG ({inventoryItems.length})</h3>
@@ -1503,7 +1670,7 @@ export default function GroupDetailPage() {
                             <button onClick={() => setShowStockIn(true)} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <ion-icon name="add-circle"></ion-icon> Nhập kho
                             </button>
-                            <button onClick={() => setShowAddInventory(true)} style={{ background: '#d4a574', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <button onClick={() => setShowAddInventory(true)} style={{ background: '#b97820', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <ion-icon name="add"></ion-icon> Thêm sản phẩm
                             </button>
                         </div>
@@ -1572,6 +1739,7 @@ export default function GroupDetailPage() {
                     </tbody>
                 </table>
             </div>
+            )}
 
                         {/* ===== CHAT PANEL (Messenger-style) ===== */}
             {showChat && (
@@ -1616,10 +1784,10 @@ export default function GroupDetailPage() {
 
                         {/* Tab pills: Nhóm / Cá nhân */}
                         <div style={{ display: 'flex', padding: '4px 12px 8px', gap: 6, flexShrink: 0 }}>
-                            <button onClick={() => { setChatTab('group'); setDmUserId(null); }} style={{ flex: 1, padding: '8px 12px', borderRadius: 18, border: 'none', cursor: 'pointer', background: chatTab === 'group' ? '#d4a574' : 'var(--bg-input, #e4e6eb)', color: chatTab === 'group' ? '#fff' : 'var(--text-primary, #050505)', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                            <button onClick={() => { setChatTab('group'); setDmUserId(null); }} style={{ flex: 1, padding: '8px 12px', borderRadius: 18, border: 'none', cursor: 'pointer', background: chatTab === 'group' ? '#b97820' : 'var(--bg-input, #e4e6eb)', color: chatTab === 'group' ? '#fff' : 'var(--text-primary, #050505)', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                                 <ion-icon name="people" style={{ fontSize: 14 }}></ion-icon> Nhóm {chatTab === 'group' && renderUnreadBadge(unreadGroupCount)}
                             </button>
-                            <button onClick={() => setChatTab('dm')} style={{ flex: 1, padding: '8px 12px', borderRadius: 18, border: 'none', cursor: 'pointer', background: chatTab === 'dm' ? '#d4a574' : 'var(--bg-input, #e4e6eb)', color: chatTab === 'dm' ? '#fff' : 'var(--text-primary, #050505)', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                            <button onClick={() => setChatTab('dm')} style={{ flex: 1, padding: '8px 12px', borderRadius: 18, border: 'none', cursor: 'pointer', background: chatTab === 'dm' ? '#b97820' : 'var(--bg-input, #e4e6eb)', color: chatTab === 'dm' ? '#fff' : 'var(--text-primary, #050505)', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                                 <ion-icon name="person" style={{ fontSize: 14 }}></ion-icon> Cá nhân {chatTab === 'dm' && renderUnreadBadge(unreadDmTotal)}
                             </button>
                         </div>
@@ -1828,7 +1996,7 @@ export default function GroupDetailPage() {
                                     <div style={{ flex: 1, minWidth: 0, background: 'var(--bg-input, #f0f2f5)', borderRadius: 20, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
                                         <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendChat()} placeholder={chatTab === 'dm' ? "Aa" : "Aa, nhắn cho nhóm..."} style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary, #050505)' }} />
                                     </div>
-                                    <button onClick={handleSendChat} disabled={!chatInput.trim() && !chatAttachment} style={{ width: 40, height: 40, borderRadius: '50%', background: chatInput.trim() || chatAttachment ? '#d4a574' : 'var(--bg-input, #e4e6eb)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: chatInput.trim() || chatAttachment ? 'pointer' : 'default', flexShrink: 0, transition: 'background 0.15s' }} title="Gửi">
+                                    <button onClick={handleSendChat} disabled={!chatInput.trim() && !chatAttachment} style={{ width: 40, height: 40, borderRadius: '50%', background: chatInput.trim() || chatAttachment ? '#b97820' : 'var(--bg-input, #e4e6eb)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: chatInput.trim() || chatAttachment ? 'pointer' : 'default', flexShrink: 0, transition: 'background 0.15s' }} title="Gửi">
                                         <ion-icon name={chatInput.trim() || chatAttachment ? "send" : "thumbs-up"} style={{ fontSize: 18, marginLeft: chatInput.trim() || chatAttachment ? 2 : 0 }}></ion-icon>
                                     </button>
                                 </div>
@@ -1904,7 +2072,7 @@ export default function GroupDetailPage() {
                             <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 12px' }}>Chỉ chủ nhóm hoặc quản trị viên mới có thể gửi lời mời.</p>
                             <div style={{ display: 'flex', gap: 8 }}>
                                 <button onClick={closeModal} style={{ flex: 1, background: 'var(--bg-input)', color: '#1f2937', border: '1px solid var(--border)', padding: '12px', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Hủy</button>
-                                <button onClick={handleInviteMember} disabled={loading} style={{ flex: 1, background: loading ? '#e5e7eb' : '#d4a574', color: loading ? '#9ca3af' : '#fff', border: 'none', padding: '12px', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: loading ? 'not-allowed' : 'pointer' }}>{loading ? 'Đang gửi...' : 'Gửi lời mời'}</button>
+                                <button onClick={handleInviteMember} disabled={loading} style={{ flex: 1, background: loading ? '#e5e7eb' : '#b97820', color: loading ? '#9ca3af' : '#fff', border: 'none', padding: '12px', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: loading ? 'not-allowed' : 'pointer' }}>{loading ? 'Đang gửi...' : 'Gửi lời mời'}</button>
                             </div>
                         </div>
                         {successMsg && <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', background: '#111827', color: '#fff', padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600 }}><ion-icon name="checkmark-circle" style={{ color: '#10b981' }}></ion-icon> {successMsg}</div>}
@@ -1927,7 +2095,7 @@ export default function GroupDetailPage() {
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20, flexWrap: 'wrap' }}>
                             <button onClick={() => setShowCreateGoal(false)} style={{ padding: '10px 20px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
                             <button onClick={() => handleCreateGoal(false)} disabled={loading} style={{ padding: '10px 20px', borderRadius: 8, border: '1px solid var(--border)', background: '#f0fdf4', color: '#16a34a', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{loading ? 'Đang tạo...' : 'Tạo thủ công'}</button>
-                            <button onClick={() => handleCreateGoal(true)} disabled={loading || !trialActive} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: '#d4a574', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: trialActive ? 1 : 0.5 }}>{loading ? 'Đang tạo...' : `AI tạo task (${trialDays} ngày)`}</button>
+                            <button onClick={() => handleCreateGoal(true)} disabled={loading || !trialActive} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: '#b97820', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: trialActive ? 1 : 0.5 }}>{loading ? 'Đang tạo...' : `AI tạo task (${trialDays} ngày)`}</button>
                         </div>
                     </div>
                 </div>
@@ -1951,7 +2119,7 @@ export default function GroupDetailPage() {
                         )}
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
                             <button onClick={() => setShowAdSettings(false)} style={{ padding: '10px 20px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Thoát</button>
-                            <button onClick={handleSaveAdSettings} disabled={loading} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: '#d4a574', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{loading ? 'Đang lưu...' : 'Lưu'}</button>
+                            <button onClick={handleSaveAdSettings} disabled={loading} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: '#b97820', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{loading ? 'Đang lưu...' : 'Lưu'}</button>
                         </div>
                     </div>
                 </div>
@@ -2012,7 +2180,7 @@ export default function GroupDetailPage() {
                             </button>
                             <div style={{ display: 'flex', gap: 10 }}>
                                 <button onClick={() => setShowLabelModal(false)} style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
-                                <button onClick={handleSaveLabels} disabled={loading} style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                                <button onClick={handleSaveLabels} disabled={loading} style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#b97820', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                                     {loading ? 'Đang lưu...' : 'Lưu'}
                                 </button>
                             </div>
@@ -2086,7 +2254,7 @@ export default function GroupDetailPage() {
                                         setTeam(prev => prev ? { ...prev, metadata: newMetadata } : prev);
                                     } catch (e) { /* role update failure handled by UI */ }
                                 }
-                            }} style={{ background: '#d4a574', color: '#fff', border: 'none', borderRadius: 10, padding: '0 16px', fontWeight: 600, cursor: 'pointer' }}>
+                            }} style={{ background: '#b97820', color: '#fff', border: 'none', borderRadius: 10, padding: '0 16px', fontWeight: 600, cursor: 'pointer' }}>
                                 Thêm
                             </button>
                         </div>
@@ -2121,7 +2289,7 @@ export default function GroupDetailPage() {
                         </div>
                         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 32 }}>
                             <button onClick={() => setShowAddInventory(false)} style={{ padding: '12px 24px', borderRadius: 10, border: '1px solid var(--border, #e2e8f0)', background: 'transparent', color: 'var(--text-primary, #64748b)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
-                            <button onClick={handleAddInventory} disabled={loading || !invName.trim()} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (loading || !invName.trim()) ? 0.6 : 1 }}>
+                            <button onClick={handleAddInventory} disabled={loading || !invName.trim()} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: '#b97820', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (loading || !invName.trim()) ? 0.6 : 1 }}>
                                 {loading ? 'Đang lưu...' : 'Thêm sản phẩm'}
                             </button>
                         </div>
@@ -2151,7 +2319,7 @@ export default function GroupDetailPage() {
                         </div>
                         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 32 }}>
                             <button onClick={() => setShowStockIn(false)} style={{ padding: '12px 24px', borderRadius: 10, border: '1px solid var(--border, #e2e8f0)', background: 'transparent', color: 'var(--text-primary, #64748b)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
-                            <button onClick={handleStockIn} disabled={loading || !stockInItemId || !stockInQty} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (loading || !stockInItemId || !stockInQty) ? 0.6 : 1 }}>
+                            <button onClick={handleStockIn} disabled={loading || !stockInItemId || !stockInQty} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: '#b97820', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (loading || !stockInItemId || !stockInQty) ? 0.6 : 1 }}>
                                 {loading ? 'Đang lưu...' : 'Lưu vào kho'}
                             </button>
                         </div>
@@ -2175,7 +2343,7 @@ export default function GroupDetailPage() {
                                 </div>
                             ))}
                         </div>
-                        <div style={{ padding: 16, borderTop: '1px solid var(--border)', textAlign: 'center' }}><button onClick={() => setShowChatHistory(false)} style={{ background: '#d4a574', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>Đóng</button></div>
+                        <div style={{ padding: 16, borderTop: '1px solid var(--border)', textAlign: 'center' }}><button onClick={() => setShowChatHistory(false)} style={{ background: '#b97820', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>Đóng</button></div>
                     </div>
                 </div>
             )}
@@ -2206,7 +2374,7 @@ export default function GroupDetailPage() {
                         </div>
                         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 32 }}>
                             <button onClick={() => setEditItem(null)} style={{ padding: '12px 24px', borderRadius: 10, border: '1px solid var(--border, #e2e8f0)', background: 'transparent', color: 'var(--text-primary, #64748b)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
-                            <button onClick={handleEditInventory} disabled={loading || !editItem.name.trim()} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (loading || !editItem.name.trim()) ? 0.6 : 1 }}>
+                            <button onClick={handleEditInventory} disabled={loading || !editItem.name.trim()} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: '#b97820', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (loading || !editItem.name.trim()) ? 0.6 : 1 }}>
                                 {loading ? 'Đang lưu...' : 'Lưu thay đổi'}
                             </button>
                         </div>
@@ -2473,14 +2641,326 @@ export default function GroupDetailPage() {
 
                         {/* Footer buttons */}
                         <div style={{ marginTop: 12, borderTop: '1px solid var(--border, #334155)', paddingTop: 20, textAlign: 'right' }}>
-                            <button onClick={() => setShowStatsModal(false)} style={{ background: '#d4a574', color: '#fff', border: 'none', padding: '12px 36px', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontSize: 14, boxShadow: '0 4px 12px rgba(212,165,116,0.2)', transition: 'all 0.2s' }}>Đóng báo cáo</button>
+                            <button onClick={() => setShowStatsModal(false)} style={{ background: '#b97820', color: '#fff', border: 'none', padding: '12px 36px', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontSize: 14, boxShadow: '0 4px 12px rgba(185,120,32,0.24)', transition: 'all 0.2s' }}>Đóng báo cáo</button>
                         </div>
                     </div>
                 </div>
             )}
 
             {/* Schedule Modal */}
-            {showScheduleModal && (
+            {showScheduleModal && (() => {
+                const year = calendarDate.getFullYear();
+                const month = calendarDate.getMonth();
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const selectedDate = new Date(selectedCalendarDate);
+                selectedDate.setHours(0, 0, 0, 0);
+
+                const normalizeDate = (value?: string | null) => {
+                    if (!value) return null;
+                    const parsed = new Date(value);
+                    if (Number.isNaN(parsed.getTime())) return null;
+                    parsed.setHours(0, 0, 0, 0);
+                    return parsed;
+                };
+
+                const getTaskEnd = (task: Task) => normalizeDate(task.dueTime || task.deadline);
+                const getTaskStart = (task: Task) => normalizeDate(task.startTime || task.actualStart || task.createdAt);
+                const isTaskOverdue = (task: Task) => {
+                    const end = getTaskEnd(task);
+                    return !!end && end.getTime() < today.getTime() && task.status !== 'COMPLETED';
+                };
+                const isSameDay = (a: Date | null, b: Date) => !!a && a.getTime() === b.getTime();
+                const isActiveStatus = (task: Task) => !['COMPLETED', 'CANCELLED'].includes(task.status);
+                const isTaskOnDate = (task: Task, date: Date) => {
+                    const start = getTaskStart(task);
+                    const end = getTaskEnd(task);
+                    const isBetween = !!start && !!end && date.getTime() >= start.getTime() && date.getTime() <= end.getTime() && isActiveStatus(task);
+                    return isSameDay(start, date) || isSameDay(end, date) || isBetween;
+                };
+                const tasksForDate = (date: Date) => latestGoalTasks
+                    .filter(task => isTaskOnDate(task, date))
+                    .sort((a, b) => {
+                        const aDueToday = isSameDay(getTaskEnd(a), date) ? 0 : 1;
+                        const bDueToday = isSameDay(getTaskEnd(b), date) ? 0 : 1;
+                        if (aDueToday !== bDueToday) return aDueToday - bDueToday;
+                        return (getTaskEnd(a)?.getTime() || Number.MAX_SAFE_INTEGER) - (getTaskEnd(b)?.getTime() || Number.MAX_SAFE_INTEGER);
+                    });
+                const selectedTasks = tasksForDate(selectedDate);
+                const selectedDueTasks = selectedTasks.filter(task => isSameDay(getTaskEnd(task), selectedDate));
+                const selectedWorkTasks = selectedTasks.filter(task => !isSameDay(getTaskEnd(task), selectedDate));
+                const activeTasks = latestGoalTasks
+                    .filter(task => isActiveStatus(task))
+                    .sort((a, b) => (getTaskEnd(a)?.getTime() || Number.MAX_SAFE_INTEGER) - (getTaskEnd(b)?.getTime() || Number.MAX_SAFE_INTEGER));
+                const overdueTasks = latestGoalTasks.filter(isTaskOverdue);
+                const scheduledTasks = latestGoalTasks.filter(task => getTaskEnd(task) || getTaskStart(task));
+                const completedCount = latestGoalTasks.filter(task => task.status === 'COMPLETED').length;
+                const completionRate = latestGoalTasks.length ? Math.round((completedCount / latestGoalTasks.length) * 100) : 0;
+
+                const monthStart = new Date(year, month, 1);
+                const monthDays = new Date(year, month + 1, 0).getDate();
+                const mondayOffset = monthStart.getDay() === 0 ? 6 : monthStart.getDay() - 1;
+                const prevMonthDays = new Date(year, month, 0).getDate();
+                const calendarCells: { day: number; date: Date; isCurrentMonth: boolean }[] = [];
+
+                for (let i = mondayOffset - 1; i >= 0; i--) {
+                    const day = prevMonthDays - i;
+                    calendarCells.push({ day, date: new Date(year, month - 1, day), isCurrentMonth: false });
+                }
+                for (let day = 1; day <= monthDays; day++) {
+                    calendarCells.push({ day, date: new Date(year, month, day), isCurrentMonth: true });
+                }
+                while (calendarCells.length % 7 !== 0 || calendarCells.length < 35) {
+                    const day = calendarCells.length - (mondayOffset + monthDays) + 1;
+                    calendarCells.push({ day, date: new Date(year, month + 1, day), isCurrentMonth: false });
+                }
+
+                const goToMonth = (offset: number) => {
+                    const next = new Date(year, month + offset, 1);
+                    next.setHours(0, 0, 0, 0);
+                    setCalendarDate(next);
+                    setSelectedCalendarDate(next);
+                };
+
+                const formatShortDate = (value?: string | null) => {
+                    if (!value) return 'Chưa có hạn';
+                    const parsed = new Date(value);
+                    if (Number.isNaN(parsed.getTime())) return 'Chưa có hạn';
+                    return parsed.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+                };
+
+                const formatMonthTitle = calendarDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+                const selectedTitle = selectedDate.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' });
+                const selectedSubtitle = selectedDate.getTime() === today.getTime()
+                    ? 'Hôm nay'
+                    : `${selectedDueTasks.length} hạn chót, ${selectedWorkTasks.length} việc đang làm`;
+
+                return (
+                    <div className="schedule-modal-overlay" onClick={() => setShowScheduleModal(false)}>
+                        <section className="schedule-modal" onClick={event => event.stopPropagation()} aria-label="Lịch sản xuất">
+                            <header className="schedule-modal__header">
+                                <div>
+                                    <p className="schedule-modal__eyebrow">{latestGoal?.title || 'Kế hoạch hiện tại'}</p>
+                                    <h2>Lịch sản xuất</h2>
+                                    <span>Theo dõi hạn việc, tiến độ và điểm nghẽn trong tháng</span>
+                                </div>
+                                <button type="button" className="schedule-modal__close" onClick={() => setShowScheduleModal(false)} aria-label="Đóng lịch sản xuất">
+                                    <ion-icon name="close-outline"></ion-icon>
+                                </button>
+                            </header>
+
+                            <div className="schedule-summary">
+                                {[
+                                    { label: 'Tổng việc', value: latestGoalTasks.length, tone: 'neutral' },
+                                    { label: 'Đang làm', value: activeTasks.length, tone: 'progress' },
+                                    { label: 'Quá hạn', value: overdueTasks.length, tone: 'danger' },
+                                    { label: 'Hoàn thành', value: `${completionRate}%`, tone: 'success' },
+                                ].map(item => (
+                                    <div className={`schedule-summary__item tone-${item.tone}`} key={item.label}>
+                                        <span>{item.label}</span>
+                                        <strong>{item.value}</strong>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="schedule-layout">
+                                <div className="schedule-calendar-panel">
+                                    <div className="schedule-calendar-toolbar">
+                                        <button type="button" onClick={() => goToMonth(-1)} aria-label="Tháng trước">
+                                            <ion-icon name="chevron-back-outline"></ion-icon>
+                                        </button>
+                                        <div>
+                                            <strong>{formatMonthTitle}</strong>
+                                            <span>{scheduledTasks.length} việc có lịch</span>
+                                            <button
+                                                type="button"
+                                                className="schedule-today-jump"
+                                                onClick={() => {
+                                                    const current = new Date();
+                                                    current.setHours(0, 0, 0, 0);
+                                                    setCalendarDate(new Date(current.getFullYear(), current.getMonth(), 1));
+                                                    setSelectedCalendarDate(current);
+                                                }}
+                                            >
+                                                Hôm nay
+                                            </button>
+                                        </div>
+                                        <button type="button" onClick={() => goToMonth(1)} aria-label="Tháng sau">
+                                            <ion-icon name="chevron-forward-outline"></ion-icon>
+                                        </button>
+                                    </div>
+
+                                    <div className="schedule-weekdays">
+                                        {['Th 2', 'Th 3', 'Th 4', 'Th 5', 'Th 6', 'Th 7', 'CN'].map(day => <span key={day}>{day}</span>)}
+                                    </div>
+
+                                    <div className="schedule-calendar-grid">
+                                        {calendarCells.map((cell, index) => {
+                                            cell.date.setHours(0, 0, 0, 0);
+                                            const dayTasks = tasksForDate(cell.date);
+                                            const dueTasks = dayTasks.filter(task => isSameDay(getTaskEnd(task), cell.date));
+                                            const workTasks = dayTasks.filter(task => !isSameDay(getTaskEnd(task), cell.date));
+                                            const hasOverdue = dayTasks.some(isTaskOverdue);
+                                            const hasActive = dayTasks.some(task => isActiveStatus(task));
+                                            const hasCompleted = dayTasks.some(task => task.status === 'COMPLETED');
+                                            const isSelected = cell.date.getTime() === selectedDate.getTime();
+                                            const isTodayCell = cell.date.getTime() === today.getTime();
+                                            const tone = hasOverdue ? 'danger' : hasActive ? 'progress' : hasCompleted ? 'success' : dayTasks.length > 0 ? 'planned' : 'empty';
+
+                                            return (
+                                                <button
+                                                    type="button"
+                                                    key={`${cell.date.toISOString()}-${index}`}
+                                                    className={`schedule-day tone-${tone}${cell.isCurrentMonth ? '' : ' is-muted'}${isSelected ? ' is-selected' : ''}${isTodayCell ? ' is-today' : ''}`}
+                                                    onClick={() => {
+                                                        const selected = new Date(cell.date);
+                                                        selected.setHours(0, 0, 0, 0);
+                                                        setCalendarDate(new Date(selected.getFullYear(), selected.getMonth(), 1));
+                                                        setSelectedCalendarDate(selected);
+                                                    }}
+                                                >
+                                                    <span className="schedule-day__top">
+                                                        <span className="schedule-day__number">{cell.day}</span>
+                                                        {isTodayCell && <span className="schedule-day__today">Hôm nay</span>}
+                                                    </span>
+                                                    {dayTasks.length > 0 && (
+                                                        <span className="schedule-day__meta">
+                                                            <span>{dayTasks.length}</span>
+                                                            việc
+                                                        </span>
+                                                    )}
+                                                    {dayTasks.length > 0 && (
+                                                        <span className="schedule-day__badges">
+                                                            {dueTasks.length > 0 && <span className="schedule-day__badge is-due">{dueTasks.length} hạn</span>}
+                                                            {workTasks.length > 0 && <span className="schedule-day__badge is-work">{workTasks.length} làm</span>}
+                                                        </span>
+                                                    )}
+                                                    {dayTasks.length > 0 && (
+                                                        <span className="schedule-day__dots">
+                                                            {dayTasks.slice(0, 4).map(task => (
+                                                                <i key={task.id} className={`status-${task.status.toLowerCase()}`} />
+                                                            ))}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <aside className="schedule-detail-panel">
+                                    <section className="schedule-card schedule-card--selected">
+                                        <div className="schedule-card__head">
+                                            <div>
+                                                <span>{selectedSubtitle}</span>
+                                                <strong>{selectedTitle}</strong>
+                                            </div>
+                                            <em>{selectedTasks.length} việc</em>
+                                        </div>
+
+                                        {selectedTasks.length === 0 ? (
+                                            <div className="schedule-empty">
+                                                <ion-icon name="calendar-clear-outline"></ion-icon>
+                                                <strong>Chưa có lịch trong ngày này</strong>
+                                                <span>Các việc có ngày tạo hoặc hạn xử lý sẽ xuất hiện tại đây.</span>
+                                            </div>
+                                        ) : (
+                                            <div className="schedule-task-list">
+                                                {selectedDueTasks.length > 0 && (
+                                                    <div className="schedule-task-group-title">Hạn chót trong ngày</div>
+                                                )}
+                                                {selectedDueTasks.map(task => {
+                                                    const status = STATUS_COLORS[task.status] || STATUS_COLORS.PENDING;
+                                                    const overdue = isTaskOverdue(task);
+                                                    return (
+                                                        <article className={`schedule-task ${overdue ? 'is-overdue' : ''}`} key={task.id}>
+                                                            <div>
+                                                                <strong>{task.title}</strong>
+                                                                <span>{task.productionStage || 'Chưa gắn công đoạn'} · {task.memberName || 'Chưa giao người phụ trách'}</span>
+                                                                <small>Hạn chót hôm nay</small>
+                                                            </div>
+                                                            <mark style={{ background: status.bg, color: status.color }}>{status.label}</mark>
+                                                        </article>
+                                                    );
+                                                })}
+                                                {selectedWorkTasks.length > 0 && (
+                                                    <div className="schedule-task-group-title">Cần làm trong ngày</div>
+                                                )}
+                                                {selectedWorkTasks.map(task => {
+                                                    const status = STATUS_COLORS[task.status] || STATUS_COLORS.PENDING;
+                                                    const overdue = isTaskOverdue(task);
+                                                    const taskDeadline = formatShortDate(task.dueTime || task.deadline);
+                                                    return (
+                                                        <article className={`schedule-task ${overdue ? 'is-overdue' : ''}`} key={task.id}>
+                                                            <div>
+                                                                <strong>{task.title}</strong>
+                                                                <span>{task.productionStage || 'Chưa gắn công đoạn'} · {task.memberName || 'Chưa giao người phụ trách'}</span>
+                                                                <small>{`Hạn ${taskDeadline}`}</small>
+                                                            </div>
+                                                            <mark style={{ background: status.bg, color: status.color }}>{status.label}</mark>
+                                                        </article>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </section>
+
+                                    <section className="schedule-card">
+                                        <div className="schedule-card__head">
+                                            <div>
+                                                <span>Đang thực hiện</span>
+                                                <strong>Ưu tiên theo hạn gần nhất</strong>
+                                            </div>
+                                            <em>{activeTasks.length} việc</em>
+                                        </div>
+
+                                        {activeTasks.length === 0 ? (
+                                            <div className="schedule-empty schedule-empty--compact">
+                                                <ion-icon name="checkmark-done-outline"></ion-icon>
+                                                <strong>Không có việc đang chạy</strong>
+                                            </div>
+                                        ) : (
+                                            <div className="schedule-task-list schedule-task-list--compact">
+                                                {activeTasks.slice(0, 6).map(task => (
+                                                    <article className={`schedule-running-task ${isTaskOverdue(task) ? 'is-overdue' : ''}`} key={task.id}>
+                                                        <span>{task.title}</span>
+                                                        <strong>{formatShortDate(task.dueTime || task.deadline)}</strong>
+                                                    </article>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </section>
+
+                                    {isAdmin && (
+                                        <button
+                                            type="button"
+                                            className="schedule-primary-action"
+                                            onClick={() => {
+                                                setShowScheduleModal(false);
+                                                if (!selectedGoalId && goals.length > 0) setSelectedGoalId(goals[0].id);
+                                                setShowAddTask(true);
+                                            }}
+                                        >
+                                            <ion-icon name="add-outline"></ion-icon>
+                                            Tạo công việc mới
+                                        </button>
+                                    )}
+                                </aside>
+                            </div>
+
+                            <footer className="schedule-legend">
+                                <span><i className="legend-progress" />Đang làm</span>
+                                <span><i className="legend-danger" />Quá hạn</span>
+                                <span><i className="legend-success" />Hoàn thành</span>
+                                <span><i className="legend-planned" />Có lịch</span>
+                            </footer>
+                        </section>
+                    </div>
+                );
+            })()}
+
+            {/* Legacy schedule modal kept disabled while the new calendar UI is active. */}
+            {false && showScheduleModal && (
                 <div className="modal-overlay" onClick={() => setShowScheduleModal(false)} style={{ background: 'rgba(10, 10, 12, 0.85)', backdropFilter: 'blur(10px)', zIndex: 10000, position: 'fixed', inset: 0, display: 'grid', placeItems: 'center', transition: 'all 0.3s ease' }}>
                     <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 1250, width: '92%', background: '#121214', color: '#ffffff', borderRadius: 20, padding: '24px', border: '1px solid #232328', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: "'Inter', sans-serif" }}>
                         {/* Header */}
@@ -3321,7 +3801,7 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                     if (window.confirm(`Bạn có chắc chắn muốn thanh toán tổng cộng ${totalSalary.toLocaleString('vi-VN')} đ cho nhân viên?`)) {
                                         try {
                                             const res = await taskService.payoutSalary(teamId);
-                                            const checkoutUrl = res.data?.checkoutUrl || (res as any).checkoutUrl;
+                                            const checkoutUrl = res.checkoutUrl;
                                             if (checkoutUrl) {
                                                 window.open(checkoutUrl, '_blank');
                                             } else {
@@ -3332,7 +3812,7 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                         }
                                     }
                                 }}
-                                style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#d4a574', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                                style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#b97820', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
                             >
                                 <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                                 Phát lương

@@ -1602,7 +1602,7 @@ export default function MarketplacePage() {
                                             ) : (
                                                 <>
                                                     <button onClick={() => { setSelectedFactory(factory); setActiveProfileTab('overview'); }} style={{background: 'var(--bg-input)', color: 'var(--text-primary)', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>{t.viewCapacity}</button>
-                                                    <button onClick={() => { const fact = factory; handleOrderClick(fact); }} style={{background: '#d4a574', color: '#1a1a1a', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>{t.sendRequest}</button>
+                                                    <button onClick={() => { const fact = factory; handleOrderClick(fact); }} style={{background: '#b97820', color: '#fff', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>{t.sendRequest}</button>
                                                 </>
                                             )}
                                         </div>
@@ -1795,7 +1795,7 @@ export default function MarketplacePage() {
                                                 <p style={{ margin: '0 0 4px', color: '#ece8e1', fontWeight: 600, fontSize: 14 }}>{factory.name}</p>
                                                 <p style={{ margin: 0, color: '#a79d94', fontSize: 12 }}>{displayText(factory.region)} • {factory.factoryType || 'Đối tác ORCA'}</p>
                                             </div>
-                                            <button type="button" style={{ background: '#d4a574', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }} onClick={() => {
+                                            <button type="button" style={{ background: '#b97820', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }} onClick={() => {
                                                 setSelectedProduct(null);
                                                 handleOrderClick(factory);
                                             }}>
@@ -2340,7 +2340,7 @@ export default function MarketplacePage() {
                                 </div>
 
                                 <div style={{display: 'flex', gap: 12}}>
-                                    <button style={{flex: 1, padding: 14, background: '#d4a574', color: '#1a1a1a', borderRadius: 8, fontWeight: 600, border: 'none', cursor: 'pointer'}} onClick={() => { setShowAiMatching(false); navigate('/orders'); }}>Theo dõi RFQ</button>
+                                    <button style={{flex: 1, padding: 14, background: '#b97820', color: '#fff', borderRadius: 8, fontWeight: 600, border: 'none', cursor: 'pointer'}} onClick={() => { setShowAiMatching(false); navigate('/orders'); }}>Theo dõi RFQ</button>
                                 </div>
                             </div>
                         )}
