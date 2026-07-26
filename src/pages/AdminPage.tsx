@@ -166,6 +166,9 @@ const maskEmail = (email?: string | null) => {
   return `${name.substring(0, 2)}***@${domain}`;
 };
 
+/**
+ * Masks business license for privacy
+ */
 const maskLicense = (license?: string | null) => {
   if (!license) return '-';
   if (license.length <= 4) return '***';
