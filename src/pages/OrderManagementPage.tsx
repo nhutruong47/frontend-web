@@ -20,7 +20,7 @@ import { disputeService } from '../services/disputeService';
 import DisputeModal from '../components/DisputeModal';
 import BuyerConfirmDeliveryModal from '../components/BuyerConfirmDeliveryModal';
 import DeliverOrderModal from '../components/DeliverOrderModal';
-
+import ContractModal from '../components/ContractModal';
 export default function OrderManagementPage() {
     const { user } = useAuth();
     const [myTeams, setMyTeams] = useState<Team[]>([]);
@@ -30,6 +30,7 @@ export default function OrderManagementPage() {
     const [disputeOrderId, setDisputeOrderId] = useState<string | null>(null);
     const [confirmDeliveryOrderId, setConfirmDeliveryOrderId] = useState<string | null>(null);
     const [deliverOrderId, setDeliverOrderId] = useState<string | null>(null);
+    const [contractOrderId, setContractOrderId] = useState<string | null>(null);
 
     const [orders, setOrders] = useState<InterGroupOrder[]>([]);
     const [loading, setLoading] = useState(true);
@@ -190,6 +191,10 @@ export default function OrderManagementPage() {
 
     const handleDispute = (orderId: string) => {
         setDisputeOrderId(orderId);
+    };
+
+    const handleContract = (orderId: string) => {
+        setContractOrderId(orderId);
     };
 
     const submitDispute = async (reason: string, evidenceUrls: string[], amount: number) => {
@@ -638,9 +643,17 @@ export default function OrderManagementPage() {
                                             {activeTab === 'inbound' && (order.status === 'ACCEPTED' || order.status === 'CONFIRMED') && !order.cancelRequested && (
                                                 <button className="btn btn-primary" onClick={() => handleShip(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}><ion-icon name="car-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Giao hàng</button>
                                             )}
-                                            {/* Inbound SHIPPING: Mark as Delivered */}
-                                            {activeTab === 'inbound' && order.status === 'SHIPPING' && !order.cancelRequested && (
+                                            {/* Inbound ACCEPTED/CONFIRMED... Contract */}
+                                            {activeTab === 'inbound' && (order.status === 'ACCEPTED' || order.status === 'CONFIRMED' || order.status === 'DELIVERED' || order.status === 'COMPLETED') && !order.cancelRequested && (
+                                                <button className="btn" onClick={() => handleContract(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f6', color: 'white', border: 'none', marginLeft: '5px' }}><ion-icon name="document-text-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Hợp đồng</button>
+                                            )}
+                                            {/* Inbound PROCESSING: Delivery */}
+                                            {activeTab === 'inbound' && order.status === 'PROCESSING' && !order.cancelRequested && (
                                                 <button className="btn btn-primary" onClick={() => handleDeliver(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}><ion-icon name="cube-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Đã giao hàng</button>
+                                            )}
+                                            {/* Outbound ACCEPTED/CONFIRMED... Contract */}
+                                            {activeTab === 'outbound' && (order.status === 'ACCEPTED' || order.status === 'CONFIRMED' || order.status === 'DELIVERED' || order.status === 'COMPLETED') && !order.cancelRequested && (
+                                                <button className="btn" onClick={() => handleContract(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#3b82f6', color: 'white', border: 'none', marginLeft: '5px' }}><ion-icon name="document-text-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Hợp đồng</button>
                                             )}
                                             {/* Outbound DELIVERED: Confirm Delivery */}
                                             {activeTab === 'outbound' && order.status === 'DELIVERED' && !order.cancelRequested && (
@@ -762,6 +775,12 @@ export default function OrderManagementPage() {
                 isOpen={!!deliverOrderId}
                 onClose={() => setDeliverOrderId(null)}
                 onSubmit={submitDeliverOrder}
+            />
+
+            <ContractModal
+                isOpen={!!contractOrderId}
+                onClose={() => setContractOrderId(null)}
+                orderId={contractOrderId || ''}
             />
         </div>
     );
