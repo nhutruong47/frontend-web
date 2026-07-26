@@ -153,8 +153,27 @@ const formatTime = (value: string | null | undefined) => {
   return date ? date.toLocaleTimeString('vi-VN') : '-';
 };
 
-const paymentCustomerName = (payment: AdminPayment) =>
-  payment.fullName || payment.username || payment.email || 'Không rõ người dùng';
+const maskEmail = (email?: string | null) => {
+  if (!email) return '-';
+  const parts = email.split('@');
+  if (parts.length !== 2) return email;
+  const name = parts[0];
+  const domain = parts[1];
+  if (name.length <= 2) return `***@${domain}`;
+  return `${name.substring(0, 2)}***@${domain}`;
+};
+
+const maskLicense = (license?: string | null) => {
+  if (!license) return '-';
+  if (license.length <= 4) return '***';
+  return `${license.substring(0, 2)}***${license.substring(license.length - 2)}`;
+};
+
+const paymentCustomerName = (payment: AdminPayment) => {
+  if (payment.fullName || payment.username) return payment.fullName || payment.username;
+  if (payment.email) return maskEmail(payment.email);
+  return 'Không rõ người dùng';
+};
 
 function KpiCard({ item }: { item: KpiItem }) {
   const Icon = item.icon;
@@ -562,7 +581,7 @@ export default function AdminPage() {
                         <td>{item.ownerName || '-'}</td>
                         <td>
                           <div style={{fontSize:'12px', color:'#6b7280'}}>
-                            <div>GPKD: {item.businessLicense || '-'}</div>
+                            <div>GPKD: {maskLicense(item.businessLicense)}</div>
                             <div>Địa chỉ: {item.businessAddress || '-'}</div>
                           </div>
                         </td>
@@ -649,7 +668,7 @@ export default function AdminPage() {
                       return paginatedUsers.map(item => (
                         <tr key={item.id}>
                           <td><div className="admin-user-cell"><div className="admin-user-avatar">{(item.fullName || item.username || '?').charAt(0)}</div><strong>{item.fullName || item.username}</strong></div></td>
-                          <td>{item.email}</td>
+                          <td>{maskEmail(item.email)}</td>
                           <td><StatusBadge value={item.role} /></td>
                           <td><StatusBadge value={item.status || 'Active'} /></td>
                           <td>{item.createdAt ? formatShortDate(item.createdAt) : '-'}</td>
