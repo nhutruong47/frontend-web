@@ -153,6 +153,9 @@ const formatTime = (value: string | null | undefined) => {
   return date ? date.toLocaleTimeString('vi-VN') : '-';
 };
 
+/**
+ * Masks email address for privacy
+ */
 const maskEmail = (email?: string | null) => {
   if (!email) return '-';
   const parts = email.split('@');
