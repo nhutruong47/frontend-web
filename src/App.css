@@ -769,7 +769,7 @@
 }
 
 .login-form-header {
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
 .login-logo-row {
@@ -777,6 +777,53 @@
   align-items: center;
   gap: 10px;
   margin-bottom: 20px;
+}
+
+/* Auth tab bar (Đăng nhập / Đăng ký) */
+.auth-tab-bar {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 22px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  position: relative;
+}
+
+.auth-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  user-select: none;
+}
+
+.auth-tab:hover:not(.auth-tab--active) {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.auth-tab--active {
+  background: var(--primary);
+  color: var(--text-on-accent);
+  box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--primary) 60%, transparent);
+}
+
+.auth-tab--active:hover {
+  color: var(--text-on-accent);
+  background: var(--primary);
 }
 
 .login-input-wrap {
@@ -3995,6 +4042,103 @@
   backdrop-filter: blur(20px) saturate(1.08);
 }
 
+.login-form-container--compact {
+  width: min(560px, 100%);
+  max-width: 560px;
+  padding: clamp(30px, 3.4vw, 40px);
+  border-radius: 12px;
+}
+
+.login-form-container--compact .login-form-header {
+  margin-bottom: 22px;
+}
+
+.login-form-container--compact .login-logo-row {
+  margin-bottom: 18px;
+}
+
+.login-form-container--compact .login-logo-row img,
+.login-form-container--compact .login-brand-full-logo {
+  height: 40px !important;
+}
+
+.login-form-container--compact .login-form-title {
+  font-size: clamp(1.85rem, 2.4vw, 2.3rem);
+  line-height: 1.15;
+  margin-bottom: 6px;
+}
+
+.login-form-container--compact .login-form-subtitle {
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.login-form-container--compact .login-form {
+  gap: 14px;
+}
+
+.login-form-container--compact .login-field label {
+  font-size: 0.9rem;
+  font-weight: 750;
+  margin-bottom: 6px;
+}
+
+.login-form-container--compact .login-split .login-input-wrap input {
+  min-height: 54px;
+  padding: 12px 15px 12px 42px;
+  font-size: 1rem;
+  border-radius: 9px;
+}
+
+.login-form-container--compact .login-input-icon {
+  left: 14px;
+  width: 17px;
+  height: 17px;
+}
+
+.login-form-container--compact .login-input-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.login-form-container--compact .password-toggle-btn {
+  right: 9px;
+  width: 34px;
+  height: 34px;
+}
+
+.login-form-container--compact .login-remember-row {
+  font-size: 0.9rem;
+}
+
+.login-form-container--compact .login-btn-primary,
+.login-form-container--compact .login-btn-google {
+  min-height: 48px;
+  padding: 12px 18px;
+  font-size: 0.98rem;
+  border-radius: 9px;
+}
+
+.login-form-container--compact .login-error {
+  padding: 11px 13px;
+  font-size: 0.9rem;
+}
+
+.login-form-container--compact .login-divider {
+  margin: 12px 0;
+  font-size: 0.85rem;
+}
+
+.login-form-container--compact .login-footer {
+  margin-top: 16px;
+  font-size: 0.9rem;
+}
+
+.login-form-container--compact .login-btn-google svg {
+  width: 19px;
+  height: 19px;
+}
+
 .login-form-header {
   margin-bottom: 24px;
 }
@@ -4071,6 +4215,25 @@
 .login-form {
   display: grid;
   gap: 16px;
+}
+
+@keyframes authFormFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.login-form {
+  animation: authFormFadeIn 0.22s ease-out;
+}
+
+.login-form-container > * {
+  animation-fill-mode: both;
 }
 
 .login-field label {
@@ -4235,6 +4398,11 @@
     padding: 22px;
   }
 
+  .login-form-container--compact {
+    max-width: none;
+    padding: 18px;
+  }
+
   .login-demo-accounts {
     grid-template-columns: 1fr;
   }
@@ -4299,6 +4467,69 @@
   z-index: 100;
   overflow: hidden;
   animation: dropDownEnter 0.2s ease-out;
+}
+
+/* ===================================================================
+   Auth Redesign — Compact, premium, modern
+   =================================================================== */
+
+/* Remember-row compact: smaller checkbox + tighter spacing */
+.remember-row-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  width: fit-content;
+  letter-spacing: 0.2px;
+}
+
+.remember-row-compact input {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
+  margin: 0;
+  border-radius: 3px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg-input);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.remember-row-compact input:hover {
+  border-color: var(--primary);
+}
+
+.remember-row-compact input::after {
+  content: "";
+  width: 5px;
+  height: 3px;
+  border-left: 1.5px solid var(--text-on-accent);
+  border-bottom: 1.5px solid var(--text-on-accent);
+  transform: rotate(-45deg) scale(0);
+  transition: transform 0.12s ease;
+}
+
+.remember-row-compact input:checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.remember-row-compact input:checked::after {
+  transform: rotate(-45deg) scale(1);
+}
+
+.remember-row-compact input:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
 }
 
 @keyframes dropDownEnter {

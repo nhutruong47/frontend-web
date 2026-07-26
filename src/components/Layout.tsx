@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from './Sidebar';
 import { Bell, MoreHorizontal, MessageCircle, Edit, Sparkles } from 'lucide-react';
 import { teamService, notificationService } from '../services/groupService';
+import { useNotificationSocket, type NotificationPayload } from '../hooks/useNotificationSocket';
 import type { AppNotification } from '../types/types';
 import defaultAvatar from '../assets/default-avatar.png';
 
@@ -46,6 +47,29 @@ export default function Layout() {
             notificationService.getAll().then(setNotifications).catch(() => { /* tolerated */ });
         }
     }, [user]);
+
+    // Realtime: socket push → prepend to bell list (the toast is fired inside the hook).
+    const handleIncomingNotification = useCallback((payload: NotificationPayload) => {
+        const mapped: AppNotification = {
+            id: payload.id,
+            title: payload.title,
+            message: payload.message,
+            type: payload.type,
+            taskId: payload.taskId ?? '',
+            read: payload.read,
+            createdAt: payload.createdAt,
+        };
+        setNotifications(prev => {
+            // de-duplicate so a server re-delivery doesn't double-show
+            if (prev.some(n => n.id === mapped.id)) return prev;
+            return [mapped, ...prev];
+        });
+    }, []);
+
+    useNotificationSocket({
+        onListChange: handleIncomingNotification,
+        enabled: !!user,
+    });
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {

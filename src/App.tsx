@@ -10,8 +10,8 @@ import ToastContainer from './components/ToastContainer';
 
 // Lazy-loaded route bundles.
 // Group key/large pages into a single chunk to keep the initial JS lean.
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const LoginPage = lazy(() => import('./pages/AuthPage'));
+const RegisterPage = lazy(() => import('./pages/AuthPage'));
 const OAuth2Callback = lazy(() => import('./pages/OAuth2Callback'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));

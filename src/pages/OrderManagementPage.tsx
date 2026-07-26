@@ -16,11 +16,20 @@ const DEFAULT_MANUAL_ORDER_FORM = {
     deliveryAddress: '',
     deliveryNote: '',
 };
+import { disputeService } from '../services/disputeService';
+import DisputeModal from '../components/DisputeModal';
+import BuyerConfirmDeliveryModal from '../components/BuyerConfirmDeliveryModal';
+import DeliverOrderModal from '../components/DeliverOrderModal';
+
 export default function OrderManagementPage() {
     const { user } = useAuth();
     const [myTeams, setMyTeams] = useState<Team[]>([]);
     const [selectedTeam, setSelectedTeam] = useState<string>(PERSONAL_BUYER);
     const [activeTab, setActiveTab] = useState<'outbound' | 'inbound'>('outbound');
+
+    const [disputeOrderId, setDisputeOrderId] = useState<string | null>(null);
+    const [confirmDeliveryOrderId, setConfirmDeliveryOrderId] = useState<string | null>(null);
+    const [deliverOrderId, setDeliverOrderId] = useState<string | null>(null);
 
     const [orders, setOrders] = useState<InterGroupOrder[]>([]);
     const [loading, setLoading] = useState(true);
@@ -145,27 +154,58 @@ export default function OrderManagementPage() {
         }
     };
 
-    const handleDeliver = async (orderId: string) => {
-        if (!confirm('Xác nhận đã giao đơn hàng này đến nơi?')) return;
+    const handleDeliver = (orderId: string) => {
+        setDeliverOrderId(orderId);
+    };
+
+    const submitDeliverOrder = async (proofImageUrls: string[]) => {
+        if (!deliverOrderId) return;
         try {
-            await interGroupOrderService.deliverOrder(orderId);
-            setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'DELIVERED' } : o));
+            await interGroupOrderService.deliverOrder(deliverOrderId); // TODO: pass proofImageUrls when backend is updated
+            setOrders(orders.map(o => o.id === deliverOrderId ? { ...o, status: 'DELIVERED' } : o));
+            setDeliverOrderId(null);
         } catch (err) {
-            alert('Có lỗi xảy ra.');
+            throw err;
         }
     };
 
-    const handleConfirmDelivery = async (orderId: string) => {
-        if (!confirm('Xác nhận đã nhận hàng thành công?')) return;
+    const handleConfirmDelivery = (orderId: string) => {
+        setConfirmDeliveryOrderId(orderId);
+    };
+
+    const submitConfirmDelivery = async (payload: { deliveryStatus: string; rating: number; comment: string; proofImageUrls?: string[] }) => {
+        if (!confirmDeliveryOrderId) return;
         try {
-            await interGroupOrderService.buyerConfirmDelivery(orderId, {
-                deliveryStatus: 'ON_TIME',
-                rating: 5,
-                comment: 'Đã nhận hàng'
-            });
-            setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'COMPLETED' } : o));
+            await interGroupOrderService.buyerConfirmDelivery(confirmDeliveryOrderId, payload);
+            if (payload.deliveryStatus === 'NOT_DELIVERED') {
+                // Should not reach here due to backend throwing error, but just in case
+            } else {
+                setOrders(orders.map(o => o.id === confirmDeliveryOrderId ? { ...o, status: 'COMPLETED' } : o));
+            }
+            setConfirmDeliveryOrderId(null);
         } catch (err) {
-            alert('Có lỗi xảy ra.');
+            throw err;
+        }
+    };
+
+    const handleDispute = (orderId: string) => {
+        setDisputeOrderId(orderId);
+    };
+
+    const submitDispute = async (reason: string, evidenceUrls: string[], amount: number) => {
+        if (!disputeOrderId) return;
+        try {
+            await disputeService.createDispute(disputeOrderId, {
+                reason,
+                evidenceUrls,
+                requestedCompensationAmount: amount
+            });
+            // Update order status locally if needed
+            setOrders(orders.map(o => o.id === disputeOrderId ? { ...o } : o)); 
+            setDisputeOrderId(null);
+            alert('Đã gửi khiếu nại thành công!');
+        } catch (err) {
+            throw err;
         }
     };
 
@@ -606,6 +646,10 @@ export default function OrderManagementPage() {
                                             {activeTab === 'outbound' && order.status === 'DELIVERED' && !order.cancelRequested && (
                                                 <button className="btn btn-primary" onClick={() => handleConfirmDelivery(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}><ion-icon name="checkmark-done-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Xác nhận đã nhận hàng</button>
                                             )}
+                                            {/* Outbound DELIVERED/COMPLETED: Dispute */}
+                                            {activeTab === 'outbound' && (order.status === 'DELIVERED' || order.status === 'COMPLETED') && !order.cancelRequested && (
+                                                <button className="btn" onClick={() => handleDispute(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#f59e0b', color: 'white', border: 'none' }}><ion-icon name="warning-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Mở khiếu nại</button>
+                                            )}
                                             {/* Inbound CANCEL_REQUESTED: Approve/Reject Cancel */}
                                             {activeTab === 'inbound' && order.cancelRequested && (
                                                 <>
@@ -701,6 +745,24 @@ export default function OrderManagementPage() {
                 </div>
             )}
 
+            <DisputeModal
+                isOpen={!!disputeOrderId}
+                onClose={() => setDisputeOrderId(null)}
+                onSubmit={submitDispute}
+                orderId={disputeOrderId || ''}
+            />
+            
+            <BuyerConfirmDeliveryModal
+                isOpen={!!confirmDeliveryOrderId}
+                onClose={() => setConfirmDeliveryOrderId(null)}
+                onSubmit={submitConfirmDelivery}
+            />
+
+            <DeliverOrderModal
+                isOpen={!!deliverOrderId}
+                onClose={() => setDeliverOrderId(null)}
+                onSubmit={submitDeliverOrder}
+            />
         </div>
     );
 }

@@ -28,6 +28,10 @@ export const teamService = {
         api.put<Team>(`/api/teams/${teamId}/verification`, data).then(r => r.data),
     unpublish: (teamId: string) =>
         api.put(`/api/teams/${teamId}/unpublish`).then(r => r.data),
+    rotateInviteCode: (teamId: string) =>
+        api.post<{ status: string; message: string; newInviteCode: string }>(
+            `/api/teams/${teamId}/rotate-invite-code`
+        ).then(r => r.data),
 };
 
 // === Goal API ===
