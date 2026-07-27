@@ -805,14 +805,18 @@ export default function OrderManagementPage() {
                                     <tr key={`${order.id}-detail`} style={{ borderBottom: '1px solid var(--border-color)' }}>
                                         <td colSpan={activeTab === 'inbound' ? 7 : 6} style={{ padding: '0 12px 16px 40px' }}>
                                             <div style={{
-                                                background: 'rgba(255,255,255,0.03)',
-                                                border: '1px solid var(--border-color)',
-                                                borderRadius: 8,
-                                                padding: '16px 20px',
-                                                marginTop: 4,
+                                                background: 'var(--bg-secondary)',
+                                                border: '1px solid var(--border)',
+                                                borderLeft: '4px solid var(--primary)',
+                                                borderRadius: '12px',
+                                                padding: '24px',
+                                                marginTop: '8px',
+                                                boxShadow: '0 4px 24px rgba(0,0,0,0.04)',
+                                                animation: 'fadeIn 0.2s ease-out',
+                                                maxWidth: '850px'
                                             }}>
                                                 {activeTab === 'inbound' && (
-                                                    <div className="order-buyer-trust-detail">
+                                                    <div className="order-buyer-trust-detail" style={{ marginBottom: '20px' }}>
                                                         <div>
                                                             <span className="order-trust-eyebrow">Độ tin cậy bên đặt</span>
                                                             <p>Tham khảo trước khi chấp nhận đơn. Điểm thấp nghĩa là bên đặt từng hủy hoặc chưa hoàn tất nhiều giao dịch.</p>
@@ -820,48 +824,68 @@ export default function OrderManagementPage() {
                                                         {renderTrustBadge(order.buyerTrustScore)}
                                                     </div>
                                                 )}
-                                                <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                    <ion-icon name="location-outline" style={{ fontSize: '16px' }}></ion-icon>
+                                                <h4 style={{ margin: '0 0 20px 0', fontSize: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 10, fontWeight: 600 }}>
+                                                    <div style={{ background: 'var(--primary-soft)', color: 'var(--primary)', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <ion-icon name="location-outline" style={{ fontSize: '18px' }}></ion-icon>
+                                                    </div>
                                                     Thông tin giao nhận hàng
                                                 </h4>
                                                 {(!order.contactPhone && !order.deliveryAddress) ? (
-                                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>Chưa có thông tin giao hàng cho đơn này.</p>
+                                                    <div style={{ padding: '24px', background: 'var(--bg-tertiary)', borderRadius: '8px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                                        <ion-icon name="information-circle-outline" style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.5 }}></ion-icon>
+                                                        <p style={{ margin: 0, fontSize: '0.95rem' }}>Chưa có thông tin giao hàng cho đơn này.</p>
+                                                    </div>
                                                 ) : (
-                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px 24px', fontSize: '0.85rem' }}>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px 32px' }}>
                                                         {order.contactPhone && (
-                                                            <div>
-                                                                <span style={{ color: 'var(--text-secondary)' }}>SĐT liên hệ:</span>
-                                                                <strong style={{ marginLeft: 6 }}>{order.contactPhone}</strong>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>SĐT liên hệ</span>
+                                                                <strong style={{ fontSize: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    <ion-icon name="call-outline" style={{ color: 'var(--primary)', opacity: 0.8 }}></ion-icon>
+                                                                    {order.contactPhone}
+                                                                </strong>
                                                             </div>
                                                         )}
                                                         {order.contactPhoneAlt && (
-                                                            <div>
-                                                                <span style={{ color: 'var(--text-secondary)' }}>SĐT phụ:</span>
-                                                                <strong style={{ marginLeft: 6 }}>{order.contactPhoneAlt}</strong>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>SĐT phụ</span>
+                                                                <strong style={{ fontSize: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    <ion-icon name="call-outline" style={{ color: 'var(--primary)', opacity: 0.8 }}></ion-icon>
+                                                                    {order.contactPhoneAlt}
+                                                                </strong>
                                                             </div>
                                                         )}
                                                         {order.deliveryAddress && (
-                                                            <div style={{ gridColumn: 'span 2' }}>
-                                                                <span style={{ color: 'var(--text-secondary)' }}>Địa chỉ giao:</span>
-                                                                <strong style={{ marginLeft: 6 }}>{order.deliveryAddress}</strong>
+                                                            <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Địa chỉ giao hàng</span>
+                                                                <strong style={{ fontSize: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'flex-start', gap: '8px', lineHeight: '1.4' }}>
+                                                                    <ion-icon name="map-outline" style={{ color: 'var(--primary)', marginTop: '2px', opacity: 0.8 }}></ion-icon>
+                                                                    {order.deliveryAddress}
+                                                                </strong>
                                                             </div>
                                                         )}
                                                         {formatDeliveryTime(order.preferredDeliveryFrom, order.preferredDeliveryTo) && (
-                                                            <div style={{ gridColumn: 'span 2' }}>
-                                                                <span style={{ color: 'var(--text-secondary)' }}>Giờ giao mong muốn:</span>
-                                                                <strong style={{ marginLeft: 6 }}>{formatDeliveryTime(order.preferredDeliveryFrom, order.preferredDeliveryTo)}</strong>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Giờ giao mong muốn</span>
+                                                                <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    <ion-icon name="time-outline" style={{ color: 'var(--primary)', opacity: 0.8 }}></ion-icon>
+                                                                    {formatDeliveryTime(order.preferredDeliveryFrom, order.preferredDeliveryTo)}
+                                                                </strong>
                                                             </div>
                                                         )}
                                                         {order.deliveryFailureAction && (
-                                                            <div>
-                                                                <span style={{ color: 'var(--text-secondary)' }}>Nếu không giao được:</span>
-                                                                <strong style={{ marginLeft: 6 }}>{deliveryFailureLabel(order.deliveryFailureAction)}</strong>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Nếu không giao được</span>
+                                                                <strong style={{ fontSize: '0.95rem', color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    <ion-icon name="alert-circle-outline"></ion-icon>
+                                                                    {deliveryFailureLabel(order.deliveryFailureAction)}
+                                                                </strong>
                                                             </div>
                                                         )}
                                                         {order.deliveryNote && (
-                                                            <div style={{ gridColumn: 'span 2' }}>
-                                                                <span style={{ color: 'var(--text-secondary)' }}>Ghi chú giao hàng:</span>
-                                                                <span style={{ marginLeft: 6 }}>{order.deliveryNote}</span>
+                                                            <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '6px', borderLeft: '3px solid var(--primary)', paddingLeft: '16px', marginTop: '8px' }}>
+                                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Ghi chú giao hàng</span>
+                                                                <span style={{ fontSize: '1rem', color: 'var(--text-primary)', fontStyle: 'italic', lineHeight: '1.5' }}>"{order.deliveryNote}"</span>
                                                             </div>
                                                         )}
                                                     </div>

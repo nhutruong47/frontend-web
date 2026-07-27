@@ -977,21 +977,66 @@ export default function AdminPage() {
           )}
 
           {active === 'reports' && (
-            <section className="admin-card">
-              <div className="admin-card-head">
-                <div><h3>Xuất dữ liệu & Báo cáo</h3><p>Tạo các báo cáo phân tích hiệu suất của nền tảng.</p></div>
+            <>
+              <div className="admin-kpi-grid" style={{ marginBottom: '24px' }}>
+                <KpiCard item={{ label: 'Tổng người dùng', value: number(overview.totalUsers), detail: `+${overview.newUsersThisMonth} tháng này`, icon: Users, tone: 'blue', trend: 'up' }} />
+                <KpiCard item={{ label: 'Doanh thu tháng này', value: money(overview.revenueThisMonth), detail: `Tổng: ${money(overview.revenueTotal)}`, icon: DollarSign, tone: 'green', trend: 'up' }} />
+                <KpiCard item={{ label: 'Tổng thanh toán', value: number(overview.paidPayments), detail: 'Giao dịch thành công', icon: CreditCard, tone: 'violet', trend: 'up' }} />
               </div>
-              <div className="admin-table-wrap">
-                <table className="admin-table">
-                  <thead><tr><th>Loại báo cáo</th><th>Mô tả</th><th>Tạo lần cuối</th><th>Thao tác</th></tr></thead>
-                  <tbody>
-                    <tr><td><strong>Báo cáo doanh thu</strong></td><td>Thống kê doanh thu thanh toán SaaS hàng tháng</td><td>Hôm nay, 10:30 AM</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> CSV</button></td></tr>
-                    <tr><td><strong>Tăng trưởng công ty</strong></td><td>Lượt đăng ký công ty mới và tỷ lệ rời bỏ</td><td>Hôm qua, 14:00 PM</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> Excel</button></td></tr>
-                    <tr><td><strong>Mức độ sử dụng</strong></td><td>Sử dụng bộ nhớ, điểm AI và yêu cầu API</td><td>2 ngày trước</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> PDF</button></td></tr>
-                  </tbody>
-                </table>
+
+              <div className="admin-grid-2" style={{ marginBottom: '24px' }}>
+                <ChartPanel title="Xu hướng phát triển">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={overview.systemTrendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorSignups" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={chartPalette.categorical[0]} stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor={chartPalette.categorical[0]} stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartPalette.grid} />
+                      <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chartPalette.muted }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chartPalette.muted }} />
+                      <Tooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                      <Area type="monotone" dataKey="users" name="Người dùng mới" stroke={chartPalette.categorical[0]} strokeWidth={2} fillOpacity={1} fill="url(#colorSignups)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </ChartPanel>
+
+                <ChartPanel title="Phân bổ trạng thái đơn hàng">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={Object.entries(overview.orderStatusCounts).map(([name, value]) => ({ name, value }))}
+                        cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value"
+                      >
+                        {Object.entries(overview.orderStatusCounts).map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={chartPalette.categorical[index % chartPalette.categorical.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </ChartPanel>
               </div>
-            </section>
+
+              <section className="admin-card">
+                <div className="admin-card-head">
+                  <div><h3>Xuất dữ liệu & Báo cáo</h3><p>Tạo các báo cáo phân tích hiệu suất của nền tảng.</p></div>
+                </div>
+                <div className="admin-table-wrap">
+                  <table className="admin-table">
+                    <thead><tr><th>Loại báo cáo</th><th>Mô tả</th><th>Tạo lần cuối</th><th>Thao tác</th></tr></thead>
+                    <tbody>
+                      <tr><td><strong>Báo cáo doanh thu</strong></td><td>Thống kê doanh thu thanh toán SaaS hàng tháng</td><td>Hôm nay, 10:30 AM</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> CSV</button></td></tr>
+                      <tr><td><strong>Tăng trưởng công ty</strong></td><td>Lượt đăng ký công ty mới và tỷ lệ rời bỏ</td><td>Hôm qua, 14:00 PM</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> Excel</button></td></tr>
+                      <tr><td><strong>Mức độ sử dụng</strong></td><td>Sử dụng bộ nhớ, điểm AI và yêu cầu API</td><td>2 ngày trước</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> PDF</button></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </>
           )}
 
           {active === 'logs' && (

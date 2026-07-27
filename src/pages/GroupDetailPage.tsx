@@ -1235,13 +1235,7 @@ export default function GroupDetailPage() {
                         <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 600, width: '90%', background: 'var(--bg-panel, #fff)', color: 'var(--text-primary, #1a1a1a)', borderRadius: 16, padding: '32px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
                             <h2 style={{ margin: '0 0 24px', fontSize: 20 }}>Tạo công việc mới</h2>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Loại công việc / Mục tiêu</label>
-                                    <select value={selectedGoalId || ''} onChange={e => setSelectedGoalId(e.target.value)} style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border, #cbd5e1)', fontSize: 14, background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)' }}>
-                                        <option value="">Công việc thủ công</option>
-                                        {goals.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
-                                    </select>
-                                </div>
+
                                 <div>
                                     <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Tên task <span style={{ color: '#dc2626' }}>*</span></label>
                                     <input value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} placeholder="Tên task" style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border, #cbd5e1)', fontSize: 14, background: 'var(--bg-input, #f8fafc)', color: 'var(--text-primary, #1a1a1a)', boxSizing: 'border-box' }} autoFocus />

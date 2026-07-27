@@ -1780,73 +1780,102 @@
 .profile-page {
   display: flex;
   flex-direction: column;
-  gap: clamp(20px, 3vw, 28px);
-  max-width: 100%;
+  gap: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
   animation: pageEnter 0.4s ease-out;
 }
 
-.profile-header {
-  text-align: center;
-  padding: clamp(24px, 5vw, 40px) 0;
+.profile-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32px 40px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.profile-header-info {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  z-index: 2;
 }
 
 .profile-avatar-large {
-  width: clamp(64px, 12vw, 96px);
-  height: clamp(64px, 12vw, 96px);
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   background: var(--accent-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-on-accent);
-  font-size: clamp(24px, 6vw, 40px);
+  font-size: 40px;
   font-weight: 800;
-  margin: 0 auto clamp(12px, 2vw, 16px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  position: relative;
+}
+
+.profile-name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
 }
 
 .profile-name {
-  font-size: clamp(18px, 4vw, 24px);
+  font-size: 28px;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin: 0;
+  color: var(--text-primary);
 }
 
 .profile-section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
 .profile-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
 }
 
 .profile-field {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
-  padding: 18px 20px;
+  padding: 20px;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  transition: var(--transition);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
 .profile-field:hover {
   background: var(--bg-card-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
 }
 
 .field-icon {
-  font-size: 22px;
-  width: 44px;
-  height: 44px;
+  font-size: 24px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent-soft);
-  border-radius: var(--radius-sm);
+  background: var(--bg-body);
+  color: var(--primary);
+  border-radius: 12px;
   flex-shrink: 0;
 }
 
@@ -1856,53 +1885,80 @@
 }
 
 .field-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-bottom: 4px;
 }
 
 .field-value {
   font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.empty-state-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--primary-light, rgba(0, 122, 255, 0.1));
+  color: var(--primary);
+  border: 1px dashed var(--primary);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
   margin-top: 2px;
+}
+
+.empty-state-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-style: solid;
 }
 
 /* Security Section */
 .security-info {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
 }
 
 .security-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
-  padding: 18px 20px;
+  padding: 20px;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 12px;
 }
 
 .security-icon {
-  font-size: 20px;
+  font-size: 24px;
+  color: var(--text-secondary);
+  padding-top: 2px;
 }
 
 .security-label {
   display: block;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
+  margin-bottom: 4px;
 }
 
 .security-value {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
-  margin-top: 2px;
+  line-height: 1.4;
 }
 
 /* ============================================

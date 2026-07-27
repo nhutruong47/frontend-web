@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
+import { gsap } from 'gsap';
 import '../components/Profile.css';
 
 export default function ProfilePage() {
@@ -27,13 +28,24 @@ export default function ProfilePage() {
     const [showWebcam, setShowWebcam] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
+    const pageRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (pageRef.current) {
+            gsap.fromTo(
+                gsap.utils.toArray('.gsap-reveal'),
+                { y: 30, opacity: 0 },
+                { y: 0, opacity: 1, duration: 0.6, stagger: 0.1, ease: 'power3.out' }
+            );
+        }
+    }, [isEditing]);
 
     const profileFields = [
         { icon: <ion-icon name="key-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'User ID', value: user?.id?.toString() || '—' },
         { icon: <ion-icon name="person-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'Tên đăng nhập', value: user?.username || '—' },
-        { icon: <ion-icon name="document-text-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'Họ tên', value: user?.fullName || '—' },
-        { icon: <ion-icon name="mail-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'Email', value: user?.email || '—' },
-        { icon: <ion-icon name="ribbon-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'Vai trò', value: 'Thành viên' },
+        { icon: <ion-icon name="document-text-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'Họ tên', value: user?.fullName || <button type="button" className="empty-state-btn" onClick={() => setIsEditing(true)}><ion-icon name="add-circle-outline"></ion-icon> Thêm Họ tên</button> },
+        { icon: <ion-icon name="mail-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'Email', value: user?.email || <button type="button" className="empty-state-btn" onClick={() => setIsEditing(true)}><ion-icon name="add-circle-outline"></ion-icon> Thêm Email</button> },
+        { icon: <ion-icon name="ribbon-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'Vai trò', value: user?.role === 'ADMIN' ? 'Admin Nền Tảng' : user?.role === 'FACTORY_OWNER' ? 'Chủ xưởng' : 'Thành viên' },
     ];
 
     const handleSave = async () => {
@@ -192,7 +204,7 @@ export default function ProfilePage() {
     }, []);
 
     return (
-        <div className="profile-page fade-in">
+        <div className="profile-page fade-in" ref={pageRef}>
             {feedback && (
                 <div className={`profile-feedback ${feedback.type}`} role="status">
                     <ion-icon name={feedback.type === 'success' ? 'checkmark-circle-outline' : 'alert-circle-outline'}></ion-icon>
@@ -202,9 +214,8 @@ export default function ProfilePage() {
                     </button>
                 </div>
             )}
-            <div className="profile-header glass-panel" style={{ position: 'relative', overflow: 'hidden' }}>
-                <div className="profile-header-backdrop" style={formData.avatar || user?.avatar ? { backgroundImage: `url(${formData.avatar || user?.avatar})` } : {}}></div>
-                <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div className="profile-header-card gsap-reveal">
+                <div className="profile-header-info">
                     <div className="profile-avatar-large" style={formData.avatar || user?.avatar ? { backgroundImage: `url(${formData.avatar || user?.avatar})`, backgroundSize: 'cover', backgroundPosition: 'center', color: 'transparent' } : {}}>
                         {!(formData.avatar || user?.avatar) && user?.username.charAt(0).toUpperCase()}
 
@@ -220,13 +231,15 @@ export default function ProfilePage() {
                         {uploadingAvatar && <div className="avatar-uploading-spinner"><ion-icon name="sync-outline" className="spin"></ion-icon></div>}
                     </div>
 
-                    <h1 className="profile-name" style={{ marginTop: 16 }}>{formData.fullName || user?.fullName || user?.username}</h1>
-                    <span className="role-badge large member" style={{ marginTop: 8 }}><ion-icon name="person-outline" style={{ fontSize: '14px' }}></ion-icon> Thành viên</span>
+                    <div className="profile-name-block">
+                        <h1 className="profile-name">{formData.fullName || user?.fullName || user?.username}</h1>
+                        <span className="role-badge large member"><ion-icon name="person-outline" style={{ fontSize: '14px' }}></ion-icon> Thành viên</span>
+                    </div>
                 </div>
 
                 <button
                     className={isEditing ? "primary-button pulse" : "secondary-button"}
-                    style={{ position: 'absolute', top: 20, right: 20, padding: '10px 20px', borderRadius: 20, zIndex: 2 }}
+                    style={{ padding: '10px 20px', borderRadius: 20 }}
                     onClick={() => isEditing ? handleSave() : setIsEditing(true)}
                     disabled={saving}
                 >
@@ -257,7 +270,7 @@ export default function ProfilePage() {
                 </div>
             )}
 
-            <div className="profile-section glass-panel">
+            <div className="profile-section glass-panel gsap-reveal">
                 <h2 className="section-title text-glow-active" style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span className="icon-container glow" style={{ width: 32, height: 32, fontSize: 18 }}><ion-icon name="clipboard-outline"></ion-icon></span> Thông tin cá nhân
@@ -304,7 +317,7 @@ export default function ProfilePage() {
                 )}
             </div>
 
-            <div className="profile-section glass-panel">
+            <div className="profile-section glass-panel gsap-reveal">
                 <h2 className="section-title text-glow-active" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span className="icon-container glow" style={{ width: 32, height: 32, fontSize: 18 }}><ion-icon name="lock-closed-outline"></ion-icon></span> Bảo mật tài khoản
                 </h2>
