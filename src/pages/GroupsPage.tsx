@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { teamService } from '../services/groupService';
 import type { Team } from '../types/types';
+import VerificationModal from '../components/VerificationModal';
+import FactoryConfigModal from '../components/FactoryConfigModal';
+import api from '../services/api';
 
 export default function GroupsPage() {
   const navigate = useNavigate();
@@ -17,6 +20,9 @@ export default function GroupsPage() {
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [error, setError] = useState('');
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showFactoryConfigModal, setShowFactoryConfigModal] = useState(false);
+  const [joinRequests, setJoinRequests] = useState<any[]>([]);
 
   const totalMembers = useMemo(
     () => groups.reduce((sum, group) => sum + (group.memberCount || group.members?.length || 0), 0),
@@ -124,11 +130,18 @@ export default function GroupsPage() {
   };
 
 
-  const openManageModal = (group: Team) => {
+  const openManageModal = async (group: Team) => {
     setManagedTeam(group);
     setEditName(group.name || '');
     setEditDescription(group.description || '');
     setError('');
+    
+    try {
+      const res = await api.get(`/team-join/team/${group.id}/pending`);
+      setJoinRequests(res.data);
+    } catch (err) {
+      console.error('Failed to fetch join requests', err);
+    }
   };
 
   const closeManageModal = () => {
@@ -212,27 +225,19 @@ export default function GroupsPage() {
     }
   };
 
-  const handleSubmitVerification = async () => {
-    if (!managedTeam) return;
-    if (!managedTeam.businessLicense) {
-      setError('Vui lòng nhập giấy phép kinh doanh trước khi nộp xác minh.');
-      return;
-    }
-    setSaving(true);
-    setError('');
+  const handleSubmitVerification = () => {
+    setShowVerificationModal(true);
+  };
+
+  const handleDecision = async (requestId: string, decision: 'APPROVED' | 'REJECTED') => {
     try {
-      const updated = await teamService.submitVerification(managedTeam.id, {
-        businessLicense: managedTeam.businessLicense,
-        businessAddress: managedTeam.businessAddress,
-        websiteUrl: managedTeam.websiteUrl,
-        facebookUrl: managedTeam.facebookUrl,
-        certificationDocument: managedTeam.certificationDocument,
-      });
-      setManagedTeam(updated);
-    } catch (err: any) {
-      setError(err?.response?.data?.error || err?.response?.data?.message || 'Không thể nộp hồ sơ xác minh.');
-    } finally {
-      setSaving(false);
+        await api.post(`/team-join/${requestId}/decision`, { decision });
+        setJoinRequests(current => current.filter(r => r.id !== requestId));
+        if (decision === 'APPROVED') {
+            loadGroups();
+        }
+    } catch (e: any) {
+        alert('Lỗi: ' + (e.response?.data?.error || e.message));
     }
   };
 
@@ -579,6 +584,16 @@ export default function GroupsPage() {
                 <button
                   type="button"
                   className="btn btn-secondary"
+                  onClick={() => setShowFactoryConfigModal(true)}
+                  disabled={saving}
+                  style={{ fontSize: 13 }}
+                >
+                  <ion-icon name="settings-outline" style={{ fontSize: 15, marginRight: 4 }}></ion-icon>
+                  Cấu hình năng lực
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
                   onClick={handleRotateInvite}
                   disabled={saving || !managedTeam.inviteCode}
                   style={{ fontSize: 13 }}
@@ -587,19 +602,37 @@ export default function GroupsPage() {
                   Cấp lại mã mời
                 </button>
               </div>
-              {managedTeam.verificationStatus && (
+              {managedTeam.isVerified ? (
+                <div style={{ marginTop: 10, fontSize: 12, color: 'green' }}>
+                  <strong>✅ Đã xác minh (Tick xanh)</strong>
+                </div>
+              ) : (
                 <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
                   Trạng thái xác minh:&nbsp;
-                  <strong>
-                    {managedTeam.verificationStatus === 'APPROVED' && '✅ Đã xác minh'}
-                    {managedTeam.verificationStatus === 'PENDING' && '⏳ Đang chờ duyệt'}
-                    {managedTeam.verificationStatus === 'REJECTED' && '❌ Bị từ chối'}
-                    {managedTeam.verificationStatus === 'NOT_SUBMITTED' && '— Chưa gửi'}
-                  </strong>
+                  <strong>Chưa xác minh</strong>
                 </div>
               )}
             </div>
 
+            {joinRequests.length > 0 && (
+                <div style={{ border: '1px solid var(--border-color)', borderRadius: 12, padding: 14, marginBottom: 18 }}>
+                    <strong style={{ fontSize: 14, display: 'block', marginBottom: 10 }}>Yêu cầu tham gia chờ duyệt</strong>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                        {joinRequests.map(req => (
+                            <li key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border-color)' }}>
+                                <div>
+                                    <div style={{ fontWeight: 600 }}>{req.userName}</div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{req.userEmail}</div>
+                                </div>
+                                <div style={{ display: 'flex', gap: 5 }}>
+                                    <button className="btn btn-primary" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => handleDecision(req.id, 'APPROVED')}>Duyệt</button>
+                                    <button className="btn btn-danger" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => handleDecision(req.id, 'REJECTED')}>Từ chối</button>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
             <form onSubmit={handleUpdateTeam} className="auth-form">
               {error && (
                 <div className="form-error">
@@ -648,6 +681,24 @@ export default function GroupsPage() {
             </form>
           </div>
         </div>
+      )}
+      {managedTeam && (
+          <VerificationModal
+              isOpen={showVerificationModal}
+              onClose={() => setShowVerificationModal(false)}
+              teamId={managedTeam.id}
+          />
+      )}
+
+      {managedTeam && (
+          <FactoryConfigModal
+              isOpen={showFactoryConfigModal}
+              onClose={() => {
+                  setShowFactoryConfigModal(false);
+                  loadGroups(); // reload to get new capacity data
+              }}
+              teamId={managedTeam.id}
+          />
       )}
     </div>
   );

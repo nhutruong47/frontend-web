@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
 import { paymentService } from '../services/paymentService';
 import type { SubscriptionPlan } from '../types/types';
 import './UpgradePlanPage.css';
 
 export default function UpgradePlanPage() {
+    const navigate = useNavigate();
     const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -104,6 +106,34 @@ export default function UpgradePlanPage() {
                                     <span>Tối đa {plan.orders} đơn hàng/tháng</span>
                                 </li>
                             </ul>
+                            
+                                                        {/* Nút Test (Hiện ở cả 3 gói) */}
+                            <div 
+                                style={{ 
+                                    width: '16px', 
+                                    height: '16px', 
+                                    borderRadius: '50%', 
+                                    backgroundColor: 'transparent',
+                                    border: '1.5px solid #fde047',
+                                    margin: '16px auto 0',
+                                    cursor: 'pointer', 
+                                    opacity: 0.8,
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
+                                }}
+                                title="Mô phỏng thanh toán PayOS thành công"
+                                onClick={async () => {
+                                    try {
+                                            const res = await paymentService.createVirtualQrPayment(plan.id, 'PAYOS');
+                                            if (res.txnRef) {
+                                                await paymentService.confirmVirtualQrPayment(res.txnRef);
+                                                alert('Mô phỏng thanh toán thành công! Mã giao dịch: ' + res.txnRef);
+                                            }
+                                        } catch (e: any) {
+                                            console.error(e);
+                                            alert('Lỗi mô phỏng thanh toán: ' + (e?.response?.data?.error || e.message));
+                                        }
+                                }}
+                            />
                         </article>
                     );
                 })}

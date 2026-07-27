@@ -22,12 +22,16 @@ const ProductionCalendarPage = lazy(() => import('./pages/ProductionCalendarPage
 const InviteAcceptPage = lazy(() => import('./pages/InviteAcceptPage'));
 const MarketplacePage = lazy(() => import('./pages/MarketplacePage'));
 const OrderManagementPage = lazy(() => import('./pages/OrderManagementPage'));
+const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const HomePage = lazy(() => import('./pages/HomePage'));
 const UpgradePlanPage = lazy(() => import('./pages/UpgradePlanPage'));
 const PaymentResultPage = lazy(() => import('./pages/PaymentResultPage'));
 const VnpayMockCheckoutPage = lazy(() => import('./pages/VnpayMockCheckoutPage'));
+const AdminVerificationPage = lazy(() => import('./pages/AdminVerificationPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const FactoryOverviewPage = lazy(() => import('./pages/FactoryOverviewPage'));
 
 import './App.css';
 
@@ -53,8 +57,14 @@ function App() {
                                     <Route path="/groups/:id/create-task" element={<CreateTaskPage />} />
                                     <Route path="/groups/:id/calendar" element={<ProductionCalendarPage />} />
                                     <Route path="/orders" element={<OrderManagementPage />} />
-                                    <Route path="/admin" element={<AdminPage />} />
+                                    <Route path="/orders/:id" element={<OrderDetailPage />} />
                                     <Route path="/settings" element={<SettingsPage />} />
+                                    <Route path="/admin" element={<AdminPage />} />
+                                    <Route path="/admin/verification" element={<AdminVerificationPage />} />
+                                    <Route path="/notifications" element={<NotificationsPage />} />
+                                    <Route path="/thong-bao" element={<NotificationsPage />} />
+                                    <Route path="/factory-overview" element={<FactoryOverviewPage />} />
+                                    <Route path="/tong-quan-xuong" element={<FactoryOverviewPage />} />
                                     <Route path="/upgrade" element={<UpgradePlanPage />} />
                                     <Route path="/nang-cap-goi" element={<UpgradePlanPage />} />
                                     <Route path="/payment-result" element={<PaymentResultPage />} />

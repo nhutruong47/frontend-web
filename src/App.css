@@ -3581,11 +3581,11 @@
 }
 
 .order-actions {
-  display: grid;
-  grid-template-columns: repeat(2, max-content);
-  justify-content: end;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .order-actions .btn,
@@ -3598,11 +3598,6 @@
   font-size: 0.8rem !important;
   line-height: 1;
   white-space: nowrap;
-}
-
-.order-actions .order-cancel-btn {
-  grid-column: 1 / -1;
-  justify-self: end;
 }
 
 .order-cancel-btn {

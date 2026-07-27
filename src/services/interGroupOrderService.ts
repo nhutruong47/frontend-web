@@ -14,11 +14,20 @@ export const interGroupOrderService = {
     getOrder: (orderId: string) =>
         api.get<InterGroupOrder>(`/api/inter-group-orders/${orderId}`).then(r => r.data),
 
+    getEventLogs: (orderId: string) =>
+        api.get<any[]>(`/api/inter-group-orders/${orderId}/event-logs`).then(r => r.data),
+
     placeOrder: (data: Partial<InterGroupOrder>) =>
         api.post<InterGroupOrder>('/api/inter-group-orders', data).then(r => r.data),
 
     acceptOrder: (orderId: string) =>
         api.post<InterGroupOrder>(`/api/inter-group-orders/${orderId}/accept`).then(r => r.data),
+
+    quoteOrder: (orderId: string, payload: { price: number; note: string }) =>
+        api.post<InterGroupOrder>(`/api/inter-group-orders/${orderId}/quote`, payload).then(r => r.data),
+
+    confirmQuote: (orderId: string) =>
+        api.post<InterGroupOrder>(`/api/inter-group-orders/${orderId}/confirm-quote`).then(r => r.data),
 
     rejectOrder: (orderId: string) =>
         api.post<InterGroupOrder>(`/api/inter-group-orders/${orderId}/reject`).then(r => r.data),
@@ -35,7 +44,7 @@ export const interGroupOrderService = {
     shipOrder: (orderId: string) =>
         api.patch<InterGroupOrder>(`/api/inter-group-orders/${orderId}/ship`).then(r => r.data),
 
-    deliverOrder: (orderId: string, payload?: { deliveryNote?: string }) =>
+    deliverOrder: (orderId: string, payload?: { deliveryNote?: string; proofImages?: { imageUrl: string; latitude: number | null; longitude: number | null; capturedAt: string }[] }) =>
         api.patch<InterGroupOrder>(`/api/inter-group-orders/${orderId}/deliver`, payload).then(r => r.data),
 
     /** Người mua xác nhận đã nhận hàng + đánh giá sao */
@@ -43,6 +52,7 @@ export const interGroupOrderService = {
         deliveryStatus: 'ON_TIME' | 'LATE' | 'NOT_DELIVERED';
         rating: number;
         comment: string;
+        proofImageUrls?: string[];
     }) =>
         api.post<InterGroupOrder>(`/api/inter-group-orders/${orderId}/buyer-confirm`, payload).then(r => r.data),
 

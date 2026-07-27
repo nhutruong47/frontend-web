@@ -19,7 +19,8 @@ import { useToast } from '../context/ToastContext';
  * </ul>
  *
  * Auto-reconnects with exponential backoff on socket drop and tears down
- * cleanly on unmount or logout.
+ * cleanly on unmount or logout. Reconnect timer is stored in a ref and
+ * cleared on cleanup to avoid firing after unmount.
  */
 export interface NotificationPayload {
     id: string;
@@ -41,6 +42,7 @@ export interface UseNotificationSocketOptions {
 }
 
 const MAX_BACKOFF_MS = 30_000;
+const MAX_RECONNECT_ATTEMPTS = 10;
 // Map server-side notification type -> toast tone. Unknown falls back to "info".
 const TYPE_TO_TONE: Record<string, 'success' | 'error' | 'warning' | 'info'> = {
     ORDER_CREATED: 'info',
@@ -69,12 +71,21 @@ export function useNotificationSocket(options: UseNotificationSocketOptions = {}
     const clientRef = useRef<Client | null>(null);
     const subscriptionRef = useRef<StompSubscription | null>(null);
     const reconnectAttemptRef = useRef(0);
+    const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const optionsRef = useRef(options);
     optionsRef.current = options;
     const toastRef = useRef(toast);
     toastRef.current = toast;
 
+    const clearReconnectTimer = useCallback(() => {
+        if (reconnectTimerRef.current !== null) {
+            clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = null;
+        }
+    }, []);
+
     const teardown = useCallback(() => {
+        clearReconnectTimer();
         if (subscriptionRef.current) {
             try {
                 subscriptionRef.current.unsubscribe();
@@ -91,7 +102,7 @@ export function useNotificationSocket(options: UseNotificationSocketOptions = {}
             }
             clientRef.current = null;
         }
-    }, []);
+    }, [clearReconnectTimer]);
 
     useEffect(() => {
         const enabled = options.enabled ?? true;
@@ -147,15 +158,22 @@ export function useNotificationSocket(options: UseNotificationSocketOptions = {}
         };
 
         const scheduleReconnect = () => {
+            // Guard: stop reconnecting after the bound OR if client was torn down
+            if (clientRef.current !== client) return;
+            if (reconnectAttemptRef.current >= MAX_RECONNECT_ATTEMPTS) {
+                optionsRef.current.onConnectionChange?.(false);
+                return;
+            }
             const attempt = ++reconnectAttemptRef.current;
             const backoff = Math.min(1000 * Math.pow(2, attempt - 1), MAX_BACKOFF_MS);
-            setTimeout(() => {
-                if (clientRef.current === client) {
-                    try {
-                        client.activate();
-                    } catch {
-                        // ignore — next onWebSocketClose will retry
-                    }
+            clearReconnectTimer();
+            reconnectTimerRef.current = setTimeout(() => {
+                reconnectTimerRef.current = null;
+                if (clientRef.current !== client) return;
+                try {
+                    client.activate();
+                } catch {
+                    // ignore — next onWebSocketClose will retry
                 }
             }, backoff);
         };
@@ -168,6 +186,7 @@ export function useNotificationSocket(options: UseNotificationSocketOptions = {}
         }
 
         return () => {
+            clearReconnectTimer();
             clientRef.current = null;
             subscriptionRef.current = null;
             try {
@@ -177,7 +196,7 @@ export function useNotificationSocket(options: UseNotificationSocketOptions = {}
             }
             optionsRef.current.onConnectionChange?.(false);
         };
-    }, [userId, token, options.enabled, teardown]);
+    }, [userId, token, options.enabled, teardown, clearReconnectTimer]);
 }
 
 let cachedAudio: HTMLAudioElement | null = null;

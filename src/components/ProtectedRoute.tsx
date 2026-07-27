@@ -6,7 +6,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -20,6 +20,11 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Redirect ADMIN away from standard user pages (dashboard, groups, etc)
+  if (user?.role === 'ADMIN' && !location.pathname.startsWith('/admin') && !['/profile', '/settings'].includes(location.pathname)) {
+    return <Navigate to="/admin" replace />;
   }
 
   return <>{children}</>;

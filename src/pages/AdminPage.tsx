@@ -11,7 +11,7 @@ import {
   Lock,
   MoreHorizontal,
   Plus,
-  RotateCcw,
+  RotateCcw, RefreshCw,
   Search,
   ServerCrash,
   ShieldCheck,
@@ -262,11 +262,12 @@ export default function AdminPage() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('All');
   const [userPage, setUserPage] = useState(1);
-  const [revenueFrom] = useState('2026-06-01');
-  const [revenueTo] = useState('2026-06-30');
+  const [revenueFrom] = useState('2020-01-01');
+  const [revenueTo] = useState('2030-12-31');
   
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
+  const [viewingReceipt, setViewingReceipt] = useState<AdminPayment | null>(null);
 
   // Costs State
   const [costs, setCosts] = useState<Cost[]>([]);
@@ -357,7 +358,7 @@ export default function AdminPage() {
     const rangePayments = adminPayments.filter(item => {
       const date = paymentDate(item);
       return Boolean(date && date >= safeFrom && date <= safeTo);
-    });
+    }).sort((a,b) => (paymentDate(b)?.getTime() || 0) - (paymentDate(a)?.getTime() || 0));
     const paidPayments = rangePayments.filter(item => item.status === 'PAID');
     const total = paidPayments.reduce((sum, item) => sum + Number(item.amount), 0);
     const pending = rangePayments.filter(item => item.status === 'PENDING').reduce((sum, item) => sum + Number(item.amount), 0);
@@ -761,7 +762,7 @@ export default function AdminPage() {
                           <td>{money(Number(item.amount))}</td>
                           <td>{formatShortDate(paymentDate(item))}</td>
                           <td><StatusBadge value={String(item.status)} /></td>
-                          <td><button className="admin-button admin-button-secondary" style={{padding:'4px 8px', fontSize:12}}>Biên lai</button></td>
+                          <td><button className="admin-button admin-button-secondary" style={{padding:'4px 8px', fontSize:12}} onClick={() => setViewingReceipt(item)}>Biên lai</button></td>
                         </tr>
                       ))}
                     </tbody>
@@ -1032,6 +1033,59 @@ export default function AdminPage() {
 
         </div>
       </main>
+
+
+      {/* Receipt Modal */}
+      {viewingReceipt && (
+        <div className="modal-overlay" onClick={() => setViewingReceipt(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{maxWidth: 450}}>
+            <div className="modal-header">
+              <h2>Biên lai thanh toán</h2>
+              <button className="modal-close" onClick={() => setViewingReceipt(null)}>&times;</button>
+            </div>
+            <div className="modal-body" style={{padding: '24px 0'}}>
+              <div style={{textAlign: 'center', marginBottom: '24px'}}>
+                <div style={{
+                  width: '60px', height: '60px', borderRadius: '50%', 
+                  background: viewingReceipt.status === 'PAID' ? '#dcfce7' : '#fef08a',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 16px'
+                }}>
+                  {viewingReceipt.status === 'PAID' ? <ShieldCheck size={32} color="#16a34a" /> : <AlertTriangle size={32} color="#ca8a04" />}
+                </div>
+                <h3 style={{fontSize: '24px', margin: '0 0 8px'}}>{money(Number(viewingReceipt.amount))}</h3>
+                <p style={{color: '#6b7280', margin: 0}}>{viewingReceipt.status === 'PAID' ? 'Đã thanh toán thành công' : 'Đang chờ xử lý'}</p>
+              </div>
+              <div style={{borderTop: '1px dashed #e5e7eb', borderBottom: '1px dashed #e5e7eb', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                  <span style={{color: '#6b7280'}}>Mã giao dịch</span>
+                  <strong>{viewingReceipt.txnRef}</strong>
+                </div>
+                <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                  <span style={{color: '#6b7280'}}>Ngày thanh toán</span>
+                  <strong>{formatShortDate(paymentDate(viewingReceipt))}</strong>
+                </div>
+                <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                  <span style={{color: '#6b7280'}}>Phương thức</span>
+                  <strong>{viewingReceipt.paymentMethod || viewingReceipt.bankCode || 'VNPAY'}</strong>
+                </div>
+                <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                  <span style={{color: '#6b7280'}}>Khách hàng</span>
+                  <strong>{paymentCustomerName(viewingReceipt)}</strong>
+                </div>
+                <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                  <span style={{color: '#6b7280'}}>Gói dịch vụ</span>
+                  <strong style={{textTransform: 'uppercase'}}>{viewingReceipt.planId}</strong>
+                </div>
+              </div>
+              <div style={{padding: '24px 24px 0', display: 'flex', gap: '12px'}}>
+                <button className="admin-button admin-button-secondary" style={{flex: 1}} onClick={() => setViewingReceipt(null)}>Đóng</button>
+                <button className="admin-button admin-button-primary" style={{flex: 1}} onClick={() => window.print()}><Download size={16} /> In biên lai</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isPlanModalOpen && (
         <div className="admin-modal-overlay">

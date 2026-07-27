@@ -70,6 +70,7 @@ export interface Team {
     factoryImageUrl?: string;
     factoryImages?: string[];
     verificationStatus?: 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
+    isVerified?: boolean;
     businessLicense?: string;
     businessAddress?: string;
     websiteUrl?: string;
@@ -297,6 +298,12 @@ export interface InterGroupOrder {
     sellerViewed?: boolean;
     deliveryStatus?: string;
     deliveryConfirmed?: boolean;
+    // Quote (server may include when the seller has quoted)
+    quotedPrice?: number;
+    quotedNote?: string;
+    quotedAt?: string;
+    // Budget cap (set by buyer when creating RFQ)
+    budget?: number;
 }
 
 // === Reviews ===
@@ -492,6 +499,7 @@ export interface AdminTeam {
     factoryImageUrl?: string;
     factoryImages?: string[];
     verificationStatus?: 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
+    isVerified?: boolean;
     businessLicense?: string;
     businessAddress?: string;
     websiteUrl?: string;

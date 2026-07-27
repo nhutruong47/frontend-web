@@ -489,6 +489,7 @@ export default function MarketplacePage() {
     const [deliveryTo, setDeliveryTo] = useState('');
     const [deliveryFailureAction, setDeliveryFailureAction] = useState('RETRY_LATER');
     const [deliveryNote, setDeliveryNote] = useState('');
+    const [agreeTerms, setAgreeTerms] = useState(false);
 
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [publishTeamId, setPublishTeamId] = useState('');
@@ -2088,6 +2089,12 @@ export default function MarketplacePage() {
                                         <label>Ghi chú giao hàng</label>
                                         <textarea rows={2} value={deliveryNote} onChange={event => setDeliveryNote(event.target.value)} placeholder="VD: Giao cổng sau, gọi trước 30 phút..." />
                                     </div>
+                                    <div className="mp-form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px', marginTop: '20px' }}>
+                                        <input type="checkbox" id="agreeTerms" checked={agreeTerms} onChange={e => setAgreeTerms(e.target.checked)} style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }} />
+                                        <label htmlFor="agreeTerms" style={{ marginBottom: 0, cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                            Tôi đã đọc và đồng ý với <a href="#" onClick={e => { e.preventDefault(); alert('Chi tiết hợp đồng dịch vụ gia công rang xay...'); }} style={{ color: 'var(--primary-color)', textDecoration: 'underline' }}>Hợp đồng dịch vụ gia công rang xay</a>
+                                        </label>
+                                    </div>
                                 </div>
                             )}
                             <div className="mp-modal-actions">
@@ -2098,7 +2105,7 @@ export default function MarketplacePage() {
                                 {rfqStep < 3 ? (
                                     <button type="button" className="mp-submit-btn" onClick={handleNextRfqStep}>Tiếp tục</button>
                                 ) : (
-                                    <button type="submit" className="mp-submit-btn" disabled={submitting}>{submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}</button>
+                                    <button type="submit" className="mp-submit-btn" disabled={submitting || !agreeTerms} style={{ opacity: (!agreeTerms || submitting) ? 0.5 : 1, cursor: (!agreeTerms || submitting) ? 'not-allowed' : 'pointer' }}>{submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}</button>
                                 )}
                             </div>
                         </form>

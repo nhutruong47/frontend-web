@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { orderContractService, OrderContract } from '../services/orderContractService';
+import { orderContractService, type OrderContract } from '../services/orderContractService';
 import { fileService } from '../services/fileService';
-import { useAuth } from '../hooks/useAuth';
 
 interface ContractModalProps {
     isOpen: boolean;
@@ -10,7 +9,6 @@ interface ContractModalProps {
 }
 
 const ContractModal: React.FC<ContractModalProps> = ({ isOpen, onClose, orderId }) => {
-    const { userId } = useAuth();
     const [contract, setContract] = useState<OrderContract | null>(null);
     const [loading, setLoading] = useState(false);
     const [signatureFile, setSignatureFile] = useState<File | null>(null);

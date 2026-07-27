@@ -104,13 +104,16 @@ export default function Sidebar() {
         { path: '/orders', label: 'Đơn hàng', icon: 'cube-outline', badge: pendingOrderCount },
     ];
 
-    const accountMenuItems = [
+    let accountMenuItems = [
         { path: '/upgrade', label: 'Nâng cấp gói', icon: 'sparkles-outline' },
         { path: '/settings', label: 'Cá nhân hóa', icon: 'color-palette-outline' },
         { path: '/profile', label: 'Hồ sơ', icon: 'person-circle-outline' },
         { path: '/settings', label: 'Cài đặt', icon: 'settings-outline' },
         { path: '/settings', label: 'Trợ giúp', icon: 'help-buoy-outline', separated: true, hasChevron: true },
     ];
+    if (user?.role === 'ADMIN') {
+        accountMenuItems = accountMenuItems.filter(item => item.path !== '/upgrade');
+    }
 
     const isNavActive = (path: string) => {
         if (path.startsWith('/admin')) {

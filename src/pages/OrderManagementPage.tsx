@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { teamService } from '../services/groupService';
 import { interGroupOrderService } from '../services/interGroupOrderService';
@@ -21,6 +21,7 @@ import DisputeModal from '../components/DisputeModal';
 import BuyerConfirmDeliveryModal from '../components/BuyerConfirmDeliveryModal';
 import DeliverOrderModal from '../components/DeliverOrderModal';
 import ContractModal from '../components/ContractModal';
+import { exportToExcel } from '../utils/excelExport';
 export default function OrderManagementPage() {
     const { user } = useAuth();
     const [myTeams, setMyTeams] = useState<Team[]>([]);
@@ -37,10 +38,20 @@ export default function OrderManagementPage() {
     const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
     const [unreadOutboundCount, setUnreadOutboundCount] = useState(0);
 
+    const [quoteOrderId, setQuoteOrderId] = useState<string | null>(null);
+    const [quotePrice, setQuotePrice] = useState('');
+    const [quoteNote, setQuoteNote] = useState('');
+
     const [showManualOrderForm, setShowManualOrderForm] = useState(false);
     const [manualCreateLoading, setManualCreateLoading] = useState(false);
     const [manualCreateError, setManualCreateError] = useState('');
     const [manualOrderForm, setManualOrderForm] = useState(DEFAULT_MANUAL_ORDER_FORM);
+
+    const [searchKeyword, setSearchKeyword] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 20;
+    const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
 
     useEffect(() => {
         const fetchTeams = async () => {
@@ -135,6 +146,31 @@ export default function OrderManagementPage() {
         }
     };
 
+    const handleQuoteSubmit = async () => {
+        if (!quoteOrderId || !quotePrice) return;
+        try {
+            await interGroupOrderService.quoteOrder(quoteOrderId, { price: Number(quotePrice), note: quoteNote });
+            setOrders(orders.map(o => o.id === quoteOrderId ? { ...o, status: 'QUOTED', quotedPrice: Number(quotePrice), quotedNote: quoteNote, quotedAt: new Date().toISOString() } : o));
+            setQuoteOrderId(null);
+            setQuotePrice('');
+            setQuoteNote('');
+            alert('Đã gửi báo giá thành công!');
+        } catch (err: any) {
+            alert('Lỗi khi gửi báo giá: ' + (err.response?.data?.error || err.message));
+        }
+    };
+
+    const handleConfirmQuote = async (orderId: string) => {
+        if (!confirm('Đồng ý chốt đơn với báo giá này?')) return;
+        try {
+            await interGroupOrderService.confirmQuote(orderId);
+            setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'CONFIRMED' } : o));
+            alert('Đã chốt đơn thành công!');
+        } catch (err: any) {
+            alert('Có lỗi xảy ra: ' + (err.response?.data?.error || err.message));
+        }
+    };
+
     const handleCancel = async (orderId: string) => {
         if (!confirm('Hủy đơn hàng này? Điều này sẽ ảnh hưởng đến độ uy tín của bạn.')) return;
         try {
@@ -159,10 +195,13 @@ export default function OrderManagementPage() {
         setDeliverOrderId(orderId);
     };
 
-    const submitDeliverOrder = async (proofImageUrls: string[]) => {
+    const submitDeliverOrder = async (proofImages: { imageUrl: string; latitude: number | null; longitude: number | null; capturedAt: string }[]) => {
         if (!deliverOrderId) return;
         try {
-            await interGroupOrderService.deliverOrder(deliverOrderId); // TODO: pass proofImageUrls when backend is updated
+            await interGroupOrderService.deliverOrder(deliverOrderId, {
+                deliveryNote: '',
+                proofImages,
+            });
             setOrders(orders.map(o => o.id === deliverOrderId ? { ...o, status: 'DELIVERED' } : o));
             setDeliverOrderId(null);
         } catch (err) {
@@ -174,7 +213,7 @@ export default function OrderManagementPage() {
         setConfirmDeliveryOrderId(orderId);
     };
 
-    const submitConfirmDelivery = async (payload: { deliveryStatus: string; rating: number; comment: string; proofImageUrls?: string[] }) => {
+    const submitConfirmDelivery = async (payload: { deliveryStatus: 'ON_TIME' | 'LATE' | 'NOT_DELIVERED'; rating: number; comment: string; proofImageUrls?: string[] }) => {
         if (!confirmDeliveryOrderId) return;
         try {
             await interGroupOrderService.buyerConfirmDelivery(confirmDeliveryOrderId, payload);
@@ -205,8 +244,7 @@ export default function OrderManagementPage() {
                 evidenceUrls,
                 requestedCompensationAmount: amount
             });
-            // Update order status locally if needed
-            setOrders(orders.map(o => o.id === disputeOrderId ? { ...o } : o)); 
+            setOrders(orders.map(o => o.id === disputeOrderId ? { ...o, status: 'DISPUTED' } : o));
             setDisputeOrderId(null);
             alert('Đã gửi khiếu nại thành công!');
         } catch (err) {
@@ -259,7 +297,6 @@ export default function OrderManagementPage() {
             const descriptionParts = [
                 manualOrderForm.description.trim(),
                 manualOrderForm.customerName.trim() ? `Khách/xưởng đặt: ${manualOrderForm.customerName.trim()}` : '',
-                manualOrderForm.deliveryNote.trim() ? `Ghi chú: ${manualOrderForm.deliveryNote.trim()}` : '',
             ].filter(Boolean);
 
             const created = await interGroupOrderService.placeOrder({
@@ -282,6 +319,41 @@ export default function OrderManagementPage() {
         } finally {
             setManualCreateLoading(false);
         }
+    };
+
+    const filteredOrders = orders
+        .filter(o => (o.title || '').toLowerCase().includes(searchKeyword.toLowerCase()))
+        .filter(o => statusFilter ? o.status === statusFilter : true)
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        
+    const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+    const paginatedOrders = filteredOrders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedOrderIds(paginatedOrders.map(o => o.id));
+        } else {
+            setSelectedOrderIds([]);
+        }
+    };
+
+    const handleSelectOrder = (id: string) => {
+        setSelectedOrderIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const handleExportExcel = () => {
+        const dataToExport = orders.filter(o => selectedOrderIds.includes(o.id)).map(o => ({
+            "Mã Đơn": o.id,
+            "Tên Đơn": o.title,
+            "Người Đặt": o.buyerTeamName || o.buyerUserName || 'N/A',
+            "Người Bán": o.sellerTeamName,
+            "Số Lượng": o.quantity,
+            "Trạng Thái": o.status,
+            "Ngày Tạo": new Date(o.createdAt || 0).toLocaleString('vi-VN'),
+            "Hạn Chót": new Date(o.deadline || 0).toLocaleDateString('vi-VN')
+        }));
+        if (dataToExport.length === 0) return alert('Vui lòng chọn ít nhất 1 đơn hàng để xuất Excel');
+        exportToExcel(dataToExport, 'DonHang_Export');
     };
 
     const getStatusBadge = (order: InterGroupOrder) => {
@@ -583,9 +655,42 @@ export default function OrderManagementPage() {
                 </div>
             ) : (
                 <div className="table-responsive glass-panel" style={{ padding: 16 }}>
+                    <div style={{ display: 'flex', gap: '15px', marginBottom: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <input 
+                            type="text" 
+                            placeholder="Tìm kiếm tên đơn hàng..." 
+                            value={searchKeyword}
+                            onChange={e => { setSearchKeyword(e.target.value); setCurrentPage(1); }}
+                            style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', minWidth: 250 }}
+                        />
+                        <select 
+                            value={statusFilter} 
+                            onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                            style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
+                        >
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="PENDING">Chờ xử lý</option>
+                            <option value="ACCEPTED">Đã nhận làm</option>
+                            <option value="SHIPPING">Đang giao</option>
+                            <option value="DELIVERED">Đã giao</option>
+                            <option value="COMPLETED">Hoàn tất</option>
+                            <option value="CANCELED">Đã hủy</option>
+                            <option value="REJECTED">Từ chối</option>
+                            <option value="DISPUTED">Khiếu nại</option>
+                        </select>
+                        
+                        {selectedOrderIds.length > 0 && (
+                            <button className="btn btn-primary" onClick={handleExportExcel}>
+                                <ion-icon name="download-outline" style={{ marginRight: 5 }}></ion-icon> Xuất Excel ({selectedOrderIds.length})
+                            </button>
+                        )}
+                    </div>
                     <table className="goals-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr>
+                                <th style={{ textAlign: 'left', padding: '12px', width: 40 }}>
+                                    <input type="checkbox" onChange={handleSelectAll} checked={paginatedOrders.length > 0 && selectedOrderIds.length === paginatedOrders.length} />
+                                </th>
                                 <th style={{ textAlign: 'left', padding: '12px' }}>Đơn hàng</th>
                                 <th style={{ textAlign: 'left', padding: '12px' }}>{activeTab === 'outbound' ? 'Nhà cung cấp (Bán)' : 'Người đặt (Mua)'}</th>
                                 {activeTab === 'inbound' && <th style={{ textAlign: 'center', padding: '12px' }}>Uy tín</th>}
@@ -596,10 +701,13 @@ export default function OrderManagementPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {orders.map(order => (
-                                <>
-                                <tr key={order.id} style={{ borderBottom: expandedOrderId === order.id ? 'none' : '1px solid var(--border-color)', cursor: 'pointer' }} onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}>
-                                    <td style={{ padding: '12px' }}>
+                            {paginatedOrders.map(order => (
+                                <React.Fragment key={order.id}>
+                                <tr style={{ borderBottom: expandedOrderId === order.id ? 'none' : '1px solid var(--border-color)' }}>
+                                    <td style={{ padding: '12px', width: 40 }} onClick={(e) => e.stopPropagation()}>
+                                        <input type="checkbox" checked={selectedOrderIds.includes(order.id)} onChange={() => handleSelectOrder(order.id)} />
+                                    </td>
+                                    <td style={{ padding: '12px', cursor: 'pointer' }} onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                             <ion-icon name={expandedOrderId === order.id ? 'chevron-down-outline' : 'chevron-forward-outline'} style={{ fontSize: '14px', color: 'var(--text-secondary)', flexShrink: 0 }}></ion-icon>
                                             <div>
@@ -625,7 +733,7 @@ export default function OrderManagementPage() {
                                         {order.quantity}
                                     </td>
                                     <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>
-                                        {new Date(order.deadline).toLocaleDateString('vi-VN')}
+                                        {order.deadline ? new Date(order.deadline).toLocaleDateString('vi-VN') : 'Không có'}
                                     </td>
                                     <td style={{ padding: '12px' }}>
                                         {getStatusBadge(order)}
@@ -636,7 +744,15 @@ export default function OrderManagementPage() {
                                             {activeTab === 'inbound' && (order.status === 'PENDING' || order.status === 'RFQ_CREATED') && !order.cancelRequested && (
                                                 <>
                                                     <button className="btn btn-secondary" onClick={() => handleReject(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>Từ chối</button>
+                                                    <button className="btn btn-primary" onClick={() => { setQuoteOrderId(order.id); setQuotePrice(order.budget != null ? String(order.budget) : ''); }} style={{ padding: '4px 8px', fontSize: '0.8rem', background: 'var(--accent-color)', color: '#fff', border: 'none' }}>Báo giá</button>
                                                     <button className="btn btn-primary" onClick={() => handleAccept(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>Chấp nhận</button>
+                                                </>
+                                            )}
+                                            {/* Outbound QUOTED: Confirm/Reject */}
+                                            {activeTab === 'outbound' && order.status === 'QUOTED' && !order.cancelRequested && (
+                                                <>
+                                                    <button className="btn btn-secondary" onClick={() => handleReject(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>Từ chối báo giá</button>
+                                                    <button className="btn btn-primary" onClick={() => handleConfirmQuote(order.id)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#10b981', color: '#fff', border: 'none' }}>Đồng ý chốt đơn</button>
                                                 </>
                                             )}
                                             {/* Inbound ACCEPTED: Mark as Shipping */}
@@ -678,6 +794,9 @@ export default function OrderManagementPage() {
                                             {order.status === 'CANCELED' && order.cancelledBy && (
                                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Bởi: {order.cancelledBy === 'BUYER' ? 'Bên mua' : 'Bên bán'}</span>
                                             )}
+                                            <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); window.open(`/orders/${order.id}`, '_blank'); }} style={{ padding: '4px 8px', fontSize: '0.8rem', marginLeft: 5 }}>
+                                                <ion-icon name="open-outline" style={{ fontSize: '13px', verticalAlign: 'middle', marginRight: 2 }}></ion-icon> Chi tiết
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -747,14 +866,75 @@ export default function OrderManagementPage() {
                                                         )}
                                                     </div>
                                                 )}
+                                                {order.quotedPrice !== null && order.quotedPrice !== undefined && (
+                                                    <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                            <ion-icon name="pricetag-outline" style={{ fontSize: '16px' }}></ion-icon> Thông tin báo giá
+                                                        </h4>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '0.85rem' }}>
+                                                            <div>
+                                                                <span style={{ color: 'var(--text-secondary)' }}>Giá đề xuất:</span>
+                                                                <strong style={{ marginLeft: 6, color: 'var(--accent-color)', fontSize: '1rem' }}>{order.quotedPrice.toLocaleString('vi-VN')} ₫</strong>
+                                                            </div>
+                                                            {order.quotedNote && (
+                                                                <div style={{ gridColumn: 'span 2' }}>
+                                                                    <span style={{ color: 'var(--text-secondary)' }}>Ghi chú báo giá:</span>
+                                                                    <span style={{ marginLeft: 6 }}>{order.quotedNote}</span>
+                                                                </div>
+                                                            )}
+                                                            {order.quotedAt && (
+                                                                <div style={{ gridColumn: 'span 2' }}>
+                                                                    <span style={{ color: 'var(--text-secondary)' }}>Thời gian báo giá:</span>
+                                                                    <span style={{ marginLeft: 6 }}>{new Date(order.quotedAt).toLocaleString('vi-VN')}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
                                 )}
-                                </>
+                                </React.Fragment>
                             ))}
                         </tbody>
                     </table>
+                    
+                    {totalPages > 1 && (
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 20 }}>
+                            <button className="btn btn-secondary" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                                Trước
+                            </button>
+                            <span style={{ padding: '8px 12px' }}>Trang {currentPage} / {totalPages}</span>
+                            <button className="btn btn-secondary" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                                Sau
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {quoteOrderId && (
+                <div className="mp-publish-sheet-overlay" onClick={() => setQuoteOrderId(null)}>
+                    <div className="mp-publish-sheet" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', margin: 'auto', marginTop: '10vh', height: 'auto', borderRadius: '12px' }}>
+                        <div className="mp-publish-header">
+                            <button className="mp-publish-back" onClick={() => setQuoteOrderId(null)}>
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                            <h2>Báo giá đơn hàng</h2>
+                        </div>
+                        <div className="mp-publish-content" style={{ padding: '20px' }}>
+                            <div className="form-group" style={{ marginBottom: 15 }}>
+                                <label style={{ display: 'block', marginBottom: 5 }}>Giá đề xuất (VND)</label>
+                                <input type="number" className="form-control" value={quotePrice} onChange={e => setQuotePrice(e.target.value)} placeholder="Nhập giá báo cho khách" style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+                            </div>
+                            <div className="form-group" style={{ marginBottom: 20 }}>
+                                <label style={{ display: 'block', marginBottom: 5 }}>Ghi chú báo giá</label>
+                                <textarea className="form-control" rows={3} value={quoteNote} onChange={e => setQuoteNote(e.target.value)} placeholder="Ghi chú thêm về giá (chi phí vận chuyển, đóng gói...)" style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}></textarea>
+                            </div>
+                            <button className="btn btn-primary" onClick={handleQuoteSubmit} style={{ width: '100%', padding: '12px', fontSize: '1rem', background: 'var(--accent-color)', color: '#fff', border: 'none', borderRadius: '4px' }}>Gửi báo giá</button>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -762,7 +942,6 @@ export default function OrderManagementPage() {
                 isOpen={!!disputeOrderId}
                 onClose={() => setDisputeOrderId(null)}
                 onSubmit={submitDispute}
-                orderId={disputeOrderId || ''}
             />
             
             <BuyerConfirmDeliveryModal

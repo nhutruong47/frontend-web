@@ -228,7 +228,7 @@ export default function VnpayMockCheckoutPage() {
                         {error && <div className="vnpay-error">{error}</div>}
 
                         <button type="button" className="vnpay-confirm" onClick={handleConfirm} disabled={!qrPayment || confirming}>
-                            {confirming ? 'Đang cập nhật database...' : `Tôi đã thanh toán qua ${config.shortLabel}`}
+                            {confirming ? 'Đang cập nhật database...' : (method === 'PAYOS' ? 'Xác nhận thanh toán (Test dòng tiền Admin)' : `Tôi đã thanh toán qua ${config.shortLabel}`)}
                         </button>
                         <button type="button" className="vnpay-cancel" onClick={() => navigate('/upgrade')}>
                             Hủy thanh toán

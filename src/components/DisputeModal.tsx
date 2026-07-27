@@ -5,10 +5,9 @@ interface DisputeModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (reason: string, evidenceUrls: string[], amount: number) => Promise<void>;
-    orderId: string;
 }
 
-export default function DisputeModal({ isOpen, onClose, onSubmit, orderId }: DisputeModalProps) {
+export default function DisputeModal({ isOpen, onClose, onSubmit }: DisputeModalProps) {
     const [reason, setReason] = useState('');
     const [compensationAmount, setCompensationAmount] = useState<number>(0);
     const [loading, setLoading] = useState(false);
