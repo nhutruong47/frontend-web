@@ -325,7 +325,7 @@ export default function CreateTaskPage() {
         hasDraftTasks(message.result);
 
     const handleSend = async () => {
-        if (!input.trim() || !trialActive || loading) return;
+        if (!input.trim() || loading) return;
         const activeDraftMessage = findActiveDraftMessage(messages);
         const activeDraft = activeDraftMessage?.result;
 
