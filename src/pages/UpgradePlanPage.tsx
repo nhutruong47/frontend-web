@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
 import { paymentService } from '../services/paymentService';
 import type { SubscriptionPlan } from '../types/types';
 import './UpgradePlanPage.css';
 
 export default function UpgradePlanPage() {
-    const navigate = useNavigate();
     const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -122,6 +120,9 @@ export default function UpgradePlanPage() {
                                 }}
                                 title="Mô phỏng thanh toán PayOS thành công"
                                 onClick={async () => {
+                                    if (!plan.id) {
+                                        return;
+                                    }
                                     try {
                                             const res = await paymentService.createVirtualQrPayment(plan.id, 'PAYOS');
                                             if (res.txnRef) {

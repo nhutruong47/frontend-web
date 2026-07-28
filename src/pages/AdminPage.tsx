@@ -11,7 +11,7 @@ import {
   Lock,
   MoreHorizontal,
   Plus,
-  RotateCcw, RefreshCw,
+  RotateCcw,
   Search,
   ServerCrash,
   ShieldCheck,

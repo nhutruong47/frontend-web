@@ -87,7 +87,8 @@ export default function VnpayMockCheckoutPage() {
     const planId = searchParams.get('planId') || 'plus';
     const plan = planMap[planId] ?? planMap.plus;
     const methodParam = searchParams.get('method')?.toUpperCase();
-    const method: PaymentMethod = methodParam === 'MB_BANK' ? 'MB_BANK' : 'VNPAY';
+    const method: PaymentMethod =
+        methodParam === 'MB_BANK' || methodParam === 'PAYOS' ? methodParam : 'VNPAY';
     const config = methodConfig[method];
     const [qrPayment, setQrPayment] = useState<VirtualQrPaymentResponse | null>(null);
     const [loading, setLoading] = useState(true);
