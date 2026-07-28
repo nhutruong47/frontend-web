@@ -4,6 +4,7 @@ import type { IMessage, StompSubscription } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { API_BASE_URL } from '../services/api';
 
 /**
  * Realtime notification hook (Quick Win 4 + F1.1 wire-up).
@@ -112,7 +113,7 @@ export function useNotificationSocket(options: UseNotificationSocketOptions = {}
             return;
         }
 
-        const socket = new SockJS('/ws');
+        const socket = new SockJS(`${API_BASE_URL}/ws`);
         const client = new Client({
             webSocketFactory: () => socket as unknown as WebSocket,
             reconnectDelay: 0, // we own the backoff
