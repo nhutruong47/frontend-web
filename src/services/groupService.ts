@@ -86,15 +86,24 @@ export const taskService = {
         api.get(`/api/tasks/member/${memberId}/kpi`).then(r => r.data),
     respondToTask: (taskId: string, accepted: boolean) =>
         api.patch<Task>(`/api/tasks/${taskId}/respond`, { accepted }).then(r => r.data),
-    getSalaryReport: (teamId: string) =>
-        api.get<SalaryReport[]>(`/api/tasks/salary/${teamId}`).then(r => r.data),
-    exportSalaryExcel: (teamId: string) =>
-        api.get(`/api/tasks/salary/${teamId}/export-excel`, { responseType: 'blob' }),
-    payoutSalary: (teamId: string) =>
+    getSalaryReport: (teamId: string, salaryMonth?: string) =>
+        api.get<SalaryReport[]>(`/api/tasks/salary/${teamId}`, { params: toSalaryMonthParams(salaryMonth) }).then(r => r.data),
+    exportSalaryExcel: (teamId: string, salaryMonth?: string) =>
+        api.get(`/api/tasks/salary/${teamId}/export-excel`, { params: toSalaryMonthParams(salaryMonth), responseType: 'blob' }),
+    payoutSalary: (teamId: string, salaryMonth?: string) =>
         api.post<{ checkoutUrl: string; txnRef: string }>(
-            `/api/tasks/salary/${teamId}/payout`
+            `/api/tasks/salary/${teamId}/payout`,
+            undefined,
+            { params: toSalaryMonthParams(salaryMonth) }
         ).then(r => r.data),
 };
+
+function toSalaryMonthParams(salaryMonth?: string) {
+    if (!salaryMonth) return undefined;
+    const [year, month] = salaryMonth.split('-').map(Number);
+    if (!year || !month) return undefined;
+    return { year, month };
+}
 
 export const productionService = {
     getOrders: (teamId: string, activeOnly = false) =>

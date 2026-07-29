@@ -26,6 +26,18 @@ export const interGroupOrderService = {
     quoteOrder: (orderId: string, payload: { price: number; note: string }) =>
         api.post<InterGroupOrder>(`/api/inter-group-orders/${orderId}/quote`, payload).then(r => r.data),
 
+    requoteOrder: (orderId: string, payload: { price: number; note: string }) =>
+        api.post<InterGroupOrder>(`/api/inter-group-orders/${orderId}/requote`, payload).then(r => r.data),
+
+    buyerAcceptRequote: (orderId: string) =>
+        api.post<InterGroupOrder>(`/api/inter-group-orders/${orderId}/buyer-accept-requote`).then(r => r.data),
+
+    buyerRejectRequote: (orderId: string) =>
+        api.post<InterGroupOrder>(`/api/inter-group-orders/${orderId}/buyer-reject-requote`).then(r => r.data),
+
+    sellerConfirmRequote: (orderId: string) =>
+        api.post<InterGroupOrder>(`/api/inter-group-orders/${orderId}/seller-confirm-requote`).then(r => r.data),
+
     confirmQuote: (orderId: string) =>
         api.post<InterGroupOrder>(`/api/inter-group-orders/${orderId}/confirm-quote`).then(r => r.data),
 

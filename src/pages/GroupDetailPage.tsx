@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { teamService, goalService, taskService, getTrialStatus, chatService, inventoryService } from '../services/groupService';
 import { attendanceService } from '../services/attendanceService';
 import { uploadFile } from '../services/api';
-import type { Team, Goal, Task, ChatMsg, SalaryReport, AiChatLogMsg } from '../types/types';
+import type { Team, Goal, Task, ChatMsg, SalaryReport } from '../types/types';
 
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
@@ -110,11 +110,6 @@ export default function GroupDetailPage() {
     const [adCapacity, setAdCapacity] = useState('');
     const [adRegion, setAdRegion] = useState('');
     const [isPublished, setIsPublished] = useState(false);
-
-    // Chat History
-    const [showChatHistory, setShowChatHistory] = useState(false);
-    const [activeChatLog, setActiveChatLog] = useState<AiChatLogMsg[]>([]);
-    const [activeGoalTitle, setActiveGoalTitle] = useState('');
 
     // Job Labels
     const [showMemberRoles, setShowMemberRoles] = useState(false);
@@ -376,7 +371,7 @@ export default function GroupDetailPage() {
         // Load initial messages if chat is open
         // if (showChat) loadChatMessages(); // handled by separate useEffect now
 
-        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
         const socketUrl = `${apiBase}/ws`;
 
         const client = new Client({
@@ -1147,17 +1142,6 @@ export default function GroupDetailPage() {
                         </h3>
                         {isAdmin && (
                             <div style={{ display: 'flex', gap: 8 }}>
-                                {latestGoal && latestGoal.chatLog && (
-                                    <button onClick={() => {
-                                        setActiveGoalTitle(latestGoal.title || '');
-                                        try {
-                                            setActiveChatLog(JSON.parse(latestGoal.chatLog || '[]'));
-                                            setShowChatHistory(true);
-                                        } catch(e) {}
-                                    }} style={{ background: 'var(--bg-input)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <ion-icon name="time-outline"></ion-icon> Lịch sử xác nhận
-                                    </button>
-                                )}
                                 <button onClick={() => { if (!selectedGoalId && goals.length > 0) setSelectedGoalId(goals[0].id); setShowAddTask(!showAddTask); }} style={{ background: '#b97820', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                                     <ion-icon name="add"></ion-icon> Thêm mới
                                 </button>
@@ -1293,7 +1277,7 @@ export default function GroupDetailPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ background: 'var(--bg-secondary)' }}>
-                            {['Tên công việc', 'Tiến độ', 'Ưu tiên', 'Thành viên', ''].map((h, i) => (
+                            {['Tên công việc', 'Tiến độ', 'Ưu tiên', 'Nhân viên chính', ''].map((h, i) => (
                                 <th key={i} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border)' }}>{h}</th>
                             ))}
                         </tr>
@@ -1372,7 +1356,7 @@ export default function GroupDetailPage() {
                                                             <input value={unit} onChange={e => setEditTaskUnit(e.target.value)} placeholder="kg, gói, chai..." />
                                                         </label>
                                                         <label className="task-edit-field">
-                                                            <span>Phụ trách</span>
+                                                            <span>Nhân viên chính</span>
                                                             <select value={t.memberId || ''} onChange={async e => {
                                                                 const nextMemberId = e.target.value;
                                                                 try {
@@ -1398,7 +1382,7 @@ export default function GroupDetailPage() {
                                                             </select>
                                                         </label>
                                                         <label className="task-edit-field">
-                                                            <span>Sao lưu</span>
+                                                            <span>Nhân viên thay thế</span>
                                                             <select value={t.backupMemberId || ''} onChange={async e => {
                                                                 try {
                                                                     const updatedTask = await taskService.setBackup(t.id, e.target.value);
@@ -1567,7 +1551,7 @@ export default function GroupDetailPage() {
                                         </td>
                                         <td style={{ padding: '12px 16px' }}>
                                             {isAdmin ? (
-                                                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                                                     <select value={t.memberId || ''} onChange={async e => {
                                                         const nextMemberId = e.target.value;
                                                         try {
@@ -1587,8 +1571,8 @@ export default function GroupDetailPage() {
                                                         } catch (error: any) {
                                                             alert(error.response?.data?.message || error.message || 'Không thể giao việc');
                                                         }
-                                                    }} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', minWidth: 100 }}>
-                                                        <option value="">— Giao —</option>
+                                                    }} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', minWidth: 145 }}>
+                                                        <option value="">— Nhân viên chính —</option>
                                                         {team?.members?.map(m => <option key={m.userId} value={m.userId}>{m.fullName || m.username}</option>)}
                                                     </select>
                                                     <select value={t.backupMemberId || ''} onChange={async e => {
@@ -1601,8 +1585,8 @@ export default function GroupDetailPage() {
                                                         } catch (error: any) {
                                                             alert(error.response?.data?.message || error.message || 'Không thể chọn người sao lưu');
                                                         }
-                                                    }} style={{ background: '#fff7ed', border: '1px solid #fde3c7', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', minWidth: 120, color: '#d97706' }}>
-                                                        <option value="">— Sao lưu —</option>
+                                                    }} style={{ background: '#fff7ed', border: '1px solid #fde3c7', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', minWidth: 170, color: '#d97706' }}>
+                                                        <option value="">— Nhân viên thay thế —</option>
                                                         {team?.members?.map(m => <option key={m.userId} value={m.userId}>{m.fullName || m.username}</option>)}
                                                     </select>
                                                 </div>
@@ -1610,7 +1594,7 @@ export default function GroupDetailPage() {
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                                     {t.memberName && <div style={{ width: 24, height: 24, borderRadius: '50%', background: avatarColor(t.memberName), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff' }}>{getInitials(t.memberName)}</div>}
                                                     <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t.memberName || 'Chưa giao'}</span>
-                                                    {t.backupMemberName && <span style={{ marginLeft: 8, fontSize: 11, color: '#9a8a6f' }}>Sao lưu: {t.backupMemberName}</span>}
+                                                    {t.backupMemberName && <span style={{ marginLeft: 8, fontSize: 11, color: '#9a8a6f' }}>Nhân viên thay thế: {t.backupMemberName}</span>}
                                                     {t.memberId && t.memberId !== user?.id && (
                                                         <ion-icon
                                                             name="chatbubble-ellipses"
@@ -2317,27 +2301,6 @@ export default function GroupDetailPage() {
                                 {loading ? 'Đang lưu...' : 'Lưu vào kho'}
                             </button>
                         </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Chat History Modal */}
-            {showChatHistory && (
-                <div className="modal-overlay" onClick={() => setShowChatHistory(false)} style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
-                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 640, padding: 0, borderRadius: 20, overflow: 'hidden', height: '80vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-card)' }}>
-                        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div><h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Lịch sử Chat AI</h3><p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>Mục tiêu: {activeGoalTitle}</p></div>
-                            <button onClick={() => setShowChatHistory(false)} style={{ background: 'var(--bg-input)', border: 'none', width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-secondary)' }}><ion-icon name="close" style={{ fontSize: 20 }}></ion-icon></button>
-                        </div>
-                        <div style={{ flex: 1, overflowY: 'auto', padding: 24, background: 'var(--bg-input)', display: 'flex', flexDirection: 'column', gap: 16 }}>
-                            {activeChatLog.map((msg, i) => (
-                                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                                    <div style={{ maxWidth: '85%', padding: '12px 16px', borderRadius: msg.role === 'user' ? '14px 14px 0 14px' : '14px 14px 14px 0', background: msg.role === 'user' ? '#d4a574' : '#fff', color: msg.role === 'user' ? '#fff' : '#1e293b', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', fontSize: 14, lineHeight: 1.5, border: msg.role === 'assistant' ? '1px solid #e2e8f0' : 'none' }}>{msg.content}</div>
-                                    <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>{msg.role === 'user' ? 'Bạn' : 'AI'} • {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                </div>
-                            ))}
-                        </div>
-                        <div style={{ padding: 16, borderTop: '1px solid var(--border)', textAlign: 'center' }}><button onClick={() => setShowChatHistory(false)} style={{ background: '#b97820', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>Đóng</button></div>
                     </div>
                 </div>
             )}
@@ -3236,7 +3199,7 @@ export default function GroupDetailPage() {
                                                                     </div>
                                                                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8e8e93' }}>
                                                                         <span>Giai đoạn: {t.productionStage || '—'}</span>
-                                                                        <span>Phụ trách: {t.memberName || 'Chưa giao'}</span>
+                                                                        <span>Nhân viên chính: {t.memberName || 'Chưa giao'}</span>
                                                                     </div>
                                                                 </div>
                                                             );
@@ -3472,14 +3435,20 @@ function SalaryPanel({ teamId }: { teamId: string }) {
     const [editingRate, setEditingRate] = useState<string | null>(null);
     const [tempRate, setTempRate] = useState('');
 
-    const loadSalary = async () => {
+    const loadSalary = async (month = selectedMonth) => {
         setLoadingSalary(true);
         try {
-            const data = await taskService.getSalaryReport(teamId);
+            const data = await taskService.getSalaryReport(teamId, month);
             setSalaryData(data);
         } catch { /* ignore */ }
         setLoadingSalary(false);
     };
+
+    useEffect(() => {
+        if (showSalary) {
+            loadSalary();
+        }
+    }, [selectedMonth, showSalary, teamId]);
 
     const handleRateEdit = (memberId: string, currentRate: number) => {
         setEditingRate(memberId);
@@ -3498,9 +3467,17 @@ function SalaryPanel({ teamId }: { teamId: string }) {
         return hourlyRateOverride[memberId] || defaultRate;
     };
 
+    const getBillableRegularHours = (report: SalaryReport) => (
+        (report.regularHours && report.regularHours > 0) ? report.regularHours : report.totalWorkload
+    );
+
+    const getTotalWorkHours = (report: SalaryReport) => (
+        getBillableRegularHours(report) + (report.overtimeHours || 0)
+    );
+
     const calculateSalary = (report: SalaryReport) => {
         const rate = getEffectiveRate(report.memberId, report.hourlyRate);
-        const billableHours = (report.regularHours && report.regularHours > 0) ? report.regularHours : report.totalWorkload;
+        const billableHours = getBillableRegularHours(report);
         const overtimeHours = report.overtimeHours || 0;
         const overtimeRate = report.overtimeRate || (rate * 1.5);
         return Math.round((billableHours * rate) + (overtimeHours * overtimeRate));
@@ -3509,7 +3486,9 @@ function SalaryPanel({ teamId }: { teamId: string }) {
     const totalSalary = salaryData.reduce((sum, s) => sum + calculateSalary(s), 0);
     const totalTasks = salaryData.reduce((sum, s) => sum + s.totalTasks, 0);
     const totalCompleted = salaryData.reduce((sum, s) => sum + s.completedTasks, 0);
-    const totalWorkload = salaryData.reduce((sum, s) => sum + s.totalWorkload, 0);
+    const totalRegularHours = salaryData.reduce((sum, s) => sum + getBillableRegularHours(s), 0);
+    const totalOvertimeHours = salaryData.reduce((sum, s) => sum + (s.overtimeHours || 0), 0);
+    const totalWorkHours = totalRegularHours + totalOvertimeHours;
     const avgCompletion = totalTasks > 0 ? Math.round((totalCompleted / totalTasks) * 100) : 0;
 
 
@@ -3523,7 +3502,7 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                     </h3>
                     <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>Theo dõi & quản lý chi phí nhân sự</p>
                 </div>
-                <button onClick={() => { setShowSalary(p => !p); if (!showSalary) loadSalary(); }} style={{
+                <button onClick={() => setShowSalary(p => !p)} style={{
                     background: 'transparent',
                     color: 'var(--text-secondary)',
                     border: 'none',
@@ -3593,7 +3572,7 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                         <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
                             {[
                                 { label: 'Tổng nhân viên', value: salaryData.length, icon: '👥', color: 'var(--text-primary)' },
-                                { label: 'Tổng công việc', value: totalTasks.toLocaleString(), icon: '📋', color: 'var(--text-primary)' },
+                                { label: 'Tổng giờ công', value: `${totalWorkHours.toFixed(1)}h`, icon: '⏱', color: 'var(--text-primary)' },
                                 { label: 'Hoàn thành', value: `${avgCompletion}%`, icon: '✅', color: '#10b981' },
                                 { label: 'Tổng quỹ lương', value: `${(totalSalary / 1000000).toFixed(1)}M`, icon: '💰', color: '#d4a574' }
                             ].map((stat, i) => (
@@ -3615,7 +3594,7 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                 <div style={{ width: 40, height: 40, border: '3px solid var(--border)', borderTopColor: '#d4a574', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }}></div>
                                 <p>Đang tải dữ liệu...</p>
                             </div>
-                        ) : (salaryData.length === 0 || salaryData.every(s => s.totalWorkload === 0 && (s.regularHours || 0) === 0 && (s.overtimeHours || 0) === 0)) ? (
+                        ) : (salaryData.length === 0 || salaryData.every(s => getTotalWorkHours(s) === 0)) ? (
                             <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-secondary)' }}>
                                 <div style={{ fontSize: 48, marginBottom: 12 }}>👥</div>
                                 <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>Chưa có dữ liệu bảng lương</p>
@@ -3630,7 +3609,7 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                     background: 'var(--bg-input, rgba(255, 255, 255, 0.03))', borderRadius: '12px 12px 0 0',
                                     borderBottom: '1px solid var(--border)'
                                 }}>
-                                    {['Nhân viên', 'Tổng task', 'Hoàn thành', 'Giờ công (Thường + Tăng ca)', 'Đơn giá/giờ', 'Lương thực nhận'].map((h, i) => (
+                                    {['Nhân viên', 'Tổng task', 'Hoàn thành', 'Giờ công (Thường + Tăng ca)', 'Tiền/1 giờ', 'Lương thực nhận'].map((h, i) => (
                                         <div key={i} style={{
                                             fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)',
                                             textTransform: 'uppercase', letterSpacing: '0.05em',
@@ -3643,6 +3622,8 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                     const salary = calculateSalary(s);
                                     const completionRate = s.totalTasks > 0 ? Math.round((s.completedTasks / s.totalTasks) * 100) : 0;
                                     const isEditing = editingRate === s.memberId;
+                                    const regularHours = getBillableRegularHours(s);
+                                    const overtimeHours = s.overtimeHours || 0;
 
                                     return (
                                         <div key={s.memberId} style={{
@@ -3687,10 +3668,10 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                             {/* Workload */}
                                             <div style={{ textAlign: 'center' }}>
                                                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-                                                    {(s.regularHours && s.regularHours > 0) ? s.regularHours.toFixed(1) : s.totalWorkload.toFixed(1)}h
+                                                    {regularHours.toFixed(1)}h
                                                 </div>
-                                                {(s.overtimeHours && s.overtimeHours > 0) ? (
-                                                    <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>+ {s.overtimeHours.toFixed(1)}h TC</div>
+                                                {overtimeHours > 0 ? (
+                                                    <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>+ {overtimeHours.toFixed(1)}h TC</div>
                                                 ) : <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>giờ thường</div>}
                                             </div>
 
@@ -3750,7 +3731,10 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Tổng cộng</div>
                                     <div style={{ textAlign: 'center', color: 'var(--text-primary)' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalTasks}</span></div>
                                     <div style={{ textAlign: 'center', color: '#10b981' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalCompleted}</span></div>
-                                    <div style={{ textAlign: 'center', color: 'var(--text-primary)' }}><span style={{ fontSize: 16, fontWeight: 800 }}>{totalWorkload.toFixed(1)}h</span></div>
+                                    <div style={{ textAlign: 'center', color: 'var(--text-primary)' }}>
+                                        <span style={{ fontSize: 16, fontWeight: 800 }}>{totalWorkHours.toFixed(1)}h</span>
+                                        {totalOvertimeHours > 0 && <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>+ {totalOvertimeHours.toFixed(1)}h TC</div>}
+                                    </div>
                                     <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12 }}>—</div>
                                     <div style={{ textAlign: 'left' }}>
                                         <div style={{
@@ -3768,7 +3752,7 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                             <button
                                 onClick={async () => {
                                     try {
-                                        const res = await taskService.exportSalaryExcel(teamId);
+                                        const res = await taskService.exportSalaryExcel(teamId, selectedMonth);
                                         const url = window.URL.createObjectURL(new Blob([res.data]));
                                         const link = document.createElement('a');
                                         link.href = url;
@@ -3794,7 +3778,7 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                     }
                                     if (window.confirm(`Bạn có chắc chắn muốn thanh toán tổng cộng ${totalSalary.toLocaleString('vi-VN')} đ cho nhân viên?`)) {
                                         try {
-                                            const res = await taskService.payoutSalary(teamId);
+                                            const res = await taskService.payoutSalary(teamId, selectedMonth);
                                             const checkoutUrl = res.checkoutUrl;
                                             if (checkoutUrl) {
                                                 window.open(checkoutUrl, '_blank');

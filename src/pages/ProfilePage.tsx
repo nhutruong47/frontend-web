@@ -41,7 +41,6 @@ export default function ProfilePage() {
     }, [isEditing]);
 
     const profileFields = [
-        { icon: <ion-icon name="key-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'User ID', value: user?.id?.toString() || '—' },
         { icon: <ion-icon name="person-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'Tên đăng nhập', value: user?.username || '—' },
         { icon: <ion-icon name="document-text-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'Họ tên', value: user?.fullName || <button type="button" className="empty-state-btn" onClick={() => setIsEditing(true)}><ion-icon name="add-circle-outline"></ion-icon> Thêm Họ tên</button> },
         { icon: <ion-icon name="mail-outline" style={{ fontSize: '16px' }}></ion-icon>, label: 'Email', value: user?.email || <button type="button" className="empty-state-btn" onClick={() => setIsEditing(true)}><ion-icon name="add-circle-outline"></ion-icon> Thêm Email</button> },

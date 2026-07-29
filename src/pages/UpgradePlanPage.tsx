@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { paymentService } from '../services/paymentService';
 import type { SubscriptionPlan } from '../types/types';
+import { PAYMENT_SUCCESS_MESSAGE, PAYMENT_SUCCESS_TITLE } from '../utils/paymentNotifications';
 import './UpgradePlanPage.css';
 
 export default function UpgradePlanPage() {
     const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
     const [loading, setLoading] = useState(true);
+    const { fetchUser } = useAuth();
+    const { success: showSuccessToast, error: showErrorToast } = useToast();
 
     useEffect(() => {
         paymentService.getPlans()
@@ -30,8 +35,8 @@ export default function UpgradePlanPage() {
         try {
             const res = await paymentService.createPayosPayment(plan.id);
             window.location.href = res.checkoutUrl;
-        } catch (err) {
-            alert('Có lỗi xảy ra khi tạo link thanh toán PayOS. Vui lòng thử lại.');
+        } catch {
+            showErrorToast('Không thể tạo link thanh toán', 'Vui lòng thử lại PayOS sau ít phút.');
         }
     };
 
@@ -126,12 +131,15 @@ export default function UpgradePlanPage() {
                                     try {
                                             const res = await paymentService.createVirtualQrPayment(plan.id, 'PAYOS');
                                             if (res.txnRef) {
-                                                await paymentService.confirmVirtualQrPayment(res.txnRef);
-                                                alert('Mô phỏng thanh toán thành công! Mã giao dịch: ' + res.txnRef);
+                                                const paymentResult = await paymentService.confirmVirtualQrPayment(res.txnRef);
+                                                localStorage.setItem('orca-ai-plan', paymentResult.planId || res.planId || plan.id);
+                                                localStorage.removeItem('orca-ai-plan-pending');
+                                                await fetchUser();
+                                                showSuccessToast(PAYMENT_SUCCESS_TITLE, PAYMENT_SUCCESS_MESSAGE);
                                             }
                                         } catch (e: any) {
                                             console.error(e);
-                                            alert('Lỗi mô phỏng thanh toán: ' + (e?.response?.data?.error || e.message));
+                                            showErrorToast('Lỗi mô phỏng thanh toán', e?.response?.data?.error || e.message);
                                         }
                                 }}
                             />

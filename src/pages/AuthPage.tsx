@@ -24,7 +24,7 @@ function GoogleButton({ label }: { label: string }) {
             id="google-login"
             className="login-btn-google"
             onClick={() => {
-                window.location.href = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/oauth2/authorization/google`;
+                window.location.href = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081'}/oauth2/authorization/google`;
             }}
         >
             <svg viewBox="0 0 24 24" width="20" height="20">

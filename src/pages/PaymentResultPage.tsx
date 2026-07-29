@@ -2,11 +2,14 @@ import { useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, CircleAlert, ReceiptText } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { PAYMENT_SUCCESS_MESSAGE, PAYMENT_SUCCESS_TITLE } from '../utils/paymentNotifications';
 import './PaymentResultPage.css';
 
 export default function PaymentResultPage() {
     const [searchParams] = useSearchParams();
     const { fetchUser } = useAuth();
+    const { success: showSuccessToast } = useToast();
     const status = searchParams.get('status');
     const txnRef = searchParams.get('txnRef') || searchParams.get('orderCode');
     const planId = searchParams.get('planId') || localStorage.getItem('orca-ai-plan-pending') || localStorage.getItem('orca-ai-plan');
@@ -20,11 +23,11 @@ export default function PaymentResultPage() {
         if (success) {
             fetchUser();
             if (!sessionStorage.getItem(`payment_alert_${txnRef}`)) {
-                alert('🎉 Thanh toán thành công! Gói AI của bạn đã được kích hoạt.');
+                showSuccessToast(PAYMENT_SUCCESS_TITLE, PAYMENT_SUCCESS_MESSAGE);
                 sessionStorage.setItem(`payment_alert_${txnRef}`, 'true');
             }
         }
-    }, [success, fetchUser, txnRef]);
+    }, [success, fetchUser, txnRef, showSuccessToast]);
 
     return (
         <div className="payment-result-page">

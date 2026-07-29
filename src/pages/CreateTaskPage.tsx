@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ClipboardEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -200,6 +200,10 @@ function friendlyTaskError(error?: string) {
     return text || 'Không thể tạo công việc, vui lòng thử lại';
 }
 
+function normalizeComposerPaste(value: string) {
+    return value.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 export default function CreateTaskPage() {
     const { id: teamId } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -308,6 +312,23 @@ export default function CreateTaskPage() {
                 localStorage.removeItem(`ai_task_chat_${teamId}`);
             }
         }
+    };
+
+    const handleComposerPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+        const pastedText = event.clipboardData.getData('text');
+        if (!pastedText) return;
+
+        event.preventDefault();
+        const textarea = event.currentTarget;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const cleanText = normalizeComposerPaste(pastedText);
+        const nextValue = `${input.slice(0, start)}${cleanText}${input.slice(end)}`;
+
+        setInput(nextValue);
+        window.setTimeout(() => {
+            textarea.selectionStart = textarea.selectionEnd = start + cleanText.length;
+        }, 0);
     };
 
     const hasDraftTasks = (result?: AiParseResult) =>
@@ -1042,6 +1063,7 @@ export default function CreateTaskPage() {
                         className="task-gpt-textarea"
                         value={input}
                         onChange={e => setInput(e.target.value)}
+                        onPaste={handleComposerPaste}
                         onKeyDown={e => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
@@ -1428,6 +1450,7 @@ export default function CreateTaskPage() {
                         className="task-studio-input"
                         value={input}
                         onChange={e => setInput(e.target.value)}
+                        onPaste={handleComposerPaste}
                         onKeyDown={e => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
@@ -1946,6 +1969,7 @@ export default function CreateTaskPage() {
                                 ref={chatInputRef}
                                 value={input}
                                 onChange={e => setInput(e.target.value)}
+                                onPaste={handleComposerPaste}
                                 onKeyDown={e => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
                                         e.preventDefault();
