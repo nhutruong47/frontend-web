@@ -71,7 +71,7 @@ export default function InviteAcceptPage() {
             setDone(true);
             setTimeout(() => navigate('/groups'), 2500);
         } catch (err: any) {
-            setError(err.response?.data?.error || err.response?.data?.message || 'Không thể tham gia nhóm. Vui lòng thử lại.');
+            setError(err.response?.data?.message || err.response?.data?.error || 'Không thể tham gia nhóm. Vui lòng thử lại.');
         } finally {
             setLoading(false);
         }

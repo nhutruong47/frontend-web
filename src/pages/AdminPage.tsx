@@ -175,7 +175,22 @@ const maskLicense = (license?: string | null) => {
   return `${license.substring(0, 2)}***${license.substring(license.length - 2)}`;
 };
 
+const demoCustomerNames = [
+  'Nguyễn Minh Anh',
+  'Trần Hoàng Nam',
+  'Lê Thảo Nguyên',
+  'Phạm Quốc Bảo',
+  'Võ Thanh Hương',
+  'Đặng Gia Huy',
+  'Bùi Khánh Linh',
+];
+
 const paymentCustomerName = (payment: AdminPayment) => {
+  if (payment.txnRef?.startsWith('DEMO-')) {
+    const sequence = Number(payment.txnRef.slice(-3));
+    const index = Number.isFinite(sequence) && sequence > 0 ? sequence - 1 : 0;
+    return demoCustomerNames[index % demoCustomerNames.length];
+  }
   if (payment.fullName || payment.username) return payment.fullName || payment.username;
   if (payment.email) return maskEmail(payment.email);
   return 'Không rõ người dùng';
@@ -262,8 +277,8 @@ export default function AdminPage() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('All');
   const [userPage, setUserPage] = useState(1);
-  const [revenueFrom] = useState('2020-01-01');
-  const [revenueTo] = useState('2030-12-31');
+  const [revenueFrom] = useState('2026-07-06');
+  const [revenueTo] = useState(() => new Date().toISOString().slice(0, 10));
   
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
@@ -314,6 +329,29 @@ export default function AdminPage() {
       .finally(() => setAdminLoading(false));
   }, [user?.role]);
 
+  useEffect(() => {
+    if (active !== 'payments' || user?.role !== 'ADMIN') return;
+
+    let disposed = false;
+    const refreshPayments = () => {
+      Promise.all([
+        adminService.getPayments(0, 1000, ''),
+        adminService.getOverview(),
+      ]).then(([paymentData, overviewData]) => {
+        if (disposed) return;
+        setAdminPayments(paymentData.content || []);
+        setOverview({ ...emptyOverview, ...overviewData });
+      }).catch(() => { });
+    };
+
+    refreshPayments();
+    const intervalId = window.setInterval(refreshPayments, 10_000);
+    return () => {
+      disposed = true;
+      window.clearInterval(intervalId);
+    };
+  }, [active, user?.role]);
+
   const loadCosts = () => {
     adminCostService.getCosts(costPage, 10, costSearch, costFilterCategory, costFilterStatus)
       .then(res => {
@@ -362,6 +400,9 @@ export default function AdminPage() {
     const paidPayments = rangePayments.filter(item => item.status === 'PAID');
     const total = paidPayments.reduce((sum, item) => sum + Number(item.amount), 0);
     const pending = rangePayments.filter(item => item.status === 'PENDING').reduce((sum, item) => sum + Number(item.amount), 0);
+    const paidCount = paidPayments.length;
+    const plusCount = paidPayments.filter(item => ['plus', 'professional'].includes(String(item.planId).toLowerCase())).length;
+    const enterpriseCount = paidPayments.filter(item => String(item.planId).toLowerCase() === 'enterprise').length;
     
     const dailyMap = paidPayments.reduce<Record<string, { amount: number; time: number }>>((acc, item) => {
       const date = paymentDate(item);
@@ -391,7 +432,7 @@ export default function AdminPage() {
     
     const topCustomers = Object.entries(customerMap).map(([name, value]) => ({ name, value: Math.round(value / 1000000) })).sort((a, b) => b.value - a.value).slice(0, 5);
 
-    return { total, pending, rangeInvoices: rangePayments, timeline, revenueByPlan, topCustomers };
+    return { total, pending, paidCount, plusCount, enterpriseCount, rangeInvoices: rangePayments, timeline, revenueByPlan, topCustomers };
   }, [adminPayments, revenueFrom, revenueTo]);
 
   const dashboardKpis: KpiItem[] = [
@@ -744,11 +785,20 @@ export default function AdminPage() {
             <>
               <section className="admin-mini-grid">
                 <MiniMetric label="Tổng doanh thu" value={money(revenueReport.total)} icon={DollarSign} />
+                <MiniMetric label="Gói đã bán" value={number(revenueReport.paidCount)} icon={CreditCard} />
+                <MiniMetric label="Gói Plus" value={number(revenueReport.plusCount)} icon={Wallet} />
+                <MiniMetric label="Gói Doanh nghiệp" value={number(revenueReport.enterpriseCount)} icon={Building2} />
                 <MiniMetric label="Đang chờ xử lý" value={money(revenueReport.pending)} icon={AlertTriangle} />
               </section>
               <section className="admin-card">
                 <div className="admin-card-head">
-                  <div><h3>Lịch sử giao dịch</h3><p>Xem tất cả các thanh toán trên toàn hệ thống.</p></div>
+                  <div>
+                    <h3>Lịch sử giao dịch</h3>
+                    <p>
+                      Từ {formatShortDate(parseDateInput(revenueFrom))} đến {formatShortDate(parseDateInput(revenueTo))}
+                      {' • '}Hiển thị 10 giao dịch gần nhất trong {number(revenueReport.rangeInvoices.length)} giao dịch.
+                    </p>
+                  </div>
                 </div>
                 <div className="admin-table-wrap">
                   <table className="admin-table">

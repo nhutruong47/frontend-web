@@ -1416,10 +1416,10 @@
 
 .topbar-logout {
   padding: 7px 14px;
-  border: 1px solid var(--danger);
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
   background: transparent;
-  color: var(--danger);
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 600;
   font-family: var(--font);
@@ -1428,8 +1428,9 @@
 }
 
 .topbar-logout:hover {
-  background: var(--danger-soft);
-  border-color: var(--danger);
+  background: rgba(139, 115, 85, 0.15);
+  border-color: var(--text-secondary);
+  color: var(--text-secondary);
 }
 
 .goal-roadmap-markdown {
@@ -3473,9 +3474,9 @@
 .topbar-username  { color: var(--text-primary); }
 
 .topbar-logout {
-  border-color: var(--danger);
-  color: var(--danger);
-  background: var(--danger-soft);
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+  background: transparent;
 }
 
 .page-container,
@@ -4106,12 +4107,12 @@
 }
 
 .login-form-container--compact .login-logo-row {
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .login-form-container--compact .login-logo-row img,
 .login-form-container--compact .login-brand-full-logo {
-  height: 40px !important;
+  height: 80px !important;
 }
 
 .login-form-container--compact .login-form-title {
@@ -4529,9 +4530,10 @@
 .remember-row-compact {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin: 0;
   padding: 0;
+  min-height: 44px;
   font-size: 11px;
   font-weight: 500;
   color: var(--text-muted);
@@ -4541,11 +4543,12 @@
   letter-spacing: 0.2px;
 }
 
-.remember-row-compact input {
+.remember-row-compact input[type="checkbox"] {
   appearance: none;
-  width: 12px;
-  height: 12px;
-  min-width: 12px;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  min-height: 14px;
   margin: 0;
   border-radius: 3px;
   border: 1.5px solid var(--border-strong);
@@ -4758,6 +4761,22 @@
   padding: 0 8px;
 }
 
+.fb-notification-empty {
+  min-height: 132px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.fb-notification-empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
 .fb-notification-item {
   display: flex;
   align-items: center;
@@ -4893,6 +4912,18 @@
 
 .msg-item {
   align-items: center;
+}
+
+.message-notification-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--info);
+  background: var(--info-soft);
+  border: 1px solid color-mix(in srgb, var(--info) 24%, transparent);
 }
 
 .msg-group-name {

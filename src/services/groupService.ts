@@ -1,12 +1,14 @@
 import api from './api';
-import type { Team, Goal, Task, ProductionOrder } from '../types/types';
+import type { Team, Goal, Task, ProductionOrder, PlanUsage } from '../types/types';
 import type { AppNotification, SalaryReport } from '../types/types';
 
 // === Team/Group API ===
 export const teamService = {
     getAllTeams: () => api.get<Team[]>('/api/teams/all').then(r => r.data),
     getMyTeams: () => api.get<Team[]>('/api/teams').then(r => r.data),
+    getMyQuota: () => api.get<PlanUsage>('/api/teams/quota').then(r => r.data),
     getDetail: (id: string) => api.get<Team>(`/api/teams/${id}`).then(r => r.data),
+    getQuota: (id: string) => api.get<PlanUsage>(`/api/teams/${id}/quota`).then(r => r.data),
     create: (data: { name: string; description?: string }) =>
         api.post<Team>('/api/teams', data).then(r => r.data),
     update: (id: string, data: { name?: string; description?: string; metadata?: string }) =>
@@ -207,142 +209,25 @@ export const workforceService = {
         api.put(`/api/workforce/members/${teamMemberId}/skills/${skillId}`, { level }).then(r => r.data),
 };
 
-export interface AiPlan {
-    id: string;
-    team: { id: string };
-    owner: { id: string };
-    sourceQuery: string;
-    intent: string;
-    goalTitle: string;
-    outputTarget?: string;
-    deadline?: string;
-    priority?: number;
-    tasksJson?: string;
-    referencedKnowledgeJson?: string;
-    suggestedActionsJson?: string;
-    reasoningSummary?: string;
-    confidenceScore?: number;
-    status: 'DRAFT' | 'REVISED' | 'APPROVED' | 'REJECTED' | 'PROMOTED' | 'EXPIRED';
-    createdAt: string;
-    updatedAt: string;
-    approvedAt?: string;
-    promotedGoalId?: string;
-}
-
-export interface AiPlanApiResponse {
-    planId?: string;
-    draft?: AiV2PlanDraft;
-    planStatus?: string;
-}
-
-export const aiPlanService = {
-    /** List every AI plan draft for a team (newest first). */
-    getByTeam: (teamId: string) =>
-        api.get<AiPlan[]>(`/api/ai-plans/teams/${teamId}`).then(r => r.data),
-
-    /** Generate a new AI plan via the RAG /assistant pipeline (no intent). */
-    generateDraft: (teamId: string, query: string, conversationId?: string) =>
-        api.post<AiPlan>(`/api/ai-plans/teams/${teamId}`, {
-            query,
-            conversationId,
-        }).then(r => r.data),
-
-    /** Generate a structured AI plan via /api/ai/v2/plan (intent + fields). */
-    generateStructuredPlan: (
-        teamId: string,
-        text: string,
-        intent: AiV2ExtractResponse['intent'],
-        fields: Record<string, any>
-    ) =>
-        api.post<AiPlanApiResponse>(`/api/ai/v2/plan`, {
-            teamId,
-            text,
-            intent,
-            fields,
-        }).then(r => r.data),
-
-    /** Get one AI plan by id. */
-    getOne: (planId: string) =>
-        api.get<AiPlan>(`/api/ai-plans/${planId}`).then(r => r.data),
-
-    /** Apply a revision instruction to a draft. */
-    revise: (planId: string, instruction: string) =>
-        api.post<AiPlan>(`/api/ai-plans/${planId}/revise`, { instruction }).then(r => r.data),
-
-    /** Update the plan status (DRAFT, REVISED, APPROVED, REJECTED). */
-    updateStatus: (planId: string, status: string) =>
-        api.patch<AiPlan>(`/api/ai-plans/${planId}/status`, { status }).then(r => r.data),
-
-    /** Promote an APPROVED plan to a real Goal (goalId required). */
-    promote: (planId: string, goalId: string) =>
-        api.post<AiPlan>(`/api/ai-plans/${planId}/promote`, { goalId }).then(r => r.data),
-};
-
-// === RAG Assistant Service (used by the AI Assistant panel) ===
-
-export interface RagCitation {
-    document_id: string;
-    source: string;
-    source_id: string;
-    title: string;
-    category: string;
-    excerpt: string;
-    relevance_score: number;
-    rank?: number;
-    url?: string;
-    last_updated?: string;
-}
-
-export interface RagSuggestedAction {
-    label: string;
-    type: 'navigate' | 'create_task' | 'open_modal' | 'external';
-    payload?: Record<string, any>;
-}
-
-export interface RagAssistantResponse {
-    answer: string;
-    reasoning_summary?: string;
-    referenced_knowledge?: RagCitation[];
-    confidence?: { score: number; level: 'high' | 'medium' | 'low'; reasons?: string[] };
-    suggested_actions?: RagSuggestedAction[];
-    metadata?: Record<string, any>;
-}
-
-export const ragAssistantService = {
-    /** Send a free-form question to the AI assistant. */
-    query: (params: {
-        query: string;
-        teamId: string;
-        userId: string;
-        conversationId?: string;
-        sources?: string[];
-        maxDocuments?: number;
-    }) =>
-        api.post<RagAssistantResponse>('/api/ai/assistant/query', {
-            query: params.query,
-            team_id: params.teamId,
-            user_id: params.userId,
-            conversation_id: params.conversationId,
-            sources: params.sources,
-            max_documents: params.maxDocuments ?? 5,
-        }).then(r => r.data),
-
-    /** Read conversation memory on the frontend. */
-    getHistory: (conversationId: string, limit = 20) =>
-        api.get<{ conversation_id: string; messages: { role: string; content: string }[]; count: number }>(
-            `/api/rag/conversations/${conversationId}/messages`, { params: { limit } }
-        ).then(r => r.data),
-
-    /** Clear conversation memory. */
-    clearHistory: (conversationId: string) =>
-        api.delete<{ status: string; conversation_id: string }>(
-            `/api/rag/conversations/${conversationId}`
-        ).then(r => r.data),
-};
-
 // === Trial Status ===
 export const getTrialStatus = () =>
     api.get<{ aiTrialActive: boolean; daysRemaining: number; aiUsageCount: number; aiMaxUsage: number; aiPlan: string }>('/api/auth/trial-status').then(r => r.data);
+
+// === AI Service ===
+export interface AiParseResult {
+    title: string;
+    description: string;
+    quantity: string | null;
+    quantityNumber: number | null;
+    unit: string | null;
+    deadline: string | null;
+    priority: string;
+    needsClarification: boolean;
+    source: string;
+    suggestedQuestions?: string[];
+    tasks?: { title: string, description: string, priority: number, workload: number, suggestedAssignee?: string, suggestedAssigneeId?: string | null, suggestedReason?: string | null, assignee?: string, assigneeRole?: string }[];
+}
+
 
 // === AI Service ===
 export interface AiParseResult {
@@ -363,6 +248,14 @@ export const aiService = {
     parseText: (text: string, teamId: string, history?: string) =>
         api.post<AiParseResult>('/api/ai/parse', { text, teamId, history }).then(r => r.data),
 };
+
+export interface AiV2ExtractContext {
+    mode: 'WAITING_CLARIFICATION';
+    originalText?: string;
+    intent?: AiV2ExtractResponse['intent'];
+    previousFields?: Record<string, any>;
+    missingFields?: string[];
+}
 
 export interface AiV2ExtractResponse {
     intent: 'PRODUCTION_PLAN' | 'OPERATION_TASK' | 'UNKNOWN';
@@ -388,21 +281,18 @@ export interface AiV2PlanDraft {
     deadline?: string | null;
     priority: number;
     tasks: AiV2TaskDraft[];
+    aiNote?: string | null; // Present when AI cannot process the revision; frontend should display this instead of updating the draft
 }
 
+
 export const aiWorkflowService = {
-    extract: (teamId: string, text: string) =>
-        api.post<AiV2ExtractResponse>('/api/ai/v2/extract', { teamId, text }).then(r => r.data),
+    extract: (teamId: string, text: string, context?: AiV2ExtractContext) =>
+        api.post<AiV2ExtractResponse>('/api/ai/v2/extract', { teamId, text, context }).then(r => r.data),
     plan: (teamId: string, intent: AiV2ExtractResponse['intent'], fields: Record<string, any>) =>
-        api.post<AiPlanApiResponse | AiV2PlanDraft>('/api/ai/v2/plan', { teamId, intent, fields }).then(r => {
-            const data = r.data as AiPlanApiResponse | AiV2PlanDraft;
-            if ('draft' in data && data.draft) return data.draft;
-            return data as AiV2PlanDraft;
-        }),
+        api.post<AiV2PlanDraft>('/api/ai/v2/plan', { teamId, intent, fields }).then(r => r.data),
     revise: (teamId: string, instruction: string, draft: AiV2PlanDraft) =>
         api.post<AiV2PlanDraft>('/api/ai/v2/revise', { teamId, instruction, draft }).then(r => r.data),
 };
-
 // === Chat Service ===
 import type { ChatMsg } from '../types/types';
 

@@ -2,11 +2,10 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from './Sidebar';
-import { Bell, MoreHorizontal, MessageCircle, Edit, Sparkles } from 'lucide-react';
-import { teamService, notificationService } from '../services/groupService';
+import { Bell, MoreHorizontal, MessageCircle, Sparkles } from 'lucide-react';
+import { notificationService } from '../services/groupService';
 import { useNotificationSocket, type NotificationPayload } from '../hooks/useNotificationSocket';
 import type { AppNotification } from '../types/types';
-import defaultAvatar from '../assets/default-avatar.png';
 
 export default function Layout() {
     const { user, logout } = useAuth();
@@ -18,7 +17,6 @@ export default function Layout() {
     const msgRef = useRef<HTMLDivElement>(null);
 
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
-    const [messageGroups, setMessageGroups] = useState<any[]>([]);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
     useEffect(() => {
@@ -31,24 +29,11 @@ export default function Layout() {
 
     useEffect(() => {
         if (user) {
-            teamService.getMyTeams().then(teams => {
-                const mapped = teams.map(t => ({
-                    id: t.id,
-                    name: t.name,
-                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=0284c7&color=fff`,
-                    lastMessage: t.description || 'Nhấn để mở đoạn chat của nhóm',
-                    time: new Date(t.createdAt).toLocaleDateString('vi-VN'),
-                    unreadCount: 0,
-                    isActive: false
-                }));
-                setMessageGroups(mapped);
-            }).catch(() => { /* tolerated */ });
-
             notificationService.getAll().then(setNotifications).catch(() => { /* tolerated */ });
         }
     }, [user]);
 
-    // Realtime: socket push → prepend to bell list (the toast is fired inside the hook).
+    // Realtime notifications share one transport, then are routed by type below.
     const handleIncomingNotification = useCallback((payload: NotificationPayload) => {
         const mapped: AppNotification = {
             id: payload.id,
@@ -84,10 +69,49 @@ export default function Layout() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const unreadCount = notifications.filter(n => !n.read).length;
-    const displayNotifications = activeTab === 'all' ? notifications : notifications.filter(n => !n.read);
-    
-    const unreadMsgCount = messageGroups.reduce((acc, curr) => acc + curr.unreadCount, 0);
+    const chatNotifications = notifications.filter(n => n.type === 'CHAT_MESSAGE');
+    const systemNotifications = notifications.filter(n => n.type !== 'CHAT_MESSAGE');
+    const unreadCount = systemNotifications.filter(n => !n.read).length;
+    const displayNotifications = activeTab === 'all'
+        ? systemNotifications
+        : systemNotifications.filter(n => !n.read);
+    const unreadMsgCount = chatNotifications.filter(n => !n.read).length;
+
+    const markNotificationAsRead = (notification: AppNotification) => {
+        if (notification.read) return;
+
+        setNotifications(prev => prev.map(item =>
+            item.id === notification.id ? { ...item, read: true } : item
+        ));
+        notificationService.markAsRead(notification.id).catch(() => {
+            setNotifications(prev => prev.map(item =>
+                item.id === notification.id ? { ...item, read: false } : item
+            ));
+        });
+    };
+
+    const openChatNotification = (notification: AppNotification) => {
+        markNotificationAsRead(notification);
+        setShowMessages(false);
+        navigate(notification.taskId
+            ? `/groups/${notification.taskId}?openChat=1`
+            : '/groups');
+    };
+
+    const openSystemNotification = (notification: AppNotification) => {
+        markNotificationAsRead(notification);
+        setShowNotifications(false);
+
+        if (notification.type.startsWith('/')) {
+            navigate(notification.type);
+        } else if (notification.type.startsWith('ORDER_') && notification.taskId) {
+            navigate(`/orders/${notification.taskId}`);
+        } else if (notification.type.startsWith('TASK_')) {
+            navigate('/dashboard');
+        } else {
+            navigate('/notifications');
+        }
+    };
 
     return (
         <div className="layout">
@@ -120,42 +144,40 @@ export default function Layout() {
                                 <div className="fb-notification-dropdown msg-dropdown">
                                     <div className="fb-notification-header">
                                         <h3>Đoạn chat</h3>
-                                        <div style={{display: 'flex', gap: '8px'}}>
-                                            <button className="fb-notification-options"><MoreHorizontal size={20}/></button>
-                                            <button className="fb-notification-options"><Edit size={18}/></button>
-                                        </div>
+                                        <button className="fb-notification-options"><MoreHorizontal size={20}/></button>
                                     </div>
                                     <div className="fb-notification-list">
-                                        {messageGroups.map(group => (
+                                        {chatNotifications.length === 0 ? (
+                                            <div className="fb-notification-empty">
+                                                <MessageCircle size={28} />
+                                                <p>Chưa có tin nhắn mới.</p>
+                                            </div>
+                                        ) : chatNotifications.map(notification => (
                                             <div 
-                                                key={group.id} 
-                                                className="fb-notification-item msg-item"
-                                                onClick={() => {
-                                                    setShowMessages(false);
-                                                    navigate(`/groups/${group.id}?openChat=1`);
-                                                }}
+                                                key={notification.id}
+                                                className={`fb-notification-item msg-item ${notification.read ? 'read' : 'unread'}`}
+                                                onClick={() => openChatNotification(notification)}
                                                 style={{cursor: 'pointer'}}
                                             >
                                                 <div className="fb-notif-avatar-wrapper">
-                                                    <img src={group.avatar} alt="avatar" className="fb-notif-avatar" />
-                                                    {group.isActive && <div className="online-indicator"></div>}
+                                                    <div className="message-notification-avatar">
+                                                        <MessageCircle size={23} />
+                                                    </div>
                                                 </div>
                                                 <div className="fb-notif-content">
-                                                    <p className={`msg-group-name ${group.unreadCount > 0 ? 'unread-text' : ''}`}>
-                                                        {group.name}
+                                                    <p className={`msg-group-name ${!notification.read ? 'unread-text' : ''}`}>
+                                                        {notification.title}
                                                     </p>
                                                     <div className="msg-preview">
-                                                        <span className={`msg-preview-text ${group.unreadCount > 0 ? 'unread-text' : ''}`}>
-                                                            {group.lastMessage}
+                                                        <span className={`msg-preview-text ${!notification.read ? 'unread-text' : ''}`}>
+                                                            {notification.message}
                                                         </span>
-                                                        <span className="msg-preview-time"> · {group.time}</span>
+                                                        <span className="msg-preview-time">
+                                                            {' · '}{new Date(notification.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
                                                     </div>
                                                 </div>
-                                                {group.unreadCount > 0 && (
-                                                    <div className="msg-unread-badge-icon">
-                                                        {group.unreadCount}
-                                                    </div>
-                                                )}
+                                                {!notification.read && <div className="fb-notif-unread-dot"></div>}
                                             </div>
                                         ))}
                                     </div>
@@ -191,24 +213,19 @@ export default function Layout() {
                                     </div>
                                     <div className="fb-notification-section">
                                         <span>Gần đây</span>
-                                        <button>Xem tất cả</button>
+                                        <button onClick={() => { setShowNotifications(false); navigate('/notifications'); }}>Xem tất cả</button>
                                     </div>
                                     <div className="fb-notification-list">
-                                        {displayNotifications.map(notif => (
+                                        {displayNotifications.length === 0 ? (
+                                            <div className="fb-notification-empty">
+                                                <Bell size={28} />
+                                                <p>{activeTab === 'unread' ? 'Không có thông báo chưa đọc.' : 'Chưa có thông báo hệ thống.'}</p>
+                                            </div>
+                                        ) : displayNotifications.map(notif => (
                                             <div 
                                                 key={notif.id} 
                                                 className={`fb-notification-item ${notif.read ? 'read' : 'unread'}`}
-                                                onClick={() => {
-                                                    if (!notif.read) {
-                                                        notificationService.markAsRead(notif.id).then(() => {
-                                                            setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
-                                                        }).catch(() => { /* tolerated */ });
-                                                    }
-                                                    if (notif.taskId) {
-                                                        // Example navigation if there's a taskId
-                                                        setShowNotifications(false);
-                                                    }
-                                                }}
+                                                onClick={() => openSystemNotification(notif)}
                                                 style={{cursor: 'pointer'}}
                                             >
                                                 <div className="fb-notif-avatar-wrapper">
@@ -218,23 +235,22 @@ export default function Layout() {
                                                 </div>
                                                 <div className="fb-notif-content">
                                                     <p>
-                                                        <strong>Hệ thống</strong> {notif.message}
+                                                        <strong>{notif.title || 'Hệ thống'}</strong> {notif.message}
                                                     </p>
-                                                    <span className="fb-notif-time">{new Date(notif.createdAt).toLocaleDateString('vi-VN')}</span>
+                                                    <span className="fb-notif-time">{new Date(notif.createdAt).toLocaleString('vi-VN')}</span>
                                                 </div>
                                                 {!notif.read && <div className="fb-notif-unread-dot"></div>}
                                             </div>
                                         ))}
                                     </div>
                                     <div className="fb-notification-footer">
-                                        <button>Xem thông báo trước đó</button>
+                                        <button onClick={() => { setShowNotifications(false); navigate('/notifications'); }}>Xem tất cả thông báo</button>
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                        <div className="topbar-avatar" onClick={() => navigate('/profile')} title="Hồ sơ nhân viên" style={{ cursor: 'pointer', backgroundImage: `url(${user?.avatar || defaultAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center', color: 'transparent' }}>
-                        </div>
+
                         <button className="topbar-logout" onClick={logout}>
                             Đăng xuất
                         </button>

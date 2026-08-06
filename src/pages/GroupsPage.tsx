@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { teamService } from '../services/groupService';
-import type { Team } from '../types/types';
+import type { PlanUsage, Team } from '../types/types';
 import VerificationModal from '../components/VerificationModal';
 import FactoryConfigModal from '../components/FactoryConfigModal';
 import api from '../services/api';
 
+const INITIAL_VISIBLE_GROUPS = 4;
+
 export default function GroupsPage() {
   const navigate = useNavigate();
   const [groups, setGroups] = useState<Team[]>([]);
+  const [planUsage, setPlanUsage] = useState<PlanUsage | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -23,6 +26,7 @@ export default function GroupsPage() {
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showFactoryConfigModal, setShowFactoryConfigModal] = useState(false);
   const [joinRequests, setJoinRequests] = useState<any[]>([]);
+  const [showAllGroups, setShowAllGroups] = useState(false);
 
   const totalMembers = useMemo(
     () => groups.reduce((sum, group) => sum + (group.memberCount || group.members?.length || 0), 0),
@@ -34,12 +38,21 @@ export default function GroupsPage() {
     [groups],
   );
 
+  const visibleGroups = useMemo(
+    () => showAllGroups ? groups : groups.slice(0, INITIAL_VISIBLE_GROUPS),
+    [groups, showAllGroups],
+  );
+
   const loadGroups = async () => {
     setLoading(true);
     setError('');
     try {
-      const data = await teamService.getMyTeams();
+      const [data, usage] = await Promise.all([
+        teamService.getMyTeams(),
+        teamService.getMyQuota().catch(() => null),
+      ]);
       setGroups(data);
+      setPlanUsage(usage);
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Không thể tải danh sách nhóm.');
       setGroups([]);
@@ -59,6 +72,10 @@ export default function GroupsPage() {
   };
 
   const openCreateModal = () => {
+    if (planUsage && !planUsage.canCreateWorkshop) {
+      setError(`Gói ${planUsage.planName} chỉ cho phép tối đa ${planUsage.maxWorkshops} xưởng. Vui lòng nâng cấp gói để tạo thêm xưởng.`);
+      return;
+    }
     resetCreateForm();
     setShowCreateModal(true);
   };
@@ -101,7 +118,7 @@ export default function GroupsPage() {
       resetCreateForm();
       navigate(`/groups/${created.id}`);
     } catch (err: any) {
-      setError(err?.response?.data?.error || err?.response?.data?.message || 'Khong the tao nhom moi.');
+      setError(err?.response?.data?.message || err?.response?.data?.error || 'Không thể tạo nhóm mới.');
     } finally {
       setSaving(false);
     }
@@ -110,20 +127,21 @@ export default function GroupsPage() {
     event.preventDefault();
     const code = inviteCode.trim().toUpperCase();
     if (!code) {
-      setError('Nhap ma moi.');
+      setError('Vui lòng nhập mã mời.');
       return;
     }
 
     setSaving(true);
     setError('');
     try {
-      const joined = await teamService.joinByCode(code);
-      setGroups(current => [joined, ...current.filter(group => group.id !== joined.id)]);
+      const res: any = await teamService.joinByCode(code);
       setShowJoinModal(false);
       setInviteCode('');
-      navigate(`/groups/${joined.id}`);
+      alert(res?.teamName 
+        ? `🎉 Yêu cầu tham gia xưởng "${res.teamName}" đã được gửi thành công!\n\nVui lòng chờ Trưởng nhóm (Owner) phê duyệt yêu cầu của bạn.`
+        : '🎉 Yêu cầu tham gia xưởng đã được gửi thành công!\n\nVui lòng chờ Trưởng nhóm phê duyệt.');
     } catch (err: any) {
-      setError(err?.response?.data?.error || err?.response?.data?.message || 'Khong the tham gia nhom bang ma nay.');
+      setError(err?.response?.data?.error || err?.response?.data?.message || 'Không thể tham gia nhóm bằng mã này.');
     } finally {
       setSaving(false);
     }
@@ -137,7 +155,7 @@ export default function GroupsPage() {
     setError('');
     
     try {
-      const res = await api.get(`/team-join/team/${group.id}/pending`);
+      const res = await api.get(`/api/team-join/team/${group.id}/pending`);
       setJoinRequests(res.data);
     } catch (err) {
       console.error('Failed to fetch join requests', err);
@@ -186,6 +204,7 @@ export default function GroupsPage() {
     try {
       await teamService.deleteTeam(managedTeam.id);
       setGroups(current => current.filter(group => group.id !== managedTeam.id));
+      teamService.getMyQuota().then(setPlanUsage).catch(() => { });
       closeManageModal();
     } catch (err: any) {
       setError(err?.response?.data?.error || err?.response?.data?.message || 'Khong the xoa nhom.');
@@ -231,13 +250,13 @@ export default function GroupsPage() {
 
   const handleDecision = async (requestId: string, decision: 'APPROVED' | 'REJECTED') => {
     try {
-        await api.post(`/team-join/${requestId}/decision`, { decision });
+        await api.post(`/api/team-join/${requestId}/decision`, { decision });
         setJoinRequests(current => current.filter(r => r.id !== requestId));
         if (decision === 'APPROVED') {
             loadGroups();
         }
     } catch (e: any) {
-        alert('Lỗi: ' + (e.response?.data?.error || e.message));
+        alert('Lỗi: ' + (e.response?.data?.message || e.response?.data?.error || e.message));
     }
   };
 
@@ -279,7 +298,13 @@ export default function GroupsPage() {
               <ion-icon name="enter-outline" style={{ fontSize: 16 }}></ion-icon>
               Tham gia nhóm
             </button>
-            <button type="button" className="btn btn-primary" onClick={openCreateModal}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={openCreateModal}
+              disabled={planUsage ? !planUsage.canCreateWorkshop : false}
+              title={planUsage && !planUsage.canCreateWorkshop ? 'Đã đạt giới hạn xưởng của gói hiện tại' : undefined}
+            >
               <ion-icon name="add-circle-outline" style={{ fontSize: 16 }}></ion-icon>
               Tạo nhóm mới
             </button>
@@ -289,18 +314,32 @@ export default function GroupsPage() {
 
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 20 }}>
         <div className="glass-panel premium-card" style={{ padding: 18 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Tổng nhóm</div>
-          <div style={{ fontSize: 24, fontWeight: 800 }}>{groups.length}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Xưởng sở hữu</div>
+          <div style={{ fontSize: 24, fontWeight: 800 }}>
+            {planUsage ? `${planUsage.workshopsUsed}/${planUsage.maxWorkshops}` : groups.length}
+          </div>
+          {planUsage && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Gói {planUsage.planName}</div>}
         </div>
         <div className="glass-panel premium-card" style={{ padding: 18 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Thành viên</div>
-          <div style={{ fontSize: 24, fontWeight: 800 }}>{totalMembers}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Nhân viên theo gói</div>
+          <div style={{ fontSize: 24, fontWeight: 800 }}>
+            {planUsage ? `${planUsage.usersUsed}/${planUsage.maxUsers}` : totalMembers}
+          </div>
         </div>
         <div className="glass-panel premium-card" style={{ padding: 18 }}>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Đang lên Marketplace</div>
           <div style={{ fontSize: 24, fontWeight: 800 }}>{publishedCount}</div>
         </div>
       </section>
+
+      {planUsage && (!planUsage.canCreateWorkshop || !planUsage.canAddMember) && (
+        <div className="glass-panel" style={{ marginBottom: 20, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+            Bạn đã đạt một giới hạn của gói {planUsage.planName}.
+          </span>
+          <button type="button" className="btn btn-secondary" onClick={() => navigate('/upgrade')}>Nâng cấp gói</button>
+        </div>
+      )}
 
       {error && !showCreateModal && (
         <div className="form-error" style={{ marginBottom: 16 }}>
@@ -328,7 +367,7 @@ export default function GroupsPage() {
               <ion-icon name="enter-outline" style={{ fontSize: 16 }}></ion-icon>
               Tham gia nhóm
             </button>
-            <button type="button" className="btn btn-primary" onClick={openCreateModal}>
+            <button type="button" className="btn btn-primary" onClick={openCreateModal} disabled={planUsage ? !planUsage.canCreateWorkshop : false}>
               <ion-icon name="add-circle-outline" style={{ fontSize: 16 }}></ion-icon>
               Tạo nhóm mới
             </button>
@@ -339,8 +378,17 @@ export default function GroupsPage() {
           <section style={{ marginBottom: 20 }}>
             <h2 className="section-title" style={{ fontSize: 18, marginBottom: 12 }}>Nhóm của bạn</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
-              {groups.map(group => (
-                <article key={group.id} className="premium-card glass-panel" style={{ padding: 18 }}>
+              {visibleGroups.map((group, index) => (
+                <article
+                  key={group.id}
+                  className="premium-card glass-panel"
+                  style={{
+                    padding: 18,
+                    animation: showAllGroups && index >= INITIAL_VISIBLE_GROUPS
+                      ? 'fadeInRight 180ms ease both'
+                      : undefined,
+                  }}
+                >
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'flex-start' }}>
                     <div style={{ minWidth: 0 }}>
                       <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>{group.name}</h3>
@@ -366,6 +414,28 @@ export default function GroupsPage() {
                 </article>
               ))}
             </div>
+            {groups.length > INITIAL_VISIBLE_GROUPS && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 18 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowAllGroups(current => !current)}
+                  aria-expanded={showAllGroups}
+                >
+                  {showAllGroups ? (
+                    <>
+                      Thu gọn
+                      <ion-icon name="chevron-up-outline"></ion-icon>
+                    </>
+                  ) : (
+                    <>
+                      Xem thêm ({groups.length - INITIAL_VISIBLE_GROUPS})
+                      <ion-icon name="chevron-down-outline"></ion-icon>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </section>
 
           <section>
@@ -621,8 +691,8 @@ export default function GroupsPage() {
                         {joinRequests.map(req => (
                             <li key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border-color)' }}>
                                 <div>
-                                    <div style={{ fontWeight: 600 }}>{req.userName}</div>
-                                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{req.userEmail}</div>
+                                    <div style={{ fontWeight: 600 }}>{req.userName || req.userEmail || 'Thành viên mới'}</div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{req.userEmail || ''}</div>
                                 </div>
                                 <div style={{ display: 'flex', gap: 5 }}>
                                     <button className="btn btn-primary" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => handleDecision(req.id, 'APPROVED')}>Duyệt</button>

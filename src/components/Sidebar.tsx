@@ -4,7 +4,15 @@ import { useAuth } from '../context/AuthContext';
 import { teamService } from '../services/groupService';
 import { interGroupOrderService } from '../services/interGroupOrderService';
 import orcaLogo from '../assets/orca-logo.png';
-import defaultAvatar from '../assets/default-avatar.png';
+
+function getUsernameInitials(username?: string) {
+    const value = username?.trim() || 'U';
+    const parts = value.split(/[\s._-]+/).filter(Boolean);
+    if (parts.length > 1) {
+        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    }
+    return value.slice(0, 2).toUpperCase();
+}
 
 export default function Sidebar() {
     const { user, logout } = useAuth();
@@ -13,6 +21,7 @@ export default function Sidebar() {
     const [pendingOrderCount, setPendingOrderCount] = useState(0);
     const displayName = user?.fullName || user?.username || 'Người dùng';
     const displayPlan = user?.aiPlan || 'free';
+    const usernameInitials = getUsernameInitials(user?.username);
 
     const getPlanColor = (plan: string) => {
         if (user?.role === 'ADMIN') {
@@ -173,7 +182,7 @@ export default function Sidebar() {
                     {userMenuOpen && (
                         <div className="sidebar-user-menu">
                             <div className="sidebar-user-menu-head">
-                                <div className="sidebar-avatar sidebar-avatar-initials" style={{ backgroundImage: `url(${user?.avatar || defaultAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center', color: 'transparent' }}></div>
+                                <div className="sidebar-avatar sidebar-avatar-initials">{usernameInitials}</div>
                                 <div className="sidebar-user-info">
                                     <span className="sidebar-username">{displayName}</span>
                                     <span className="sidebar-user-plan">{displayPlan}</span>
@@ -214,7 +223,7 @@ export default function Sidebar() {
                         onClick={() => setUserMenuOpen((open) => !open)}
                         aria-expanded={userMenuOpen}
                     >
-                        <div className="sidebar-avatar sidebar-avatar-initials" style={{ backgroundImage: `url(${user?.avatar || defaultAvatar})`, backgroundSize: 'cover', backgroundPosition: 'center', color: 'transparent' }}></div>
+                        <div className="sidebar-avatar sidebar-avatar-initials">{usernameInitials}</div>
                         <div className="sidebar-user-info">
                             <span className="sidebar-username">{displayName}</span>
                             <span

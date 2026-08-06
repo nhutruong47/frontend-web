@@ -14,7 +14,7 @@ export const adminService = {
     getTasks: () =>
         api.get<AdminTask[]>('/api/admin/tasks').then(r => r.data),
     getPayments: (page: number = 0, size: number = 10, search: string = '') =>
-        api.get<PageResponse<AdminPayment>>(`/api/admin/payments?page=${page}&size=${size}&search=${search}`).then(r => r.data),
+        api.get<PageResponse<AdminPayment>>(`/api/admin/payments?page=${page}&size=${size}&search=${search}&_=${Date.now()}`).then(r => r.data),
     getLogs: (page: number = 0, size: number = 20, search: string = '') =>
         api.get<PageResponse<SystemLog>>(`/api/admin/logs?page=${page}&size=${size}&search=${search}`).then(r => r.data),
     updateUserRole: (id: string, role: AdminUser['role']) =>

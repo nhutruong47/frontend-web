@@ -100,6 +100,17 @@ export interface Team {
     inviteCode?: string;
 }
 
+export interface PlanUsage {
+    planId: string;
+    planName: string;
+    usersUsed: number;
+    maxUsers: number;
+    workshopsUsed: number;
+    maxWorkshops: number;
+    canAddMember: boolean;
+    canCreateWorkshop: boolean;
+}
+
 // === Goals & Tasks ===
 export interface AiTaskSuggestion {
     title: string;

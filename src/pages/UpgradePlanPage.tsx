@@ -86,7 +86,6 @@ export default function UpgradePlanPage() {
 
                             <div className="pricing-subtitle">
                                 <strong>Giới hạn: {plan.users} NV, {plan.workshops} Xưởng</strong>
-                                <span>{plan.ai > 0 ? `+${plan.ai} AI Tokens` : 'Bao gồm lượt AI miễn phí'}</span>
                             </div>
 
                             <button

@@ -30,7 +30,7 @@ export default function NotificationsPage() {
     const reload = useCallback(async () => {
         try {
             const data = await notificationService.getAll();
-            setItems(data);
+            setItems(data.filter((notification) => notification.type !== 'CHAT_MESSAGE'));
         } catch (err) {
             toast.error('Lỗi tải thông báo', 'Không thể tải danh sách thông báo.');
         } finally {
@@ -47,6 +47,7 @@ export default function NotificationsPage() {
     useNotificationSocket({
         enabled: !!user,
         onListChange: (payload: NotificationPayload) => {
+            if (payload.type === 'CHAT_MESSAGE') return;
             const mapped: AppNotification = {
                 id: payload.id,
                 title: payload.title,
@@ -72,7 +73,8 @@ export default function NotificationsPage() {
     const handleMarkAll = async () => {
         setMarking(true);
         try {
-            await notificationService.markAllRead();
+            const unreadIds = items.filter((notification) => !notification.read).map((notification) => notification.id);
+            await Promise.all(unreadIds.map((id) => notificationService.markAsRead(id)));
             setItems((prev) => prev.map((n) => ({ ...n, read: true })));
             toast.success('Đã đánh dấu tất cả là đã đọc', '');
         } catch (err) {

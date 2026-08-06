@@ -1476,18 +1476,57 @@ export default function MarketplacePage() {
                 </section>
 
                 {myPublishedTeams.length > 0 && (
-                    <section className="mp-published-panel">
-                        <h3><span className="material-symbols-outlined">storefront</span>Xưởng của bạn trên thị trường</h3>
+                    <section className="mp-published-panel" aria-labelledby="mp-published-title">
+                        <div className="mp-published-heading">
+                            <div className="mp-published-heading-icon" aria-hidden="true">
+                                <span className="material-symbols-outlined">storefront</span>
+                            </div>
+                            <div>
+                                <h3 id="mp-published-title">Xưởng của bạn trên thị trường</h3>
+                                <p>Quản lý thông tin mà khách hàng và đối tác đang nhìn thấy.</p>
+                            </div>
+                        </div>
                         <div className="mp-my-published-list">
                             {myPublishedTeams.map(team => (
-                                <div key={team.id} className="mp-my-pub-item">
-                                    <div>
-                                        <strong>{team.name}</strong>
-                                        <span className="mp-pub-badge">Đang hiển thị</span>
+                                <article key={team.id} className="mp-my-pub-item">
+                                    <img
+                                        className="mp-my-pub-image"
+                                        src={getFactoryCardImage(team)}
+                                        alt={`Ảnh đại diện ${team.name}`}
+                                        onError={handleFactoryImageError}
+                                    />
+                                    <div className="mp-my-pub-content">
+                                        <div className="mp-my-pub-title-row">
+                                            <strong>{team.name}</strong>
+                                            <span className="mp-pub-badge">
+                                                <span aria-hidden="true" />
+                                                Đang hiển thị
+                                            </span>
+                                        </div>
+                                        <div className="mp-my-pub-meta">
+                                            {team.region && (
+                                                <span><span className="material-symbols-outlined" aria-hidden="true">location_on</span>{team.region}</span>
+                                            )}
+                                            {(team.specialty || team.factoryType) && (
+                                                <span><span className="material-symbols-outlined" aria-hidden="true">coffee</span>{team.specialty || team.factoryType}</span>
+                                            )}
+                                        </div>
+                                        <p className="mp-my-pub-visibility">
+                                            <span className="material-symbols-outlined" aria-hidden="true">visibility</span>
+                                            Khách hàng có thể tìm thấy xưởng này trên thị trường ORCA.
+                                        </p>
                                     </div>
-                                    <button className="mp-edit-pub-btn" onClick={() => openEditPublishedTeam(team)}>Chỉnh sửa</button>
-                                    <button className="mp-unpub-btn" onClick={() => handleUnpublish(team.id)}>Gỡ xuống</button>
-                                </div>
+                                    <div className="mp-my-pub-actions">
+                                        <button type="button" className="mp-edit-pub-btn" onClick={() => openEditPublishedTeam(team)}>
+                                            <span className="material-symbols-outlined" aria-hidden="true">edit</span>
+                                            Chỉnh sửa thông tin
+                                        </button>
+                                        <button type="button" className="mp-unpub-btn" onClick={() => handleUnpublish(team.id)}>
+                                            <span className="material-symbols-outlined" aria-hidden="true">visibility_off</span>
+                                            Gỡ khỏi thị trường
+                                        </button>
+                                    </div>
+                                </article>
                             ))}
                         </div>
                     </section>
