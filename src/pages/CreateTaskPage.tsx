@@ -348,6 +348,11 @@ export default function CreateTaskPage() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const totalTokens = messages.reduce((sum, message) => sum + estimateTokens(message.content), 0);
 
+    // Wake up AI service early if it's sleeping on free tier
+    useEffect(() => {
+        fetch('https://orca-ai-service.onrender.com/health', { mode: 'no-cors' }).catch(() => {});
+    }, []);
+
     const handleCopyMessage = (content: string) => {
         navigator.clipboard.writeText(content);
         alert('Đã copy nội dung!');
