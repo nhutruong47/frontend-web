@@ -348,11 +348,6 @@ export default function CreateTaskPage() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const totalTokens = messages.reduce((sum, message) => sum + estimateTokens(message.content), 0);
 
-    // Wake up AI service early if it's sleeping on free tier
-    useEffect(() => {
-        fetch('https://orca-ai-service.onrender.com/health', { mode: 'no-cors' }).catch(() => {});
-    }, []);
-
     const handleCopyMessage = (content: string) => {
         navigator.clipboard.writeText(content);
         alert('Đã copy nội dung!');
@@ -517,10 +512,6 @@ export default function CreateTaskPage() {
                     return;
                 }
 
-                if (!localRevision && (!apiDraft.tasks || apiDraft.tasks.length === 0)) {
-                    throw new Error('AI_RETURNED_EMPTY_TASKS');
-                }
-
                 const revisedDraft = localRevision
                     || ensureRequestedRevision(userMsg.content, currentDraft, apiDraft);
                 const res = draftToResult(revisedDraft);
@@ -578,11 +569,6 @@ export default function CreateTaskPage() {
             }
 
             const draft = await aiWorkflowService.plan(teamId || '', extracted.intent, extracted.fields);
-            
-            if (!draft.tasks || draft.tasks.length === 0) {
-                throw new Error('AI_RETURNED_EMPTY_TASKS');
-            }
-
             const res = draftToResult(draft);
             setConversationState({ mode: 'DRAFT_READY' });
 
@@ -607,7 +593,7 @@ export default function CreateTaskPage() {
 
             let friendlyMsg = 'Hệ thống gặp gián đoạn tạm thời. Bạn thử gửi lại yêu cầu giúp ORCA nhé!';
 
-            if (status === 502 || status === 503 || rawLower.includes('bad gateway') || rawLower.includes('cannot reach ai') || rawLower.includes('gemini') || rawLower.includes('empty_tasks')) {
+            if (status === 502 || status === 503 || rawLower.includes('bad gateway') || rawLower.includes('cannot reach ai') || rawLower.includes('gemini')) {
                 friendlyMsg = 'Hệ thống AI đang bận hoặc gián đoạn tạm thời. Bạn chờ vài giây rồi gửi lại giúp ORCA nhé!';
             } else if (status === 500 || rawLower.includes('internal server error')) {
                 friendlyMsg = 'Hệ thống gặp sự cố kỹ thuật tạm thời. Vui lòng thử lại sau giây lát!';
