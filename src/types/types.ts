@@ -480,15 +480,11 @@ export interface SubscriptionPlan {
 
 export interface SystemLog {
     id: string;
-    actorId: string;
-    actorUsername: string;
+    actorId: string | null;
+    actorName: string;
     actionType: string;
-    targetType: string;
     targetId: string;
     details: string;
-    ipAddress: string;
-    userAgent: string;
-    status: string;
     createdAt: string;
 }
 

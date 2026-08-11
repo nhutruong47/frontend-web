@@ -13,6 +13,12 @@ import remarkGfm from 'remark-gfm';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { estimateTokens, formatTokenCount } from '../utils/tokenUsage';
+import {
+    formatMemberIdentity,
+    getDuplicateMemberNameKeys,
+    getMemberCode,
+    hasDuplicateMemberName,
+} from '../utils/memberIdentity';
 import './GroupDetailPage.css';
 
 gsap.registerPlugin(useGSAP);
@@ -367,6 +373,7 @@ export default function GroupDetailPage() {
     const [showAttendanceHistory, setShowAttendanceHistory] = useState(false);
     const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
     const [loadingAttendance, setLoadingAttendance] = useState(false);
+    const attendanceHistoryModalRef = useRef<HTMLDivElement>(null);
     
     // Team Attendance
     const [showTeamAttendance, setShowTeamAttendance] = useState(false);
@@ -379,6 +386,40 @@ export default function GroupDetailPage() {
         completed: teamAttendanceData.filter(item => item.checkOutTime).length,
         totalHours: teamAttendanceData.reduce((sum, item) => sum + (Number(item.actualWorkHours) || 0), 0),
     };
+
+    useGSAP(() => {
+        if (!showAttendanceHistory || !attendanceHistoryModalRef.current) return;
+
+        const media = gsap.matchMedia();
+        media.add('(prefers-reduced-motion: no-preference)', () => {
+            const timeline = gsap.timeline({ defaults: { ease: 'power3.out' } });
+            timeline
+                .fromTo('.attendance-history-modal__backdrop', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.16 })
+                .fromTo(
+                    '.attendance-history-modal__panel',
+                    { autoAlpha: 0, y: 12, scale: 0.985 },
+                    { autoAlpha: 1, y: 0, scale: 1, duration: 0.22 },
+                    '<'
+                )
+                .fromTo(
+                    '.attendance-history-modal__card',
+                    { autoAlpha: 0, y: 8 },
+                    { autoAlpha: 1, y: 0, duration: 0.2, stagger: 0.03 },
+                    '-=0.08'
+                );
+        });
+
+        return () => media.revert();
+    }, { scope: attendanceHistoryModalRef, dependencies: [showAttendanceHistory], revertOnUpdate: true });
+
+    useEffect(() => {
+        if (!showAttendanceHistory) return;
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setShowAttendanceHistory(false);
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [showAttendanceHistory]);
 
     useGSAP(() => {
         if (!showTeamAttendance || !teamAttendanceModalRef.current) return;
@@ -839,6 +880,11 @@ export default function GroupDetailPage() {
 
     const handleSaveLabels = async () => {
         if (!team || !selectedMemberForLabels) return;
+        const duplicateNames = getDuplicateMemberNameKeys(team.members || []);
+        if (hasDuplicateMemberName(selectedMemberForLabels, duplicateNames)) {
+            const accepted = confirm(`Thành viên này trùng tên với người khác.\n\nBạn đang phân vai cho:\n${formatMemberIdentity(selectedMemberForLabels)}\n\nXác nhận tiếp tục?`);
+            if (!accepted) return;
+        }
         setLoading(true);
         try {
             const labelArray = editingLabels.split(',').map(l => l.trim()).filter(l => l.length > 0);
@@ -959,6 +1005,7 @@ export default function GroupDetailPage() {
     // Show the actual team roster for everyone. The previous filter hid all other
     // members for non-admin users, which made the group appear to have only one member.
     const visibleMemberStats = memberStats;
+    const duplicateMemberNameKeys = getDuplicateMemberNameKeys(team.members || []);
     const latestGoal = [...goals].sort((a, b) => {
         const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -1124,6 +1171,12 @@ export default function GroupDetailPage() {
             {/* ===== MEMBER CARDS ===== */}
             {showMemberRoles && visibleMemberStats.length > 0 && (
             <>
+                {duplicateMemberNameKeys.size > 0 && (
+                    <div role="alert" style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 14, padding: '11px 14px', borderRadius: 12, border: '1px solid #fcd34d', background: '#fffbeb', color: '#92400e', fontSize: 13, lineHeight: 1.45 }}>
+                        <ion-icon name="warning-outline" style={{ fontSize: 18, flexShrink: 0 }}></ion-icon>
+                        <span><strong>Phát hiện thành viên trùng tên.</strong> ORCA vẫn phân biệt bằng tài khoản và UUID; hãy đối chiếu username, mã nhân viên trước khi phân vai.</span>
+                    </div>
+                )}
                 <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
                     <button onClick={() => setMemberRoleFilter('ALL')} style={{ padding: '6px 14px', borderRadius: 20, border: memberRoleFilter === 'ALL' ? '1px solid var(--accent-primary, #d4a574)' : '1px solid var(--border, #e2e8f0)', background: memberRoleFilter === 'ALL' ? 'var(--accent-primary, #d4a574)' : 'transparent', color: memberRoleFilter === 'ALL' ? '#fff' : 'var(--text-secondary, #64748b)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Tất cả</button>
                     {Array.from(new Set(visibleMemberStats.flatMap(m => m.jobLabels || []).filter((l: string) => l.trim().length > 0))).map(role => (
@@ -1145,9 +1198,15 @@ export default function GroupDetailPage() {
                         <div key={m.userId} style={{ minWidth: 220, background: 'var(--bg-card, #fff)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border, #e2e8f0)', flexShrink: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                                 <div style={{ width: 36, height: 36, borderRadius: '50%', background: m.color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 14 }}>{getInitials(displayName)}</div>
-                                <div>
-                                    <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{displayName}</div>
-                                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{m.groupRole === 'ADMIN' || m.groupRole === 'OWNER' ? 'Trưởng nhóm' : 'Thành viên'}</div>
+                                <div style={{ minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{displayName}</div>
+                                        {hasDuplicateMemberName(m, duplicateMemberNameKeys) && (
+                                            <span title="Có người khác trùng tên" style={{ padding: '2px 6px', borderRadius: 999, background: '#fef3c7', color: '#92400e', fontSize: 9, fontWeight: 800 }}>TRÙNG TÊN</span>
+                                        )}
+                                    </div>
+                                    <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>@{m.username} · {getMemberCode(m.userId)}</div>
+                                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{m.groupRole === 'ADMIN' || m.groupRole === 'OWNER' ? 'Trưởng nhóm' : 'Thành viên'}</div>
                                 </div>
                                 <div style={{ marginLeft: 'auto', fontSize: 18, fontWeight: 800, color: m.pct === 100 ? '#16a34a' : m.pct > 0 ? '#f59e0b' : '#94a3b8' }}>{m.pct}%</div>
                             </div>
@@ -2322,8 +2381,14 @@ export default function GroupDetailPage() {
                     <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, background: 'var(--bg-card)', color: '#1a1a1a', borderRadius: 16, padding: '24px' }}>
                         <h2 style={{ margin: '0 0 8px', color: 'var(--text-primary)', fontSize: 18 }}>Phân vai trò</h2>
                         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
-                            Gán vai trò cho <b>{selectedMemberForLabels.fullName || selectedMemberForLabels.username}</b>. Bạn có thể chọn từ danh sách hoặc tự nhập ở dưới.
+                            Gán vai trò cho <b>{formatMemberIdentity(selectedMemberForLabels)}</b>. Bạn có thể chọn từ danh sách hoặc tự nhập ở dưới.
                         </p>
+                        {hasDuplicateMemberName(selectedMemberForLabels, duplicateMemberNameKeys) && (
+                            <div role="alert" style={{ display: 'flex', gap: 8, padding: '9px 11px', margin: '-8px 0 16px', borderRadius: 10, border: '1px solid #fcd34d', background: '#fffbeb', color: '#92400e', fontSize: 12, lineHeight: 1.4 }}>
+                                <ion-icon name="warning-outline" style={{ fontSize: 16, flexShrink: 0 }}></ion-icon>
+                                <span>Người này trùng tên với thành viên khác. Hãy kiểm tra đúng username và mã nhân viên trước khi lưu.</span>
+                            </div>
+                        )}
                         
                         {teamRoles.length > 0 && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
@@ -3691,38 +3756,61 @@ export default function GroupDetailPage() {
 
             {/* Modal Lịch sử vào ra ca */}
             {showAttendanceHistory && (
-                <div className="modal-overlay" onClick={() => setShowAttendanceHistory(false)} style={{ background: 'rgba(10, 10, 12, 0.85)', backdropFilter: 'blur(10px)', zIndex: 10000, position: 'fixed', inset: 0, display: 'grid', placeItems: 'center' }}>
-                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 900, minWidth: 'min(90vw, 750px)', width: '100%', background: '#121214', color: '#ffffff', borderRadius: 20, padding: '32px', border: '1px solid #232328', maxHeight: '80vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #232328', paddingBottom: 16 }}>
-                            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#ffffff' }}>Lịch sử vào/ra ca của bạn</h3>
-                            <button onClick={() => setShowAttendanceHistory(false)} style={{ background: 'rgba(255, 255, 255, 0.08)', border: 'none', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', color: '#fff', display: 'grid', placeItems: 'center' }}>✕</button>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div
+                    ref={attendanceHistoryModalRef}
+                    className="attendance-history-modal__backdrop"
+                    onClick={() => setShowAttendanceHistory(false)}
+                >
+                    <section
+                        className="attendance-history-modal__panel"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="attendance-history-title"
+                        onClick={event => event.stopPropagation()}
+                    >
+                        <header className="attendance-history-modal__header">
+                            <div className="attendance-history-modal__heading">
+                                <span aria-hidden="true"><ion-icon name="time-outline"></ion-icon></span>
+                                <div>
+                                    <h3 id="attendance-history-title">Lịch sử vào/ra ca của bạn</h3>
+                                    <p>Theo dõi thời gian làm việc và trạng thái từng ca.</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                className="attendance-history-modal__close"
+                                onClick={() => setShowAttendanceHistory(false)}
+                                aria-label="Đóng lịch sử vào ra ca"
+                            >
+                                <ion-icon name="close-outline"></ion-icon>
+                            </button>
+                        </header>
+                        <div className="attendance-history-modal__body">
                             {attendanceHistory.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '30px 0', color: '#8e8e93' }}>Chưa có lịch sử chấm công nào.</div>
+                                <div className="attendance-history-modal__empty">Chưa có lịch sử chấm công nào.</div>
                             ) : (
                                 attendanceHistory.map((item, idx) => (
-                                    <div key={idx} style={{ background: '#1c1c1e', border: '1px solid #2d2d34', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontWeight: 700, color: '#d4a574' }}>Ngày {new Date(item.date).toLocaleDateString('vi-VN')}</span>
-                                            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: item.checkOutTime ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', color: item.checkOutTime ? '#10b981' : '#f59e0b', fontWeight: 700 }}>
+                                    <article key={idx} className="attendance-history-modal__card">
+                                        <div className="attendance-history-modal__card-header">
+                                            <span className="attendance-history-modal__date">Ngày {new Date(item.date).toLocaleDateString('vi-VN')}</span>
+                                            <span className={`attendance-history-modal__status ${item.checkOutTime ? 'is-complete' : 'is-active'}`}>
                                                 {item.checkOutTime ? 'Đã hoàn thành' : 'Đang làm việc'}
                                             </span>
                                         </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, fontSize: 14, color: '#8e8e93', marginTop: 8 }}>
-                                            <div>🕒 Vào ca: <strong style={{ color: '#fff' }}>{item.checkInTime ? new Date(item.checkInTime).toLocaleTimeString('vi-VN') : '--:--'}</strong></div>
-                                            <div>🕒 Tan ca: <strong style={{ color: '#fff' }}>{item.checkOutTime ? new Date(item.checkOutTime).toLocaleTimeString('vi-VN') : '--:--'}</strong></div>
-                                            <div>⏱️ Tổng giờ: <strong style={{ color: '#10b981' }}>{item.actualWorkHours !== undefined ? `${item.actualWorkHours} giờ` : '--'}</strong></div>
-                                            <div>💼 Vai trò: <strong style={{ color: '#fff' }}>{item.productionStage || 'Thường'}</strong></div>
+                                        <div className="attendance-history-modal__details">
+                                            <div><ion-icon name="log-in-outline"></ion-icon><span>Vào ca</span><strong>{item.checkInTime ? new Date(item.checkInTime).toLocaleTimeString('vi-VN') : '--:--'}</strong></div>
+                                            <div><ion-icon name="log-out-outline"></ion-icon><span>Tan ca</span><strong>{item.checkOutTime ? new Date(item.checkOutTime).toLocaleTimeString('vi-VN') : '--:--'}</strong></div>
+                                            <div className="is-hours"><ion-icon name="timer-outline"></ion-icon><span>Tổng giờ</span><strong>{item.actualWorkHours !== undefined ? `${item.actualWorkHours} giờ` : '--'}</strong></div>
+                                            <div><ion-icon name="briefcase-outline"></ion-icon><span>Vai trò</span><strong>{item.productionStage || 'Thường'}</strong></div>
                                         </div>
-                                    </div>
+                                    </article>
                                 ))
                             )}
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #232328', paddingTop: 16 }}>
-                            <button onClick={() => setShowAttendanceHistory(false)} style={{ background: 'rgba(255, 255, 255, 0.08)', color: '#ffffff', border: 'none', padding: '10px 24px', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Đóng</button>
-                        </div>
-                    </div>
+                        <footer className="attendance-history-modal__footer">
+                            <button type="button" onClick={() => setShowAttendanceHistory(false)}>Đóng</button>
+                        </footer>
+                    </section>
                 </div>
             )}
 

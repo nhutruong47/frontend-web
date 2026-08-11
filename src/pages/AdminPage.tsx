@@ -64,7 +64,22 @@ const number = (value: number) => new Intl.NumberFormat('vi-VN').format(value);
 
 const millionsFormatter = (val: unknown): [string, string] => {
   const num = typeof val === 'number' ? val : Number(val ?? 0);
-  return [`${num}M`, 'Chi phí'];
+  return [money(num * 1_000_000), 'Chi phí'];
+};
+
+const revenueMillionsFormatter = (val: unknown): [string, string] => {
+  const num = typeof val === 'number' ? val : Number(val ?? 0);
+  return [money(num * 1_000_000), 'Doanh thu'];
+};
+
+const orderStatusLabels: Record<string, string> = {
+  PENDING: 'Chờ xử lý',
+  ACCEPTED: 'Đã chấp nhận',
+  PROCESSING: 'Đang xử lý',
+  COMPLETED: 'Hoàn thành',
+  CANCELLED: 'Đã hủy',
+  CANCELED: 'Đã hủy',
+  REJECTED: 'Từ chối',
 };
 
 const parseDateInput = (value: string, endOfDay = false) => {
@@ -143,6 +158,25 @@ const getDate = (value: string | null | undefined) => {
 
 const paymentDate = (payment: AdminPayment) => getDate(payment.paidAt || payment.createdAt);
 
+const isReportablePayment = (payment: AdminPayment) => {
+  const txnRef = String(payment.txnRef || '').toUpperCase();
+  const bankCode = String(payment.bankCode || '').toUpperCase();
+  return !txnRef.startsWith('DEMO-') && !bankCode.endsWith('_QR');
+};
+
+const formatDateInput = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const startOfPreviousMonthInput = () => {
+  const date = new Date();
+  date.setMonth(date.getMonth() - 1, 1);
+  return formatDateInput(date);
+};
+
 const formatShortDate = (value: Date | string | null | undefined) => {
   const date = value instanceof Date ? value : getDate(value);
   return date ? date.toLocaleDateString('vi-VN') : '-';
@@ -175,22 +209,7 @@ const maskLicense = (license?: string | null) => {
   return `${license.substring(0, 2)}***${license.substring(license.length - 2)}`;
 };
 
-const demoCustomerNames = [
-  'Nguyễn Minh Anh',
-  'Trần Hoàng Nam',
-  'Lê Thảo Nguyên',
-  'Phạm Quốc Bảo',
-  'Võ Thanh Hương',
-  'Đặng Gia Huy',
-  'Bùi Khánh Linh',
-];
-
 const paymentCustomerName = (payment: AdminPayment) => {
-  if (payment.txnRef?.startsWith('DEMO-')) {
-    const sequence = Number(payment.txnRef.slice(-3));
-    const index = Number.isFinite(sequence) && sequence > 0 ? sequence - 1 : 0;
-    return demoCustomerNames[index % demoCustomerNames.length];
-  }
   if (payment.fullName || payment.username) return payment.fullName || payment.username;
   if (payment.email) return maskEmail(payment.email);
   return 'Không rõ người dùng';
@@ -277,8 +296,9 @@ export default function AdminPage() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('All');
   const [userPage, setUserPage] = useState(1);
-  const [revenueFrom] = useState('2026-07-06');
-  const [revenueTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [revenueFrom] = useState(startOfPreviousMonthInput);
+  const [revenueTo] = useState(() => formatDateInput(new Date()));
+  const [logFilter, setLogFilter] = useState('all');
   
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
@@ -352,6 +372,28 @@ export default function AdminPage() {
     };
   }, [active, user?.role]);
 
+  useEffect(() => {
+    if (active !== 'logs' || user?.role !== 'ADMIN') return;
+
+    let disposed = false;
+    const refreshLogs = () => {
+      adminService.getLogs(0, 100, '')
+        .then(logData => {
+          if (!disposed) setSystemLogs(logData.content || []);
+        })
+        .catch(() => {
+          if (!disposed) setAdminError('Không tải được nhật ký hệ thống từ database.');
+        });
+    };
+
+    refreshLogs();
+    const intervalId = window.setInterval(refreshLogs, 10_000);
+    return () => {
+      disposed = true;
+      window.clearInterval(intervalId);
+    };
+  }, [active, user?.role]);
+
   const loadCosts = () => {
     adminCostService.getCosts(costPage, 10, costSearch, costFilterCategory, costFilterStatus)
       .then(res => {
@@ -393,7 +435,7 @@ export default function AdminPage() {
     const toDate = parseDateInput(revenueTo, true);
     const safeFrom = fromDate <= toDate ? fromDate : toDate;
     const safeTo = fromDate <= toDate ? toDate : fromDate;
-    const rangePayments = adminPayments.filter(item => {
+    const rangePayments = adminPayments.filter(isReportablePayment).filter(item => {
       const date = paymentDate(item);
       return Boolean(date && date >= safeFrom && date <= safeTo);
     }).sort((a,b) => (paymentDate(b)?.getTime() || 0) - (paymentDate(a)?.getTime() || 0));
@@ -438,11 +480,72 @@ export default function AdminPage() {
   const dashboardKpis: KpiItem[] = [
     { label: 'Tổng số doanh nghiệp', value: number(adminTeams.length), detail: `+${number(overview.newTeamsThisMonth)} tháng này`, icon: Building2, tone: 'blue', trend: 'up' },
     { label: 'Tổng số người dùng', value: number(adminUsers.length), detail: `+${number(overview.newUsersThisMonth)} tháng này`, icon: Users, tone: 'violet', trend: 'up' },
-    { label: 'Doanh thu tháng này', value: money(overview.revenueThisMonth), detail: 'so với tháng trước', icon: DollarSign, tone: 'green', trend: 'up' },
+    { label: 'Doanh thu tháng này', value: money(overview.revenueThisMonth), detail: 'Chỉ giao dịch xác thực', icon: DollarSign, tone: 'green', trend: 'up' },
     { label: 'Xưởng chờ duyệt', value: number(adminTeams.filter(t => t.verificationStatus === 'PENDING').length), detail: 'Cần xử lý', icon: AlertTriangle, tone: 'amber' },
   ];
 
   const systemTrendData = overview.systemTrendData || [];
+  const orderStatusData = useMemo(
+    () => Object.entries(overview.orderStatusCounts || {})
+      .filter(([, value]) => Number(value) > 0)
+      .map(([statusName, value]) => ({
+        name: orderStatusLabels[statusName] || statusName,
+        value: Number(value),
+      })),
+    [overview.orderStatusCounts]
+  );
+  const currentPeriodLabel = new Intl.DateTimeFormat('vi-VN', { month: '2-digit', year: 'numeric' }).format(new Date());
+  const currentMonthCost = Number(costStats?.totalMonth ?? 0);
+  const totalSystemCost = Number(costStats?.totalSystem ?? 0);
+  const coreInfrastructureCost = (costStats?.categoryChart ?? [])
+    .filter(item => ['Máy chủ & lưu trữ', 'Cơ sở dữ liệu', 'Tên miền & bảo mật'].includes(item.name))
+    .reduce((sum, item) => sum + Number(item.value) * 1_000_000, 0);
+  const platformServiceCost = Math.max(currentMonthCost - coreInfrastructureCost, 0);
+  const currentCostTimeline = useMemo(() => {
+    let cumulative = 0;
+    return (costStats?.dailyChart ?? [])
+      .filter(point => Number(point.amount) > 0)
+      .map(point => {
+        cumulative += Number(point.amount);
+        return { ...point, cumulative: Number(cumulative.toFixed(2)) };
+      });
+  }, [costStats?.dailyChart]);
+  const currentMonthCostShare = totalSystemCost > 0
+    ? (currentMonthCost / totalSystemCost) * 100
+    : 0;
+  const filteredSystemLogs = systemLogs.filter(log => {
+    if (logFilter === 'all') return true;
+    const action = log.actionType.toLowerCase();
+    if (logFilter === 'payment') return action.includes('payment');
+    if (logFilter === 'security') return action.includes('lock') || action.includes('security') || action.includes('role');
+    return action.includes('login');
+  });
+  const latestDatabaseUpdate = [
+    ...adminPayments.map(item => item.paidAt || item.createdAt),
+    ...adminUsers.map(item => item.createdAt),
+    ...adminTeams.map(item => item.createdAt),
+    ...systemLogs.map(item => item.createdAt),
+    ...costs.map(item => item.createdAt),
+  ]
+    .map(getDate)
+    .filter((date): date is Date => date !== null)
+    .sort((left, right) => right.getTime() - left.getTime())[0] || null;
+
+  const exportDatabaseReport = async () => {
+    try {
+      const res = await adminService.exportAdminReportExcel();
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `orca-admin-${formatDateInput(new Date())}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      window.alert('Không thể xuất báo cáo từ database.');
+    }
+  };
 
   const pendingRequests = adminTeams.filter(t => t.verificationStatus === 'PENDING');
   const approvedCompanies = adminTeams.filter(t => t.verificationStatus !== 'PENDING');
@@ -551,7 +654,9 @@ export default function AdminPage() {
           <header className="admin-hero">
             <div>
               <h1>{sidebarModules.find(m => m.id === active)?.label || 'Dashboard'}</h1>
-              <p>Quản lý cấu hình nền tảng, theo dõi hoạt động và hỗ trợ khách hàng của bạn.</p>
+              <p>{active === 'costs'
+                ? 'Theo dõi chi phí hạ tầng và dịch vụ vận hành nền tảng ORCA.'
+                : 'Quản lý cấu hình nền tảng, theo dõi hoạt động và hỗ trợ khách hàng của bạn.'}</p>
             </div>
             <div className="admin-hero-actions">
               {active === 'users' && <button className="admin-button admin-button-primary" onClick={handleCreateUser}><Plus size={16} /> Thêm người dùng</button>}
@@ -578,7 +683,7 @@ export default function AdminPage() {
                 {dashboardKpis.map(item => <KpiCard key={item.label} item={item} />)}
               </section>
               <section className="admin-grid-2">
-                <ChartPanel title="Tăng trưởng doanh thu (Hàng tháng)">
+                <ChartPanel title="Doanh thu theo tháng (triệu VNĐ)">
                   <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={systemTrendData}>
                       <defs>
@@ -590,21 +695,22 @@ export default function AdminPage() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartPalette.grid} />
                       <XAxis dataKey="month" axisLine={false} tickLine={false} stroke={chartPalette.muted} />
                       <YAxis axisLine={false} tickLine={false} stroke={chartPalette.muted} />
-                      <Tooltip />
-                      <Area type="monotone" dataKey="revenue" stroke={chartPalette.categorical[1]} strokeWidth={3} fillOpacity={1} fill="url(#revFill)" />
+                      <Tooltip formatter={revenueMillionsFormatter} />
+                      <Area type="monotone" name="Doanh thu" dataKey="revenue" stroke={chartPalette.categorical[1]} strokeWidth={3} fillOpacity={1} fill="url(#revFill)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </ChartPanel>
-                <ChartPanel title="Người dùng & Công ty">
+                <ChartPanel title="Người dùng & doanh nghiệp mới theo tháng">
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={systemTrendData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartPalette.grid} />
                       <XAxis dataKey="month" axisLine={false} tickLine={false} stroke={chartPalette.muted} />
                       <YAxis axisLine={false} tickLine={false} yAxisId="left" stroke={chartPalette.muted} />
                       <YAxis axisLine={false} tickLine={false} yAxisId="right" orientation="right" stroke={chartPalette.muted} />
-                      <Tooltip />
-                      <Line yAxisId="left" type="monotone" dataKey="users" stroke={chartPalette.categorical[0]} strokeWidth={3} dot={false} />
-                      <Line yAxisId="right" type="monotone" dataKey="companies" stroke={chartPalette.categorical[4]} strokeWidth={3} dot={false} />
+                      <Tooltip formatter={(value, name) => [number(Number(value)), String(name)]} />
+                      <Legend verticalAlign="top" height={36} iconType="circle" />
+                      <Line yAxisId="left" type="monotone" name="Người dùng mới" dataKey="users" stroke={chartPalette.categorical[0]} strokeWidth={3} dot={{ r: 3 }} />
+                      <Line yAxisId="right" type="monotone" name="Doanh nghiệp mới" dataKey="companies" stroke={chartPalette.categorical[4]} strokeWidth={3} dot={{ r: 3 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </ChartPanel>
@@ -847,25 +953,47 @@ export default function AdminPage() {
                 <>
                   {costStats && (
                     <section className="admin-kpi-grid">
-                      <KpiCard item={{ label: 'Tổng chi hôm nay', value: money(Number(costStats.totalToday ?? 0)), detail: 'Hôm nay', icon: Wallet, tone: 'blue' }} />
-                      <KpiCard item={{ label: 'Tổng chi tháng', value: money(Number(costStats.totalMonth ?? 0)), detail: `${(Number(costStats.monthOverMonthChange ?? 0)) >= 0 ? '+' : ''}${Number(costStats.monthOverMonthChange ?? 0).toFixed(1)}% so với tháng trước`, icon: Receipt, tone: Number(costStats.monthOverMonthChange ?? 0) > 0 ? 'rose' : 'green', trend: Number(costStats.monthOverMonthChange ?? 0) > 0 ? 'up' : 'down' }} />
-                      <KpiCard item={{ label: 'Tổng chi năm', value: money(Number(costStats.totalYear ?? 0)), detail: `${Number(costStats.yearOverYearChange ?? 0) >= 0 ? '+' : ''}${Number(costStats.yearOverYearChange ?? 0).toFixed(1)}% so với năm trước`, icon: DollarSign, tone: 'amber' }} />
-                      <KpiCard item={{ label: 'Tổng chi toàn hệ thống', value: money(Number(costStats.totalSystem ?? 0)), detail: 'Toàn thời gian', icon: Activity, tone: 'violet' }} />
+                      <KpiCard item={{ label: 'Tổng chi hôm nay', value: money(Number(costStats.totalToday ?? 0)), detail: 'Phát sinh trong ngày', icon: Wallet, tone: 'blue' }} />
+                      <KpiCard item={{ label: 'Chi phí tháng này', value: money(currentMonthCost), detail: `Hạ tầng ORCA · ${currentPeriodLabel}`, icon: Receipt, tone: 'green' }} />
+                      <KpiCard item={{ label: 'Hạ tầng cốt lõi', value: money(coreInfrastructureCost), detail: 'Máy chủ, dữ liệu và bảo mật', icon: ServerCrash, tone: 'amber' }} />
+                      <KpiCard item={{ label: 'Dịch vụ nền tảng', value: money(platformServiceCost), detail: 'AI, email và giám sát', icon: Activity, tone: 'violet' }} />
                     </section>
                   )}
 
-                  {costStats && Number(costStats.totalMonth ?? 0) > 10000000 && (
-                    <div style={{ background: '#fef2f2', border: '1px solid #f87171', color: '#b91c1c', padding: '12px 16px', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 500 }}>
-                      <AlertTriangle size={18} />
-                      <span>Cảnh báo: Chi phí tháng này đã vượt mức ngân sách dự kiến (10,000,000đ). Vui lòng rà soát lại các khoản chi.</span>
-                    </div>
+                  {costStats && (
+                    <section className="admin-cost-budget">
+                      <div className="admin-cost-budget__head">
+                        <div className="admin-cost-budget__title">
+                          <span><ShieldCheck size={19} /></span>
+                          <div>
+                            <h3>Đối soát chi phí hạ tầng tháng {currentPeriodLabel}</h3>
+                            <p>Tỷ trọng chi phí tháng hiện tại trên toàn bộ chi phí đã ghi nhận trong database.</p>
+                          </div>
+                        </div>
+                        <strong>{money(currentMonthCost)} <small>/ {money(totalSystemCost)}</small></strong>
+                      </div>
+                      <div
+                        className="admin-cost-budget__track"
+                        role="progressbar"
+                        aria-label="Tỷ trọng chi phí tháng hiện tại"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={Math.round(currentMonthCostShare)}
+                      >
+                        <span style={{ width: `${Math.min(currentMonthCostShare, 100)}%` }} />
+                      </div>
+                      <div className="admin-cost-budget__meta">
+                        <span>Tháng này chiếm <strong>{currentMonthCostShare.toFixed(1)}%</strong></span>
+                        <span>Tổng đã ghi nhận <strong>{money(totalSystemCost)}</strong></span>
+                      </div>
+                    </section>
                   )}
 
                   <section className="admin-grid-2">
-                    <ChartPanel title="Chi phí theo tháng (Area Chart)">
-                      {costStats?.monthlyChart && costStats.monthlyChart.length > 0 ? (
+                    <ChartPanel title={`Chi phí hạ tầng lũy kế tháng ${currentPeriodLabel}`}>
+                      {currentCostTimeline.length > 0 ? (
                         <ResponsiveContainer width="100%" height={300}>
-                          <AreaChart data={costStats.monthlyChart ?? []}>
+                          <AreaChart data={currentCostTimeline}>
                             <defs>
                               <linearGradient id="costFill" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor={chartPalette.categorical[3]} stopOpacity={0.3}/>
@@ -873,20 +1001,20 @@ export default function AdminPage() {
                               </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartPalette.grid} />
-                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke={chartPalette.muted} />
+                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke={chartPalette.muted} />
                             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke={chartPalette.muted} />
                             <Tooltip formatter={millionsFormatter} />
                             <Legend verticalAlign="top" height={36}/>
-                            <Area type="monotone" name="Chi phí (Triệu VND)" dataKey="amount" stroke={chartPalette.categorical[3]} strokeWidth={3} fillOpacity={1} fill="url(#costFill)" />
+                            <Area type="monotone" name="Lũy kế (Triệu VND)" dataKey="cumulative" stroke={chartPalette.categorical[3]} strokeWidth={3} fillOpacity={1} fill="url(#costFill)" />
                           </AreaChart>
                         </ResponsiveContainer>
                       ) : <div style={{textAlign: 'center', padding: '40px', color: 'var(--text-muted)'}}>Không đủ dữ liệu</div>}
                     </ChartPanel>
 
-                    <ChartPanel title="Chi phí theo ngày (Line Chart)">
-                      {costStats?.dailyChart && costStats.dailyChart.length > 0 ? (
+                    <ChartPanel title="Chi phí hạ tầng phát sinh theo ngày">
+                      {currentCostTimeline.length > 0 ? (
                         <ResponsiveContainer width="100%" height={300}>
-                          <LineChart data={costStats.dailyChart ?? []}>
+                          <LineChart data={currentCostTimeline}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartPalette.grid} />
                             <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke={chartPalette.muted} />
                             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke={chartPalette.muted} />
@@ -898,11 +1026,11 @@ export default function AdminPage() {
                       ) : <div style={{textAlign: 'center', padding: '40px', color: 'var(--text-muted)'}}>Không đủ dữ liệu</div>}
                     </ChartPanel>
 
-                    <ChartPanel title="Phân bổ theo danh mục (Pie Chart)">
+                    <ChartPanel title="Cơ cấu chi phí theo danh mục">
                       {costStats?.categoryChart && costStats.categoryChart.length > 0 ? (
                         <ResponsiveContainer width="100%" height={300}>
                           <PieChart>
-                            <Pie data={costStats.categoryChart ?? []} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                            <Pie data={costStats.categoryChart ?? []} dataKey="value" nameKey="name" cx="50%" cy="46%" innerRadius={58} outerRadius={94} paddingAngle={3}>
                               {(costStats.categoryChart ?? []).map((_, index) => (
                                 <Cell key={`cell-${index}`} fill={chartPalette.categorical[index % chartPalette.categorical.length]} />
                               ))}
@@ -914,16 +1042,15 @@ export default function AdminPage() {
                       ) : <div style={{textAlign: 'center', padding: '40px', color: 'var(--text-muted)'}}>Không đủ dữ liệu</div>}
                     </ChartPanel>
 
-                    <ChartPanel title="Top danh mục chi tiêu (Bar Chart)">
+                    <ChartPanel title="Top 5 nhóm chi phí">
                       {costStats?.categoryChart && costStats.categoryChart.length > 0 ? (
                         <ResponsiveContainer width="100%" height={300}>
-                          <BarChart data={(costStats.categoryChart ?? []).slice(0, 5)}>
+                          <BarChart data={(costStats.categoryChart ?? []).slice(0, 5)} layout="vertical" margin={{ top: 4, right: 20, bottom: 4, left: 16 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartPalette.grid} />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke={chartPalette.muted} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke={chartPalette.muted} />
+                            <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke={chartPalette.muted} />
+                            <YAxis type="category" dataKey="name" width={126} axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke={chartPalette.muted} />
                             <Tooltip formatter={millionsFormatter} />
-                            <Legend verticalAlign="top" height={36}/>
-                            <Bar dataKey="value" name="Chi phí (Triệu VND)" fill={chartPalette.categorical[4]} radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="value" name="Chi phí (Triệu VND)" fill={chartPalette.categorical[4]} radius={[0, 6, 6, 0]} />
                           </BarChart>
                         </ResponsiveContainer>
                       ) : <div style={{textAlign: 'center', padding: '40px', color: '#9ca3af'}}>Không đủ dữ liệu</div>}
@@ -932,7 +1059,7 @@ export default function AdminPage() {
                   
                   <section className="admin-card">
                     <div className="admin-card-head">
-                      <div><h3>Quản lý chi phí</h3><p>Xem, thêm, sửa, xóa các khoản chi phí của hệ thống.</p></div>
+                      <div><h3>Chi tiết chi phí hạ tầng</h3><p>Các khoản máy chủ, dữ liệu và dịch vụ kỹ thuật phục vụ nền tảng ORCA.</p></div>
                       <div className="admin-row-actions">
                         <button className="admin-button admin-button-secondary" onClick={() => setIsCostCategoryModalOpen(true)}>Quản lý Danh mục</button>
                         <button className="admin-button admin-button-primary" onClick={() => { setEditingCost(null); setIsCostModalOpen(true); }}><Plus size={16}/> Thêm khoản chi</button>
@@ -1035,39 +1162,39 @@ export default function AdminPage() {
               </div>
 
               <div className="admin-grid-2" style={{ marginBottom: '24px' }}>
-                <ChartPanel title="Xu hướng phát triển">
+                <ChartPanel title="Tăng trưởng theo tháng">
                   <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={overview.systemTrendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorSignups" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={chartPalette.categorical[0]} stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor={chartPalette.categorical[0]} stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
+                    <LineChart data={overview.systemTrendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartPalette.grid} />
                       <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chartPalette.muted }} dy={10} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chartPalette.muted }} />
-                      <Tooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                      <Area type="monotone" dataKey="users" name="Người dùng mới" stroke={chartPalette.categorical[0]} strokeWidth={2} fillOpacity={1} fill="url(#colorSignups)" />
-                    </AreaChart>
+                      <Tooltip formatter={(value, name) => [number(Number(value)), String(name)]} contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                      <Legend verticalAlign="top" height={36} iconType="circle" />
+                      <Line type="monotone" dataKey="users" name="Người dùng mới" stroke={chartPalette.categorical[0]} strokeWidth={3} dot={{ r: 3 }} />
+                      <Line type="monotone" dataKey="companies" name="Doanh nghiệp mới" stroke={chartPalette.categorical[4]} strokeWidth={3} dot={{ r: 3 }} />
+                    </LineChart>
                   </ResponsiveContainer>
                 </ChartPanel>
 
                 <ChartPanel title="Phân bổ trạng thái đơn hàng">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={Object.entries(overview.orderStatusCounts).map(([name, value]) => ({ name, value }))}
-                        cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value"
-                      >
-                        {Object.entries(overview.orderStatusCounts).map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={chartPalette.categorical[index % chartPalette.categorical.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {orderStatusData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={orderStatusData}
+                          cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value"
+                        >
+                          {orderStatusData.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={chartPalette.categorical[index % chartPalette.categorical.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value, name) => [number(Number(value)), String(name)]} contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="admin-chart-empty">Chưa có đơn hàng để thống kê.</div>
+                  )}
                 </ChartPanel>
               </div>
 
@@ -1079,9 +1206,12 @@ export default function AdminPage() {
                   <table className="admin-table">
                     <thead><tr><th>Loại báo cáo</th><th>Mô tả</th><th>Tạo lần cuối</th><th>Thao tác</th></tr></thead>
                     <tbody>
-                      <tr><td><strong>Báo cáo doanh thu</strong></td><td>Thống kê doanh thu thanh toán SaaS hàng tháng</td><td>Hôm nay, 10:30 AM</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> CSV</button></td></tr>
-                      <tr><td><strong>Tăng trưởng công ty</strong></td><td>Lượt đăng ký công ty mới và tỷ lệ rời bỏ</td><td>Hôm qua, 14:00 PM</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> Excel</button></td></tr>
-                      <tr><td><strong>Mức độ sử dụng</strong></td><td>Sử dụng bộ nhớ, điểm AI và yêu cầu API</td><td>2 ngày trước</td><td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}}><Download size={14}/> PDF</button></td></tr>
+                      <tr>
+                        <td><strong>Báo cáo tổng hợp hệ thống</strong></td>
+                        <td>{number(overview.totalUsers)} người dùng · {number(overview.totalTeams)} doanh nghiệp · {number(overview.paidPayments)} thanh toán thành công</td>
+                        <td>{latestDatabaseUpdate ? `${formatShortDate(latestDatabaseUpdate)} ${latestDatabaseUpdate.toLocaleTimeString('vi-VN')}` : 'Chưa có dữ liệu'}</td>
+                        <td><button className="admin-button admin-button-secondary" style={{padding:'4px 12px'}} onClick={exportDatabaseReport}><Download size={14}/> Excel</button></td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
@@ -1096,7 +1226,8 @@ export default function AdminPage() {
                 <div className="admin-toolbar" style={{margin:0}}>
                   <OrcaSelect
                     aria-label="Lọc nhật ký"
-                    defaultValue="all"
+                    value={logFilter}
+                    onChange={event => setLogFilter(event.target.value)}
                     options={[
                       { value: 'all', label: 'Tất cả sự kiện' },
                       { value: 'login', label: 'Đăng nhập' },
@@ -1108,18 +1239,18 @@ export default function AdminPage() {
               </div>
               <div className="admin-table-wrap">
                 <table className="admin-table">
-                  <thead><tr><th>Thời gian</th><th>Loại sự kiện</th><th>Người thực hiện</th><th>Địa chỉ IP</th><th>Trạng thái</th></tr></thead>
+                  <thead><tr><th>Thời gian</th><th>Loại sự kiện</th><th>Người thực hiện</th><th>Đối tượng dữ liệu</th><th>Chi tiết</th></tr></thead>
                   <tbody>
-                    {systemLogs.map(log => (
+                    {filteredSystemLogs.map(log => (
                       <tr key={log.id}>
                         <td>{formatShortDate(log.createdAt)} {formatTime(log.createdAt)}</td>
                         <td><strong>{log.actionType}</strong></td>
-                        <td>{log.actorUsername}</td>
-                        <td>{log.ipAddress || '-'}</td>
-                        <td><StatusBadge value={log.status || 'SUCCESS'} /></td>
+                        <td>{log.actorName || 'Hệ thống'}</td>
+                        <td><code style={{fontSize: 11}}>{log.targetId || '-'}</code></td>
+                        <td>{log.details || '-'}</td>
                       </tr>
                     ))}
-                    {systemLogs.length === 0 && <tr><td colSpan={5} style={{textAlign: 'center', padding: '20px'}}>Không có dữ liệu nhật ký.</td></tr>}
+                    {filteredSystemLogs.length === 0 && <tr><td colSpan={5} style={{textAlign: 'center', padding: '20px'}}>Không có dữ liệu nhật ký phù hợp.</td></tr>}
                   </tbody>
                 </table>
               </div>

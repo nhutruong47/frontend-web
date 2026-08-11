@@ -16,7 +16,7 @@ export const adminService = {
     getPayments: (page: number = 0, size: number = 10, search: string = '') =>
         api.get<PageResponse<AdminPayment>>(`/api/admin/payments?page=${page}&size=${size}&search=${search}&_=${Date.now()}`).then(r => r.data),
     getLogs: (page: number = 0, size: number = 20, search: string = '') =>
-        api.get<PageResponse<SystemLog>>(`/api/admin/logs?page=${page}&size=${size}&search=${search}`).then(r => r.data),
+        api.get<PageResponse<SystemLog>>(`/api/admin/logs?page=${page}&size=${size}&search=${encodeURIComponent(search)}&sort=createdAt,desc`).then(r => r.data),
     updateUserRole: (id: string, role: AdminUser['role']) =>
         api.patch<AdminUser>(`/api/admin/users/${id}/role`, { role }).then(r => r.data),
     updateUserLock: (id: string, locked: boolean) =>

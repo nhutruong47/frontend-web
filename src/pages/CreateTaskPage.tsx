@@ -7,6 +7,11 @@ import { isPaymentRequiredError } from '../services/api';
 import type { AiParseResult, AiV2PlanDraft } from '../services/groupService';
 import type { Team, TeamMemberInfo } from '../types/types';
 import { estimateTokens, formatTokenCount } from '../utils/tokenUsage';
+import {
+    formatMemberIdentity,
+    getDuplicateMemberNameKeys,
+    hasDuplicateMemberName,
+} from '../utils/memberIdentity';
 
 interface ChatMessage {
     id: string;
@@ -2394,14 +2399,15 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk, isConfirmed
         }
 
         const member = members.find(item => item.userId === userId);
+        if (!member) return;
         newTasks[index] = {
             ...newTasks[index],
             suggestedAssigneeId: userId,
-            suggestedAssignee: member?.fullName || member?.username || 'Thành viên',
-            suggestedReason: member?.jobLabels?.length
-                ? `Bạn chọn thủ công. Nhãn hiện có: ${member.jobLabels.join(', ')}.`
-                : 'Bạn chọn thủ công trên draft.',
-            assignee: member?.username,
+            suggestedAssignee: member.fullName || member.username || 'Thành viên',
+            suggestedReason: member.jobLabels?.length
+                ? `Bạn chọn thủ công ${formatMemberIdentity(member)}. Nhãn hiện có: ${member.jobLabels.join(', ')}.`
+                : `Bạn chọn thủ công ${formatMemberIdentity(member)} trên draft.`,
+            assignee: member.username,
         };
         updateField('tasks', newTasks);
     };
@@ -2430,7 +2436,25 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk, isConfirmed
 
     const assignedCount = (editedResult.tasks || []).filter(task => task.suggestedAssignee || task.assignee).length;
     const totalTasks = editedResult.tasks?.length || 0;
-    const memberName = (member: TeamMemberInfo) => member.fullName || member.username || 'Thành viên';
+    const duplicateMemberNameKeys = getDuplicateMemberNameKeys(members);
+    const selectedMemberIdentity = (userId: string | null | undefined, fallback: string | undefined) => {
+        const member = members.find(item => item.userId === userId);
+        return member ? formatMemberIdentity(member) : (fallback || 'Chưa chọn');
+    };
+    const handleConfirm = () => {
+        const duplicateAssignees = (editedResult.tasks || [])
+            .map(task => members.find(member => member.userId === task.suggestedAssigneeId))
+            .filter((member): member is TeamMemberInfo => member !== undefined && hasDuplicateMemberName(member, duplicateMemberNameKeys));
+        const uniqueDuplicateAssignees = [...new Map(duplicateAssignees.map(member => [member.userId, member])).values()];
+
+        if (uniqueDuplicateAssignees.length > 0) {
+            const identities = uniqueDuplicateAssignees.map(formatMemberIdentity).join('\n- ');
+            const accepted = confirm(`Có người phụ trách trùng tên. Xác nhận bạn đã chọn đúng tài khoản:\n\n- ${identities}`);
+            if (!accepted) return;
+        }
+
+        onConfirm(editedResult);
+    };
 
     return (
         <div style={{
@@ -2501,6 +2525,28 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk, isConfirmed
                     {/* Task List (Mô tả chi tiết) */}
                     <div style={{ marginBottom: 24 }}>
                         <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>Chi tiết mô tả</label>
+                        {duplicateMemberNameKeys.size > 0 && (
+                            <div
+                                id="duplicate-member-warning"
+                                role="alert"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    gap: 9,
+                                    marginBottom: 12,
+                                    padding: '10px 12px',
+                                    borderRadius: 12,
+                                    border: '1px solid #fcd34d',
+                                    background: '#fffbeb',
+                                    color: '#92400e',
+                                    fontSize: 12,
+                                    lineHeight: 1.45,
+                                }}
+                            >
+                                <ion-icon name="warning-outline" style={{ fontSize: 17, flexShrink: 0 }}></ion-icon>
+                                <span><strong>Có thành viên trùng tên.</strong> Hãy kiểm tra username và mã nhân viên trước khi xác nhận phân công.</span>
+                            </div>
+                        )}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                             {editedResult.tasks?.map((task, idx) => (
                                 <div key={idx} style={{
@@ -2647,7 +2693,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk, isConfirmed
                                                         textOverflow: 'ellipsis',
                                                         whiteSpace: 'nowrap'
                                                     }}>
-                                                        {task.suggestedAssignee || task.assignee || 'Chưa chọn'}
+                                                        {selectedMemberIdentity(task.suggestedAssigneeId, task.suggestedAssignee || task.assignee)}
                                                     </div>
                                                 </div>
                                             </div>
@@ -2657,6 +2703,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk, isConfirmed
                                                 <select
                                                     value={task.suggestedAssigneeId || ''}
                                                     onChange={e => updateTaskAssignee(idx, e.target.value)}
+                                                    aria-describedby={duplicateMemberNameKeys.size > 0 ? 'duplicate-member-warning' : undefined}
                                                     style={{
                                                         width: '100%',
                                                         minHeight: 42,
@@ -2673,7 +2720,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk, isConfirmed
                                                     <option value="">Chưa gán</option>
                                                     {members.map(member => (
                                                         <option key={member.userId} value={member.userId}>
-                                                            {memberName(member)}{member.jobLabels?.length ? ` - ${member.jobLabels.join(', ')}` : ''}
+                                                            {hasDuplicateMemberName(member, duplicateMemberNameKeys) ? '⚠ ' : ''}{formatMemberIdentity(member)}{member.jobLabels?.length ? ` — ${member.jobLabels.join(', ')}` : ''}
                                                         </option>
                                                     ))}
                                                 </select>
@@ -2804,7 +2851,7 @@ function AiResultRefinementForm({ result, members, onConfirm, onAsk, isConfirmed
                             Hủy
                         </button>
                         <button
-                            onClick={() => onConfirm(editedResult)}
+                            onClick={handleConfirm}
                             style={{ padding: '12px 32px', borderRadius: '12px', border: 'none', background: '#b97820', color: '#fff', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(185,120,32,0.24)' }}
                         >
                             Lưu thay đổi
