@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { teamService } from '../services/groupService';
 import type { PlanUsage, Team } from '../types/types';
-import VerificationModal from '../components/VerificationModal';
-import FactoryConfigModal from '../components/FactoryConfigModal';
 import api from '../services/api';
 
 const INITIAL_VISIBLE_GROUPS = 4;
@@ -23,8 +21,6 @@ export default function GroupsPage() {
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [error, setError] = useState('');
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [showFactoryConfigModal, setShowFactoryConfigModal] = useState(false);
   const [joinRequests, setJoinRequests] = useState<any[]>([]);
   const [showAllGroups, setShowAllGroups] = useState(false);
 
@@ -213,41 +209,6 @@ export default function GroupsPage() {
     }
   };
 
-  // ===== Quick Win 5: Publish / Verify / Rotate =====
-
-  const handlePublishToggle = async () => {
-    if (!managedTeam) return;
-    setSaving(true);
-    setError('');
-    try {
-      if (managedTeam.isPublished) {
-        if (!window.confirm('Ẩn xưởng khỏi Marketplace?')) { setSaving(false); return; }
-        await teamService.unpublish(managedTeam.id);
-        setManagedTeam({ ...managedTeam, isPublished: false });
-      } else {
-        if (!managedTeam.specialty) {
-          setError('Vui lòng nhập chuyên môn (specialty) trước khi đăng lên Marketplace.');
-          setSaving(false);
-          return;
-        }
-        await teamService.advertise(managedTeam.id, {
-          specialty: managedTeam.specialty,
-          capacity: managedTeam.capacity,
-          region: managedTeam.region,
-        });
-        setManagedTeam({ ...managedTeam, isPublished: true });
-      }
-    } catch (err: any) {
-      setError(err?.response?.data?.error || err?.response?.data?.message || 'Không thể cập nhật trạng thái Marketplace.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSubmitVerification = () => {
-    setShowVerificationModal(true);
-  };
-
   const handleDecision = async (requestId: string, decision: 'APPROVED' | 'REJECTED') => {
     try {
         await api.post(`/api/team-join/${requestId}/decision`, { decision });
@@ -260,25 +221,6 @@ export default function GroupsPage() {
     }
   };
 
-  const handleRotateInvite = async () => {
-    if (!managedTeam) return;
-    const ok = window.confirm(
-      'Cấp lại mã mời? Mã cũ sẽ hết hiệu lực ngay lập tức và các thành viên chưa tham gia sẽ không vào được nữa.'
-    );
-    if (!ok) return;
-    setSaving(true);
-    setError('');
-    try {
-      const result = await teamService.rotateInviteCode(managedTeam.id);
-      const newCode = result?.newInviteCode ?? managedTeam.inviteCode;
-      setManagedTeam({ ...managedTeam, inviteCode: newCode });
-      setGroups(current => current.map(g => g.id === managedTeam.id ? { ...g, inviteCode: newCode } : g));
-    } catch (err: any) {
-      setError(err?.response?.data?.error || err?.response?.data?.message || 'Không thể cấp lại mã mời.');
-    } finally {
-      setSaving(false);
-    }
-  };
   return (
     <div className="page-container" style={{ padding: '28px 24px' }}>
       <header className="page-header glass-panel" style={{ marginBottom: 20, padding: 24 }}>
@@ -608,82 +550,6 @@ export default function GroupsPage() {
               </button>
             </div>
 
-            {/* Quick Win 5: Publish / Verify / Rotate controls */}
-            <div
-              style={{
-                border: '1px solid var(--border-color)',
-                borderRadius: 12,
-                padding: 14,
-                marginBottom: 18,
-                background: 'var(--bg-input, rgba(255,255,255,0.02))',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <strong style={{ fontSize: 14 }}>Vận hành xưởng</strong>
-                <span
-                  className={`badge ${managedTeam.isPublished ? 'badge-success' : 'badge-info'}`}
-                  style={{ fontSize: 11 }}
-                >
-                  {managedTeam.isPublished ? 'Đang hiển thị' : 'Chưa đăng'}
-                </span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
-                <button
-                  type="button"
-                  className={managedTeam.isPublished ? 'btn btn-secondary' : 'btn btn-primary'}
-                  onClick={handlePublishToggle}
-                  disabled={saving}
-                  style={{ fontSize: 13 }}
-                >
-                  <ion-icon
-                    name={managedTeam.isPublished ? 'eye-off-outline' : 'megaphone-outline'}
-                    style={{ fontSize: 15, marginRight: 4 }}
-                  ></ion-icon>
-                  {managedTeam.isPublished ? 'Ẩn khỏi Marketplace' : 'Đăng lên Marketplace'}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={handleSubmitVerification}
-                  disabled={saving}
-                  style={{ fontSize: 13 }}
-                >
-                  <ion-icon name="shield-checkmark-outline" style={{ fontSize: 15, marginRight: 4 }}></ion-icon>
-                  Nộp hồ sơ xác minh
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowFactoryConfigModal(true)}
-                  disabled={saving}
-                  style={{ fontSize: 13 }}
-                >
-                  <ion-icon name="settings-outline" style={{ fontSize: 15, marginRight: 4 }}></ion-icon>
-                  Cấu hình năng lực
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={handleRotateInvite}
-                  disabled={saving || !managedTeam.inviteCode}
-                  style={{ fontSize: 13 }}
-                >
-                  <ion-icon name="refresh-outline" style={{ fontSize: 15, marginRight: 4 }}></ion-icon>
-                  Cấp lại mã mời
-                </button>
-              </div>
-              {managedTeam.isVerified ? (
-                <div style={{ marginTop: 10, fontSize: 12, color: 'green' }}>
-                  <strong>✅ Đã xác minh (Tick xanh)</strong>
-                </div>
-              ) : (
-                <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
-                  Trạng thái xác minh:&nbsp;
-                  <strong>Chưa xác minh</strong>
-                </div>
-              )}
-            </div>
-
             {joinRequests.length > 0 && (
                 <div style={{ border: '1px solid var(--border-color)', borderRadius: 12, padding: 14, marginBottom: 18 }}>
                     <strong style={{ fontSize: 14, display: 'block', marginBottom: 10 }}>Yêu cầu tham gia chờ duyệt</strong>
@@ -751,24 +617,6 @@ export default function GroupsPage() {
             </form>
           </div>
         </div>
-      )}
-      {managedTeam && (
-          <VerificationModal
-              isOpen={showVerificationModal}
-              onClose={() => setShowVerificationModal(false)}
-              teamId={managedTeam.id}
-          />
-      )}
-
-      {managedTeam && (
-          <FactoryConfigModal
-              isOpen={showFactoryConfigModal}
-              onClose={() => {
-                  setShowFactoryConfigModal(false);
-                  loadGroups(); // reload to get new capacity data
-              }}
-              teamId={managedTeam.id}
-          />
       )}
     </div>
   );

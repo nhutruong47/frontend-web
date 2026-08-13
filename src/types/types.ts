@@ -396,6 +396,7 @@ export interface AppNotification {
     message: string;
     type: string; // TASK_ASSIGNED / TASK_ACCEPTED / TASK_REJECTED
     taskId: string;
+    actorId?: string | null;
     read: boolean;
     createdAt: string;
 }
@@ -486,6 +487,75 @@ export interface SystemLog {
     targetId: string;
     details: string;
     createdAt: string;
+}
+
+export type PayrollStatus = 'DRAFT' | 'CALCULATED' | 'APPROVED' | 'PAID';
+
+export interface PayrollSummary {
+    memberCount: number;
+    paidMemberCount: number;
+    attendanceDays: number;
+    regularHours: number;
+    overtimeHours: number;
+    totalHours: number;
+    grossPayVnd: number;
+    allowanceVnd: number;
+    deductionVnd: number;
+    advanceVnd: number;
+    netPayVnd: number;
+    totalTasks: number;
+    completedTasks: number;
+    missingCheckoutCount: number;
+}
+
+export interface PayrollItem {
+    itemId: string;
+    memberId: string;
+    memberName: string;
+    regularHours: number;
+    overtimeHours: number;
+    attendanceDays: number;
+    lateDays: number;
+    missingCheckoutDays: number;
+    totalTasks: number;
+    completedTasks: number;
+    hourlyRateVnd: number;
+    overtimeMultiplier: number;
+    regularPayVnd: number;
+    overtimePayVnd: number;
+    allowanceVnd: number;
+    deductionVnd: number;
+    advanceVnd: number;
+    netPayVnd: number;
+    note?: string | null;
+    attendanceLines: PayrollAttendanceLine[];
+}
+
+export interface PayrollAttendanceLine {
+    id: string;
+    date: string;
+    checkInTime?: string | null;
+    checkOutTime?: string | null;
+    overtimeStartTime?: string | null;
+    regularHours: number;
+    overtimeHours: number;
+    attendanceStatus?: string | null;
+    shiftType?: string | null;
+    productionStage?: string | null;
+    payable: boolean;
+}
+
+export interface PayrollReport {
+    runId: string;
+    teamId: string;
+    year: number;
+    month: number;
+    status: PayrollStatus;
+    updatedAt: string;
+    finalizedAt?: string | null;
+    paidAt?: string | null;
+    summary: PayrollSummary;
+    items: PayrollItem[];
 }
 
 export interface AdminTeam {

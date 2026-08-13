@@ -69,7 +69,6 @@ export default function ProductionPlanPage() {
     // Attendance
     const [shiftType, setShiftType] = useState<ShiftType>('SANG');
     const [stage, setStage] = useState<ProductionStage>('RANG');
-    const [breakMinutes, setBreakMinutes] = useState(30);
     const [myAttendance, setMyAttendance] = useState<any>(null);
     const [loadingAttendance, setLoadingAttendance] = useState(false);
 
@@ -177,7 +176,7 @@ export default function ProductionPlanPage() {
         setLoadingAttendance(true);
         try {
             const result = await attendanceService.checkIn(teamId, {
-                shiftType, stage, orderId: selectedOrder?.id, breakMinutes
+                shiftType, stage, orderId: selectedOrder?.id
             });
             setMyAttendance(result);
             alert('Check-in thanh cong!');
@@ -545,13 +544,8 @@ export default function ProductionPlanPage() {
                                         </div>
                                     </div>
 
-                                    <div style={{ marginBottom: 20 }}>
-                                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                                            Thoi gian nghi giua ca (phut)
-                                        </label>
-                                        <input type="number" value={breakMinutes} onChange={e => setBreakMinutes(parseInt(e.target.value) || 30)}
-                                            min="0" max="120"
-                                            style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-input)', fontSize: 14, width: 120 }} />
+                                    <div style={{ marginBottom: 20, padding: '10px 12px', borderRadius: 10, background: 'var(--bg-input)', color: 'var(--text-secondary)', fontSize: 12 }}>
+                                        Thời gian nghỉ được xưởng cấu hình và hệ thống tự trừ khi tính công.
                                     </div>
 
                                     <button onClick={handleCheckIn} disabled={loadingAttendance}

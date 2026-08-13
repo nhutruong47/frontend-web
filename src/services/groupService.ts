@@ -1,6 +1,6 @@
 import api from './api';
 import type { Team, Goal, Task, ProductionOrder, PlanUsage } from '../types/types';
-import type { AppNotification, SalaryReport } from '../types/types';
+import type { AppNotification, PayrollReport, SalaryReport } from '../types/types';
 
 // === Team/Group API ===
 export const teamService = {
@@ -106,6 +106,30 @@ function toSalaryMonthParams(salaryMonth?: string) {
     if (!year || !month) return undefined;
     return { year, month };
 }
+
+export const payrollService = {
+    getReport: (teamId: string, salaryMonth: string) =>
+        api.get<PayrollReport>(`/api/payroll/teams/${teamId}`, { params: toSalaryMonthParams(salaryMonth) }).then(r => r.data),
+    updateProfile: (teamId: string, userId: string, salaryMonth: string, hourlyRateVnd: number, overtimeMultiplier: number) =>
+        api.put<PayrollReport>(`/api/payroll/teams/${teamId}/profiles/${userId}`,
+            { hourlyRateVnd, overtimeMultiplier }, { params: toSalaryMonthParams(salaryMonth) }).then(r => r.data),
+    updateAdjustments: (runId: string, userId: string, data: { allowanceVnd: number; deductionVnd: number; advanceVnd: number; note?: string }) =>
+        api.patch<PayrollReport>(`/api/payroll/runs/${runId}/items/${userId}`, data).then(r => r.data),
+    recalculate: (runId: string) =>
+        api.post<PayrollReport>(`/api/payroll/runs/${runId}/recalculate`).then(r => r.data),
+    finalize: (runId: string) =>
+        api.post<PayrollReport>(`/api/payroll/runs/${runId}/finalize`).then(r => r.data),
+    approve: (runId: string) =>
+        api.post<PayrollReport>(`/api/payroll/runs/${runId}/approve`).then(r => r.data),
+    reopen: (runId: string) =>
+        api.post<PayrollReport>(`/api/payroll/runs/${runId}/reopen`).then(r => r.data),
+    markPaid: (runId: string) =>
+        api.post<PayrollReport>(`/api/payroll/runs/${runId}/mark-paid`).then(r => r.data),
+    exportExcel: (teamId: string, salaryMonth: string) =>
+        api.get(`/api/payroll/teams/${teamId}/export-excel`, {
+            params: toSalaryMonthParams(salaryMonth), responseType: 'blob'
+        }),
+};
 
 export const productionService = {
     getOrders: (teamId: string, activeOnly = false) =>
@@ -303,6 +327,11 @@ export const chatService = {
         api.get<ChatMsg[]>(`/api/teams/${teamId}/chat/dm/${userId}`).then(r => r.data),
     getDmPreviews: (teamId: string) =>
         api.get<ChatMsg[]>(`/api/teams/${teamId}/chat/dm-previews`).then(r => r.data),
+    markConversationRead: (teamId: string, conversationType: 'GROUP' | 'DIRECT', otherUserId?: string) =>
+        api.patch<{ updated: number }>(`/api/teams/${teamId}/chat/read`, {
+            conversationType,
+            ...(otherUserId ? { otherUserId } : {}),
+        }).then(r => r.data),
     sendMessage: (teamId: string, content: string, recipientId?: string, attachmentUrl?: string, attachmentName?: string, attachmentType?: string) =>
         api.post<ChatMsg>(`/api/teams/${teamId}/chat`, { content, recipientId, attachmentUrl, attachmentName, attachmentType }).then(r => r.data),
     getOnlineUsers: () =>

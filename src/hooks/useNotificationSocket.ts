@@ -29,6 +29,7 @@ export interface NotificationPayload {
     message: string;
     type: string;
     taskId?: string | null;
+    actorId?: string | null;
     read: boolean;
     createdAt: string;
 }

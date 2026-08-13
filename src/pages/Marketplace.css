@@ -4033,7 +4033,7 @@
 
 .mp-cpc-info h3 {
     margin: 0 0 8px;
-    color: #fff;
+    color: var(--mp-heading);
     font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -4042,7 +4042,7 @@
 
 .mp-cpc-info p {
     margin: 0 0 14px;
-    color: #a79d94;
+    color: var(--mp-muted);
     font-style: italic;
     font-size: 13px;
     display: -webkit-box;
@@ -4055,7 +4055,7 @@
     font-family: 'Montserrat', sans-serif;
     font-size: 20px;
     font-weight: 500;
-    color: #ffd9bd;
+    color: var(--mp-primary);
 }
 
 @media (max-width: 1180px) {

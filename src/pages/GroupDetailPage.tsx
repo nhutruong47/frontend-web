@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Fragment, useState, useEffect, useRef, useCallback } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { teamService, goalService, taskService, getTrialStatus, chatService, inventoryService } from '../services/groupService';
+import { teamService, goalService, taskService, getTrialStatus, chatService, inventoryService, notificationService } from '../services/groupService';
 import { attendanceService } from '../services/attendanceService';
+import type { AttendanceDTO } from '../services/attendanceService';
+import type { AttendanceCorrectionDTO } from '../services/attendanceService';
 import { uploadFile } from '../services/api';
 import type { Team, Goal, Task, ChatMsg, SalaryReport, PlanUsage } from '../types/types';
 
@@ -20,6 +22,7 @@ import {
     hasDuplicateMemberName,
 } from '../utils/memberIdentity';
 import './GroupDetailPage.css';
+import PayrollPanel from '../components/payroll/PayrollPanel';
 
 gsap.registerPlugin(useGSAP);
 
@@ -160,6 +163,7 @@ export default function GroupDetailPage() {
     const { id } = useParams<{ id: string }>();
     const { user } = useAuth();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [team, setTeam] = useState<Team | null>(null);
     const [planUsage, setPlanUsage] = useState<PlanUsage | null>(null);
     const [goals, setGoals] = useState<Goal[]>([]);
@@ -310,6 +314,7 @@ export default function GroupDetailPage() {
     const [unreadDmCounts, setUnreadDmCounts] = useState<Record<string, number>>({});
     const chatEndRef = useRef<HTMLDivElement>(null);
     const stompClientRef = useRef<Client | null>(null);
+    const handledChatRequestRef = useRef('');
 
     // Refs for WebSocket callbacks to always have the latest state without resubscribing
     const chatTabRef = useRef<'group' | 'dm'>(chatTab);
@@ -324,6 +329,32 @@ export default function GroupDetailPage() {
     // Online presence + DM previews
     const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
     const [dmPreviews, setDmPreviews] = useState<ChatMsg[]>([]);
+
+    const syncPersistedChatUnread = useCallback(async () => {
+        if (!id) return;
+        try {
+            const notifications = await notificationService.getAll();
+            const unreadForTeam = notifications.filter(notification =>
+                notification.type === 'CHAT_MESSAGE'
+                && notification.taskId === id
+                && !notification.read
+            );
+            setUnreadGroupCount(unreadForTeam.filter(notification => !notification.actorId).length);
+            setUnreadDmCounts(unreadForTeam.reduce<Record<string, number>>((counts, notification) => {
+                if (notification.actorId) {
+                    counts[notification.actorId] = (counts[notification.actorId] ?? 0) + 1;
+                }
+                return counts;
+            }, {}));
+        } catch {
+            // Realtime counters continue to work if the initial sync is unavailable.
+        }
+    }, [id]);
+
+    useEffect(() => {
+        if (!user) return;
+        syncPersistedChatUnread();
+    }, [user, syncPersistedChatUnread]);
 
     const currentMember = team?.members?.find(m => m.userId === user?.id);
     const isSystemAdmin = user?.role === 'ADMIN';
@@ -377,13 +408,22 @@ export default function GroupDetailPage() {
     
     // Team Attendance
     const [showTeamAttendance, setShowTeamAttendance] = useState(false);
-    const [teamAttendanceData, setTeamAttendanceData] = useState<any[]>([]);
-    const [editingAttendance, setEditingAttendance] = useState<{ id: string, checkInTime: string, checkOutTime: string } | null>(null);
+    const [teamAttendanceData, setTeamAttendanceData] = useState<AttendanceDTO[]>([]);
+    const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().slice(0, 10));
+    const [attendanceError, setAttendanceError] = useState('');
+    const [attendanceCorrections, setAttendanceCorrections] = useState<AttendanceCorrectionDTO[]>([]);
+    const [editingAttendance, setEditingAttendance] = useState<{ id: string, checkInTime: string, checkOutTime: string, reason: string } | null>(null);
     const teamAttendanceModalRef = useRef<HTMLDivElement>(null);
+    const attendanceRows = (team?.members || []).map(member => ({
+        member,
+        attendance: teamAttendanceData.find(item => item.userId === member.userId),
+    }));
     const attendanceSummary = {
-        employees: new Set(teamAttendanceData.map(item => item.userId).filter(Boolean)).size,
+        employees: attendanceRows.length,
         active: teamAttendanceData.filter(item => item.checkInTime && !item.checkOutTime).length,
         completed: teamAttendanceData.filter(item => item.checkOutTime).length,
+        missing: attendanceRows.filter(row => !row.attendance).length,
+        overtime: teamAttendanceData.filter(item => (Number(item.overtimeHours) || 0) > 0).length,
         totalHours: teamAttendanceData.reduce((sum, item) => sum + (Number(item.actualWorkHours) || 0), 0),
     };
 
@@ -478,12 +518,42 @@ export default function GroupDetailPage() {
     const loadTeamAttendance = useCallback(async () => {
         if (!id) return;
         try {
-            const data = await attendanceService.getTeamHistory(id);
+            setAttendanceError('');
+            const data = await attendanceService.getTeamDaily(id, attendanceDate);
             setTeamAttendanceData(data || []);
         } catch (e) {
-            // silently fail; UI handles missing data
+            setAttendanceError('Không tải được dữ liệu chấm công. Vui lòng thử lại.');
         }
-    }, [id]);
+    }, [id, attendanceDate]);
+
+    const saveAttendanceCorrection = async () => {
+        if (!editingAttendance) return;
+        if (!editingAttendance.checkInTime || !editingAttendance.checkOutTime) {
+            setAttendanceError('Cần nhập đầy đủ giờ vào và giờ ra.');
+            return;
+        }
+        if (editingAttendance.reason.trim().length < 5) {
+            setAttendanceError('Vui lòng nhập lý do sửa công ít nhất 5 ký tự.');
+            return;
+        }
+        try {
+            setAttendanceError('');
+            await attendanceService.updateAttendance(editingAttendance.id, {
+                checkInTime: new Date(editingAttendance.checkInTime).toISOString(),
+                checkOutTime: new Date(editingAttendance.checkOutTime).toISOString(),
+                reason: editingAttendance.reason.trim(),
+            });
+            setEditingAttendance(null);
+            await loadTeamAttendance();
+            setAttendanceCorrections(await attendanceService.getCorrections(editingAttendance.id));
+        } catch (error: any) {
+            setAttendanceError(error?.response?.data?.error || error?.response?.data?.message || 'Không thể cập nhật chấm công.');
+        }
+    };
+
+    useEffect(() => {
+        if (showTeamAttendance) void loadTeamAttendance();
+    }, [showTeamAttendance, loadTeamAttendance]);
 
     useEffect(() => {
         if (id && user?.id) {
@@ -493,14 +563,12 @@ export default function GroupDetailPage() {
 
     const currentUserMember = team?.members?.find(m => m.userId === user?.id);
     const userRoles = currentUserMember?.jobLabels?.filter(l => l.trim().length > 0) || [];
-    const hasRole = userRoles.length > 0;
-    const hasTasks = allTasks.some(t => t.memberId === user?.id);
-    const canCheckIn = hasRole && hasTasks;
+    const canCheckIn = Boolean(currentUserMember);
 
     const handleCheckIn = async () => {
         if (!id || !user?.id) return;
         if (!canCheckIn) {
-            alert('Bạn cần được phân vai trò và công việc trước khi vào ca!');
+            alert('Tài khoản của bạn chưa phải là thành viên của xưởng.');
             return;
         }
         setLoadingAttendance(true);
@@ -514,8 +582,7 @@ export default function GroupDetailPage() {
             
             const result = await attendanceService.checkIn(id, {
                 shiftType: 'NGAY',
-                stage: stage as any,
-                breakMinutes: 0
+                stage: stage as any
             });
             setMyAttendance(result);
             alert('Vào ca thành công!');
@@ -554,6 +621,7 @@ export default function GroupDetailPage() {
                 const msgs = await chatService.getDirectMessages(id, dmUserId);
                 setChatMessages(msgs);
             }
+            window.dispatchEvent(new Event('orca:notifications-refresh'));
         } catch (err) {
             // chat history load failure is non-fatal
         }
@@ -574,13 +642,43 @@ export default function GroupDetailPage() {
     }, [showChat, chatTab, dmUserId, loadChatMessages]);
 
     useEffect(() => {
+        if (searchParams.get('openChat') !== '1' || !id) return;
+        const requestedTab = searchParams.get('chat') === 'dm' ? 'dm' : 'group';
+        const requestedUserId = searchParams.get('userId');
+        const requestKey = `${id}:${requestedTab}:${requestedUserId ?? ''}`;
+        if (handledChatRequestRef.current === requestKey) return;
+        handledChatRequestRef.current = requestKey;
+
+        setShowChat(true);
+        setChatExpanded(true);
+        setChatTab(requestedTab);
+        setDmUserId(requestedTab === 'dm' ? requestedUserId : null);
+
+        const cleaned = new URLSearchParams(searchParams);
+        cleaned.delete('openChat');
+        cleaned.delete('chat');
+        cleaned.delete('userId');
+        setSearchParams(cleaned, { replace: true });
+    }, [id, searchParams, setSearchParams]);
+
+    useEffect(() => {
         if (showChat && chatTab === 'group') {
             setUnreadGroupCount(0);
+            if (id) {
+                chatService.markConversationRead(id, 'GROUP')
+                    .then(() => window.dispatchEvent(new Event('orca:notifications-refresh')))
+                    .catch(() => {});
+            }
         }
         if (showChat && chatTab === 'dm' && dmUserId) {
             setUnreadDmCounts(prev => ({ ...prev, [dmUserId]: 0 }));
+            if (id) {
+                chatService.markConversationRead(id, 'DIRECT', dmUserId)
+                    .then(() => window.dispatchEvent(new Event('orca:notifications-refresh')))
+                    .catch(() => {});
+            }
         }
-    }, [showChat, chatTab, dmUserId]);
+    }, [id, showChat, chatTab, dmUserId]);
 
     // WebSocket connection
     useEffect(() => {
@@ -609,6 +707,10 @@ export default function GroupDetailPage() {
                     }
                     if (newMsg.senderId !== user.id && !(showChatRef.current && chatTabRef.current === 'group')) {
                         setUnreadGroupCount(prev => prev + 1);
+                    } else if (newMsg.senderId !== user.id && showChatRef.current && chatTabRef.current === 'group') {
+                        chatService.markConversationRead(id, 'GROUP')
+                            .then(() => window.dispatchEvent(new Event('orca:notifications-refresh')))
+                            .catch(() => {});
                     }
                 });
 
@@ -623,6 +725,10 @@ export default function GroupDetailPage() {
                         }
                         if (newMsg.senderId !== user.id && !(showChatRef.current && chatTabRef.current === 'dm' && dmUserIdRef.current === m.userId)) {
                             setUnreadDmCounts(prev => ({ ...prev, [m.userId]: (prev[m.userId] || 0) + 1 }));
+                        } else if (newMsg.senderId !== user.id && showChatRef.current && chatTabRef.current === 'dm' && dmUserIdRef.current === m.userId) {
+                            chatService.markConversationRead(id, 'DIRECT', m.userId)
+                                .then(() => window.dispatchEvent(new Event('orca:notifications-refresh')))
+                                .catch(() => {});
                         }
                         // Update DM previews
                         setDmPreviews(prev => {
@@ -1093,16 +1199,7 @@ export default function GroupDetailPage() {
                             >
                                 <ion-icon name="exit-outline"></ion-icon> Tan ca
                             </button>
-                        ) : (
-                            <button
-                                onClick={handleCheckIn}
-                                disabled={loadingAttendance}
-                                title="Ca trước đã hoàn thành, bấm để vào ca mới"
-                                style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.35)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: '#059669' }}
-                            >
-                                <ion-icon name="enter-outline"></ion-icon> Vào ca lại
-                            </button>
-                        )
+                        ) : <span className="attendance-day-complete"><ion-icon name="checkmark-circle-outline"></ion-icon> Đã hoàn thành ca hôm nay</span>
                     )}
 
                     {!isAdmin && (
@@ -1889,7 +1986,7 @@ export default function GroupDetailPage() {
 
             {/* ===== BẢNG LƯƠNG ===== */}
             {isAdmin && (
-                <SalaryPanel
+                <PayrollPanel
                     teamId={id!}
                 />
             )}
@@ -3847,13 +3944,21 @@ export default function GroupDetailPage() {
                             >
                                 <ion-icon name="close-outline"></ion-icon>
                             </button>
-                        </header>
+                         </header>
+
+                        <div className="attendance-modal__date-filter attendance-modal__animate">
+                            <div>
+                                <label htmlFor="attendance-date">Ngày cần xem</label>
+                                <input id="attendance-date" type="date" value={attendanceDate} onChange={event => setAttendanceDate(event.target.value)} />
+                            </div>
+                            <span>Giờ công và tăng ca do hệ thống tính từ giờ vào/ra; nhân viên không thể tự sửa.</span>
+                        </div>
 
                         <div className="attendance-modal__summary attendance-modal__animate" aria-label="Tổng quan chấm công">
                             <div className="attendance-modal__summary-card">
                                 <span>Nhân viên</span>
                                 <strong>{attendanceSummary.employees}</strong>
-                                <small>Có dữ liệu chấm công</small>
+                                <small>Tổng thành viên xưởng</small>
                             </div>
                             <div className="attendance-modal__summary-card is-active">
                                 <span>Đang làm việc</span>
@@ -3865,21 +3970,32 @@ export default function GroupDetailPage() {
                                 <strong>{attendanceSummary.completed}</strong>
                                 <small>Đã ghi nhận tan ca</small>
                             </div>
+                            <div className="attendance-modal__summary-card is-missing">
+                                <span>Chưa vào ca</span>
+                                <strong>{attendanceSummary.missing}</strong>
+                                <small>Chưa có lần chấm công</small>
+                            </div>
+                            <div className="attendance-modal__summary-card is-overtime">
+                                <span>Có tăng ca</span>
+                                <strong>{attendanceSummary.overtime}</strong>
+                                <small>Nhân viên phát sinh OT</small>
+                            </div>
                             <div className="attendance-modal__summary-card is-hours">
                                 <span>Tổng giờ</span>
-                                <strong>{attendanceSummary.totalHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}</strong>
-                                <small>Giờ làm đã ghi nhận</small>
+                                <strong>{attendanceSummary.totalHours.toLocaleString('vi-VN', { maximumFractionDigits: 2 })}</strong>
+                                <small>Giờ được ghi nhận</small>
                             </div>
                         </div>
 
                         <div className="attendance-modal__body attendance-modal__animate">
-                            {teamAttendanceData.length === 0 ? (
+                            {attendanceError && <div className="attendance-modal__error" role="alert">{attendanceError}</div>}
+                            {attendanceRows.length === 0 ? (
                                 <div className="attendance-modal__empty">
                                     <div className="attendance-modal__empty-icon" aria-hidden="true">
                                         <ion-icon name="calendar-clear-outline"></ion-icon>
                                     </div>
-                                    <h3>Chưa có dữ liệu chấm công</h3>
-                                    <p>Dữ liệu sẽ xuất hiện tại đây khi thành viên bắt đầu vào ca.</p>
+                                     <h3>Xưởng chưa có thành viên</h3>
+                                     <p>Mời nhân viên vào xưởng để bắt đầu quản lý chấm công.</p>
                                     <button type="button" onClick={() => setShowTeamAttendance(false)}>Đóng</button>
                                 </div>
                             ) : (
@@ -3888,94 +4004,91 @@ export default function GroupDetailPage() {
                                         <thead>
                                             <tr>
                                                 <th>Nhân viên</th>
-                                                <th>Ngày</th>
                                                 <th>Vào ca</th>
                                                 <th>Tan ca</th>
-                                                <th>Giờ làm</th>
+                                                <th>Giờ thường</th>
+                                                <th>Tăng ca</th>
                                                 <th>Trạng thái</th>
                                                 <th>Thao tác</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                        {teamAttendanceData.map(item => {
-                                            const isEditing = editingAttendance?.id === item.id;
-                                            const employeeName = item.userName || item.userId?.substring(0, 8) || 'Nhân viên';
-                                            const isActiveShift = Boolean(item.checkInTime && !item.checkOutTime);
-                                            return (
-                                                <tr key={item.id}>
+                                        {attendanceRows.map(({ member, attendance: item }) => {
+                                            const isEditing = Boolean(item && editingAttendance?.id === item.id);
+                                            const employeeName = member.fullName || member.username;
+                                            const isActiveShift = Boolean(item?.checkInTime && !item?.checkOutTime);
+                                            const statusLabel = !item ? 'Chưa vào ca' : isActiveShift ? 'Đang làm việc' : item.attendanceStatus === 'MISSING_CHECKOUT' ? 'Thiếu giờ ra' : item.attendanceStatus === 'LATE' ? 'Đi trễ' : 'Đã checkout';
+                                            const statusClass = !item ? 'is-pending' : item.attendanceStatus === 'MISSING_CHECKOUT' ? 'is-danger' : isActiveShift ? 'is-active' : 'is-complete';
+                                            return <Fragment key={member.userId}>
+                                                <tr>
                                                     <td>
                                                         <div className="attendance-modal__employee">
                                                             <span style={{ backgroundColor: avatarColor(employeeName) }}>{getInitials(employeeName)}</span>
                                                             <div>
                                                                 <strong>{employeeName}</strong>
-                                                                <small>{item.productionStage || 'Chưa phân công vị trí'}</small>
+                                                                 <small>{member.jobLabels?.join(', ') || 'Chưa phân công vị trí'}</small>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="attendance-modal__date">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
-                                                    <td>
-                                                        {isEditing ? (
-                                                            <input className="attendance-modal__time-input" type="datetime-local" value={editingAttendance?.checkInTime || ''} onChange={e => setEditingAttendance(prev => prev ? {...prev, checkInTime: e.target.value} : null)} />
-                                                        ) : (
-                                                            item.checkInTime ? new Date(item.checkInTime).toLocaleTimeString('vi-VN') : '--:--'
-                                                        )}
-                                                    </td>
-                                                    <td>
-                                                        {isEditing ? (
-                                                            <input className="attendance-modal__time-input" type="datetime-local" value={editingAttendance?.checkOutTime || ''} onChange={e => setEditingAttendance(prev => prev ? {...prev, checkOutTime: e.target.value} : null)} />
-                                                        ) : (
-                                                            item.checkOutTime ? new Date(item.checkOutTime).toLocaleTimeString('vi-VN') : '--:--'
-                                                        )}
-                                                    </td>
+                                                    <td>{item?.checkInTime ? new Date(item.checkInTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
+                                                    <td>{item?.checkOutTime ? new Date(item.checkOutTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
                                                     <td className="attendance-modal__hours">
-                                                        {item.actualWorkHours !== undefined ? `${item.actualWorkHours}h` : '--'}
+                                                        {item?.regularHours !== undefined ? `${item.regularHours}h` : '--'}
+                                                    </td>
+                                                    <td className="attendance-modal__overtime">
+                                                        {(Number(item?.overtimeHours) || 0) > 0 ? `+${item?.overtimeHours}h` : '--'}
                                                     </td>
                                                     <td>
-                                                        <span className={`attendance-modal__status ${isActiveShift ? 'is-active' : item.checkOutTime ? 'is-complete' : 'is-pending'}`}>
+                                                        <span className={`attendance-modal__status ${statusClass}`}>
                                                             <i aria-hidden="true"></i>
-                                                            {isActiveShift ? 'Đang làm việc' : item.checkOutTime ? 'Đã hoàn thành' : 'Chưa vào ca'}
+                                                            {statusLabel}
                                                         </span>
                                                     </td>
                                                     <td className="attendance-modal__actions-cell">
-                                                        {isEditing ? (
-                                                            <div className="attendance-modal__actions">
-                                                                <button onClick={async () => {
-                                                                    if (!editingAttendance) return;
-                                                                    try {
-                                                                        await attendanceService.updateAttendance(item.id, {
-                                                                            checkInTime: editingAttendance.checkInTime ? new Date(editingAttendance.checkInTime).toISOString() : undefined,
-                                                                            checkOutTime: editingAttendance.checkOutTime ? new Date(editingAttendance.checkOutTime).toISOString() : undefined
-                                                                        });
-                                                                        setEditingAttendance(null);
-                                                                        loadTeamAttendance();
-                                                                    } catch(e) {
-                                                                        alert('Lỗi khi cập nhật chấm công');
-                                                                    }
-                                                                }} className="attendance-modal__action is-save">Lưu</button>
-                                                                <button onClick={() => setEditingAttendance(null)} className="attendance-modal__action is-cancel">Hủy</button>
-                                                            </div>
-                                                        ) : (
-                                                            <button onClick={() => {
-                                                                // Convert to format required by datetime-local: YYYY-MM-DDThh:mm
-                                                                const toLocalString = (dateStr: string) => {
-                                                                    if (!dateStr) return '';
-                                                                    const d = new Date(dateStr);
+                                                        {item && <button onClick={() => {
+                                                                 // Convert to format required by datetime-local: YYYY-MM-DDThh:mm
+                                                                 const toLocalString = (dateStr?: string | null) => {
+                                                                     if (!dateStr) return '';
+                                                                     const d = new Date(dateStr);
                                                                     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
                                                                     return d.toISOString().slice(0,16);
                                                                 };
-                                                                setEditingAttendance({
-                                                                    id: item.id,
-                                                                    checkInTime: toLocalString(item.checkInTime),
-                                                                    checkOutTime: toLocalString(item.checkOutTime)
-                                                                });
-                                                            }} className="attendance-modal__edit">
+                                                                 setEditingAttendance({
+                                                                     id: item.id,
+                                                                     checkInTime: toLocalString(item.checkInTime),
+                                                                     checkOutTime: toLocalString(item.checkOutTime),
+                                                                     reason: '',
+                                                                 });
+                                                                 setAttendanceError('');
+                                                                 void attendanceService.getCorrections(item.id)
+                                                                     .then(setAttendanceCorrections)
+                                                                     .catch(() => setAttendanceCorrections([]));
+                                                             }} className="attendance-modal__edit">
                                                                 <ion-icon name="create-outline"></ion-icon>
                                                                 Sửa
-                                                            </button>
-                                                        )}
+                                                             </button>}
                                                     </td>
                                                 </tr>
-                                            );
+                                                {isEditing && editingAttendance && <tr className="attendance-modal__correction-row"><td colSpan={7}>
+                                                    <div className="attendance-modal__correction">
+                                                        <div><label>Giờ vào</label><input className="attendance-modal__time-input" type="datetime-local" value={editingAttendance.checkInTime} onChange={event => setEditingAttendance({ ...editingAttendance, checkInTime: event.target.value })} /></div>
+                                                        <div><label>Giờ ra</label><input className="attendance-modal__time-input" type="datetime-local" value={editingAttendance.checkOutTime} onChange={event => setEditingAttendance({ ...editingAttendance, checkOutTime: event.target.value })} /></div>
+                                                        <div className="attendance-modal__reason"><label>Lý do sửa công <span>*</span></label><input value={editingAttendance.reason} onChange={event => setEditingAttendance({ ...editingAttendance, reason: event.target.value })} placeholder="Ví dụ: Nhân viên quên checkout" maxLength={500} /></div>
+                                                        <div className="attendance-modal__actions">
+                                                            <button onClick={() => void saveAttendanceCorrection()} className="attendance-modal__action is-save">Lưu & tính lại</button>
+                                                            <button onClick={() => setEditingAttendance(null)} className="attendance-modal__action is-cancel">Hủy</button>
+                                                        </div>
+                                                    </div>
+                                                    {attendanceCorrections.length > 0 && <div className="attendance-modal__correction-history">
+                                                        <h4>Lịch sử sửa công</h4>
+                                                        {attendanceCorrections.map(correction => <article key={correction.id}>
+                                                            <div><strong>{correction.actorName}</strong><time>{new Date(correction.createdAt).toLocaleString('vi-VN')}</time></div>
+                                                            <p>{correction.reason}</p>
+                                                            <small>{correction.oldCheckInTime ? new Date(correction.oldCheckInTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—'}–{correction.oldCheckOutTime ? new Date(correction.oldCheckOutTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—'} → {new Date(correction.newCheckInTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}–{new Date(correction.newCheckOutTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</small>
+                                                        </article>)}
+                                                    </div>}
+                                                </td></tr>}
+                                            </Fragment>;
                                         })}
                                         </tbody>
                                     </table>
@@ -3989,7 +4102,8 @@ export default function GroupDetailPage() {
     );
 }
 
-function SalaryPanel({ teamId }: { teamId: string }) {
+/** @deprecated Kept temporarily for route compatibility; use PayrollPanel. */
+export function SalaryPanel({ teamId }: { teamId: string }) {
     const [salaryData, setSalaryData] = useState<SalaryReport[]>([]);
     const [loadingSalary, setLoadingSalary] = useState(false);
     const [showSalary, setShowSalary] = useState(false);
@@ -4018,15 +4132,20 @@ function SalaryPanel({ teamId }: { teamId: string }) {
 
     const handleRateEdit = (memberId: string, currentRate: number) => {
         setEditingRate(memberId);
-        setTempRate(currentRate.toString());
+        setTempRate(Math.round(currentRate).toLocaleString('vi-VN'));
     };
 
     const handleRateSave = (memberId: string) => {
-        const newRate = parseFloat(tempRate);
+        const newRate = Number(tempRate.replace(/\D/g, ''));
         if (!isNaN(newRate) && newRate > 0) {
             setHourlyRateOverride(prev => ({ ...prev, [memberId]: newRate }));
         }
         setEditingRate(null);
+    };
+
+    const handleRateInput = (value: string) => {
+        const digits = value.replace(/\D/g, '').slice(0, 10);
+        setTempRate(digits ? Number(digits).toLocaleString('vi-VN') : '');
     };
 
     const getEffectiveRate = (memberId: string, defaultRate: number) => {
@@ -4244,16 +4363,65 @@ function SalaryPanel({ teamId }: { teamId: string }) {
                                             {/* Hourly Rate */}
                                             <div style={{ textAlign: 'center' }}>
                                                 {isEditing ? (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
-                                                        <input
-                                                            type="number"
-                                                            value={tempRate}
-                                                            onChange={e => setTempRate(e.target.value)}
-                                                            autoFocus
-                                                            style={{ width: 60, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--primary)', fontSize: 13, textAlign: 'center', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                                                        />
-                                                        <button onClick={() => handleRateSave(s.memberId)} style={{ padding: '4px 8px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>✓</button>
-                                                        <button onClick={() => setEditingRate(null)} style={{ padding: '4px 8px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>✕</button>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                                                        <div style={{
+                                                            width: 118,
+                                                            height: 36,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            overflow: 'hidden',
+                                                            borderRadius: 9,
+                                                            border: '1px solid var(--primary)',
+                                                            background: 'var(--bg-input)',
+                                                            boxShadow: '0 0 0 3px var(--primary-soft)',
+                                                        }}>
+                                                            <input
+                                                                type="text"
+                                                                inputMode="numeric"
+                                                                value={tempRate}
+                                                                onChange={e => handleRateInput(e.target.value)}
+                                                                onKeyDown={e => {
+                                                                    if (e.key === 'Enter') handleRateSave(s.memberId);
+                                                                    if (e.key === 'Escape') setEditingRate(null);
+                                                                }}
+                                                                autoFocus
+                                                                aria-label={`Đơn giá mỗi giờ của ${s.memberName}`}
+                                                                style={{
+                                                                    width: '100%', minWidth: 0, padding: '0 4px 0 10px',
+                                                                    border: 'none', outline: 'none', fontSize: 13,
+                                                                    fontWeight: 700, textAlign: 'right',
+                                                                    background: 'transparent', color: 'var(--text-primary)'
+                                                                }}
+                                                            />
+                                                            <span style={{
+                                                                flexShrink: 0, paddingRight: 9, color: 'var(--text-secondary)',
+                                                                fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap'
+                                                            }}>đ/giờ</span>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRateSave(s.memberId)}
+                                                            aria-label="Lưu đơn giá"
+                                                            title="Lưu (Enter)"
+                                                            style={{
+                                                                width: 36, height: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                                padding: 0, background: '#10b981', color: '#fff', border: 'none',
+                                                                borderRadius: 9, fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                                                                boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)'
+                                                            }}
+                                                        >✓</button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setEditingRate(null)}
+                                                            aria-label="Hủy chỉnh sửa đơn giá"
+                                                            title="Hủy (Esc)"
+                                                            style={{
+                                                                width: 36, height: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                                padding: 0, background: 'var(--danger-soft)', color: 'var(--danger)',
+                                                                border: '1px solid rgba(239, 68, 68, 0.24)', borderRadius: 9,
+                                                                fontSize: 15, fontWeight: 800, cursor: 'pointer'
+                                                            }}
+                                                        >✕</button>
                                                     </div>
                                                 ) : (
                                                     <div

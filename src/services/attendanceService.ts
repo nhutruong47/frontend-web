@@ -28,7 +28,17 @@ export interface CheckInPayload {
     shiftType: ShiftType;
     stage: ProductionStage;
     orderId?: string;
-    breakMinutes?: number;
+}
+
+export interface AttendanceCorrectionDTO {
+    id: string;
+    actorName: string;
+    oldCheckInTime?: string | null;
+    oldCheckOutTime?: string | null;
+    newCheckInTime: string;
+    newCheckOutTime: string;
+    reason: string;
+    createdAt: string;
 }
 
 export const attendanceService = {
@@ -50,8 +60,14 @@ export const attendanceService = {
     getTeamAttendanceToday: (teamId: string) =>
         api.get<AttendanceDTO[]>(`/api/attendance/team-today/${teamId}`).then(r => r.data),
 
-    updateAttendance: (attendanceId: string, payload: { checkInTime?: string, checkOutTime?: string }) =>
+    getTeamDaily: (teamId: string, date: string) =>
+        api.get<AttendanceDTO[]>(`/api/attendance/team-daily/${teamId}`, { params: { date } }).then(r => r.data),
+
+    updateAttendance: (attendanceId: string, payload: { checkInTime: string, checkOutTime: string, reason: string }) =>
         api.put<AttendanceDTO>(`/api/attendance/update/${attendanceId}`, payload).then(r => r.data),
+
+    getCorrections: (attendanceId: string) =>
+        api.get<AttendanceCorrectionDTO[]>(`/api/attendance/corrections/${attendanceId}`).then(r => r.data),
 
     getProductionStages: () =>
         api.get<ProductionStage[]>('/api/attendance/stages').then(r => r.data),

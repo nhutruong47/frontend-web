@@ -2279,6 +2279,93 @@ mark.tone-muted { background: var(--bg-input); color: var(--text-secondary); }
   background: color-mix(in srgb, var(--primary, #c57d1d) 8%, transparent);
 }
 
+.attendance-day-complete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.09);
+  color: #087a50;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.attendance-modal__date-filter {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 28px 0;
+}
+
+.attendance-modal__date-filter > div { display: flex; flex-direction: column; gap: 6px; }
+.attendance-modal__date-filter label { color: var(--text-secondary); font-size: 11px; font-weight: 700; }
+.attendance-modal__date-filter input {
+  height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+.attendance-modal__date-filter > span { max-width: 520px; color: var(--text-secondary); font-size: 11px; line-height: 1.5; }
+.attendance-modal__summary { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.attendance-modal__summary-card.is-missing { border-color: rgba(148, 111, 65, .25); background: rgba(148, 111, 65, .06); }
+.attendance-modal__summary-card.is-overtime { border-color: rgba(217, 119, 6, .28); background: rgba(217, 119, 6, .07); }
+.attendance-modal__overtime { color: #c66e08; font-weight: 800; }
+.attendance-modal__status.is-danger { background: rgba(239, 68, 68, .1); color: #c93434; }
+.attendance-modal__status.is-danger i { background: #ef4444; }
+.attendance-modal__error { margin-bottom: 12px; padding: 10px 12px; border: 1px solid #efb2b2; border-radius: 9px; background: #fff1f1; color: #a92b2b; font-size: 12px; }
+.attendance-modal__correction-row td { padding: 0 !important; background: var(--bg-input); }
+.attendance-modal__correction {
+  display: grid;
+  grid-template-columns: 190px 190px minmax(260px, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  padding: 14px 18px;
+  border-left: 3px solid #c5822a;
+}
+.attendance-modal__correction > div:not(.attendance-modal__actions) { display: flex; flex-direction: column; gap: 6px; }
+.attendance-modal__correction label { color: var(--text-secondary); font-size: 10px; font-weight: 750; }
+.attendance-modal__correction label span { color: #dc2626; }
+.attendance-modal__reason input {
+  height: 38px;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  padding: 0 10px;
+  outline: none;
+  font: inherit;
+  font-size: 11px;
+}
+.attendance-modal__reason input:focus { border-color: #bd7b27; box-shadow: 0 0 0 3px rgba(189,123,39,.11); }
+.attendance-modal__correction-history { padding: 0 18px 14px 21px; }
+.attendance-modal__correction-history h4 { margin: 0 0 8px; color: var(--text-primary); font-size: 11px; }
+.attendance-modal__correction-history article { display: grid; grid-template-columns: 170px minmax(220px,1fr) auto; gap: 12px; align-items: center; padding: 8px 10px; border-top: 1px solid var(--border); font-size: 10px; }
+.attendance-modal__correction-history article div { display: flex; flex-direction: column; gap: 2px; }
+.attendance-modal__correction-history time,.attendance-modal__correction-history small { color: var(--text-secondary); }
+.attendance-modal__correction-history p { margin: 0; color: var(--text-primary); }
+
+@media (max-width: 1180px) {
+  .attendance-modal__summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .attendance-modal__correction { grid-template-columns: 1fr 1fr; }
+  .attendance-modal__reason { grid-column: 1 / -1; }
+}
+
+@media (max-width: 700px) {
+  .attendance-modal__date-filter { align-items: stretch; flex-direction: column; padding: 12px 16px 0; }
+  .attendance-modal__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .attendance-modal__correction { grid-template-columns: 1fr; }
+  .attendance-modal__reason { grid-column: auto; }
+}
+
 .attendance-modal__body {
   min-height: 0;
   flex: 1;

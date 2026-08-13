@@ -3,7 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from './Sidebar';
 import { Bell, MoreHorizontal, MessageCircle, Sparkles } from 'lucide-react';
-import { notificationService } from '../services/groupService';
+import { chatService, notificationService } from '../services/groupService';
 import { useNotificationSocket, type NotificationPayload } from '../hooks/useNotificationSocket';
 import type { AppNotification } from '../types/types';
 
@@ -27,11 +27,16 @@ export default function Layout() {
         return () => window.removeEventListener('payment-required', handlePaymentRequired);
     }, []);
 
-    useEffect(() => {
-        if (user) {
-            notificationService.getAll().then(setNotifications).catch(() => { /* tolerated */ });
-        }
+    const loadNotifications = useCallback(() => {
+        if (!user) return;
+        notificationService.getAll().then(setNotifications).catch(() => { /* tolerated */ });
     }, [user]);
+
+    useEffect(() => {
+        loadNotifications();
+        window.addEventListener('orca:notifications-refresh', loadNotifications);
+        return () => window.removeEventListener('orca:notifications-refresh', loadNotifications);
+    }, [loadNotifications]);
 
     // Realtime notifications share one transport, then are routed by type below.
     const handleIncomingNotification = useCallback((payload: NotificationPayload) => {
@@ -41,6 +46,7 @@ export default function Layout() {
             message: payload.message,
             type: payload.type,
             taskId: payload.taskId ?? '',
+            actorId: payload.actorId ?? null,
             read: payload.read,
             createdAt: payload.createdAt,
         };
@@ -90,12 +96,36 @@ export default function Layout() {
         });
     };
 
-    const openChatNotification = (notification: AppNotification) => {
-        markNotificationAsRead(notification);
+    const openChatNotification = async (notification: AppNotification) => {
+        const matchesConversation = (item: AppNotification) =>
+            item.type === 'CHAT_MESSAGE'
+            && item.taskId === notification.taskId
+            && (item.actorId ?? null) === (notification.actorId ?? null);
+        setNotifications(prev => prev.map(item =>
+            matchesConversation(item) ? { ...item, read: true } : item
+        ));
         setShowMessages(false);
-        navigate(notification.taskId
-            ? `/groups/${notification.taskId}?openChat=1`
-            : '/groups');
+        if (!notification.taskId) {
+            navigate('/groups');
+            return;
+        }
+
+        const isDirect = !!notification.actorId;
+        try {
+            await chatService.markConversationRead(
+                notification.taskId,
+                isDirect ? 'DIRECT' : 'GROUP',
+                notification.actorId ?? undefined,
+            );
+        } catch {
+            loadNotifications();
+        }
+        const params = new URLSearchParams({
+            openChat: '1',
+            chat: isDirect ? 'dm' : 'group',
+        });
+        if (notification.actorId) params.set('userId', notification.actorId);
+        navigate(`/groups/${notification.taskId}?${params.toString()}`);
     };
 
     const openSystemNotification = (notification: AppNotification) => {
