@@ -1988,6 +1988,10 @@ export default function GroupDetailPage() {
             {isAdmin && (
                 <PayrollPanel
                     teamId={id!}
+                    onEditAttendance={(_memberId, date) => {
+                        if (date) setAttendanceDate(date);
+                        setShowTeamAttendance(true);
+                    }}
                 />
             )}
 

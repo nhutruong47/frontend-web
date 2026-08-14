@@ -30,14 +30,14 @@ const statusMeta: Record<PayrollStatus, { label: string; hint: string }> = {
     PAID: { label: 'Đã thanh toán', hint: 'Kỳ lương đã hoàn tất' },
 };
 
-interface AdjustmentDraft {
-    allowanceVnd: string;
-    deductionVnd: string;
-    advanceVnd: string;
-    note: string;
+type AdjustmentType = 'BONUS' | 'DEDUCTION';
+
+interface PayrollPanelProps {
+    teamId: string;
+    onEditAttendance?: (memberId: string, date?: string) => void;
 }
 
-export default function PayrollPanel({ teamId }: { teamId: string }) {
+export default function PayrollPanel({ teamId, onEditAttendance }: PayrollPanelProps) {
     const [open, setOpen] = useState(true);
     const [selectedMonth, setSelectedMonth] = useState(() => {
         const now = new Date();
@@ -48,9 +48,13 @@ export default function PayrollPanel({ teamId }: { teamId: string }) {
     const [error, setError] = useState('');
     const [busyAction, setBusyAction] = useState('');
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [rateEditingId, setRateEditingId] = useState<string | null>(null);
+    const [adjustingItem, setAdjustingItem] = useState<PayrollItem | null>(null);
+    const [adjustmentType, setAdjustmentType] = useState<AdjustmentType>('BONUS');
+    const [adjustmentAmount, setAdjustmentAmount] = useState('');
+    const [adjustmentReason, setAdjustmentReason] = useState('');
     const [rateDraft, setRateDraft] = useState('');
     const [multiplierDraft, setMultiplierDraft] = useState('1,50');
-    const [adjustmentDraft, setAdjustmentDraft] = useState<AdjustmentDraft | null>(null);
 
     const load = useCallback(async () => {
         if (!open) return;
@@ -61,6 +65,15 @@ export default function PayrollPanel({ teamId }: { teamId: string }) {
     }, [open, selectedMonth, teamId]);
 
     useEffect(() => { void load(); }, [load]);
+
+    useEffect(() => {
+        if (!adjustingItem) return;
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && !busyAction) setAdjustingItem(null);
+        };
+        window.addEventListener('keydown', closeOnEscape);
+        return () => window.removeEventListener('keydown', closeOnEscape);
+    }, [adjustingItem, busyAction]);
 
     const monthOptions = useMemo(() => Array.from({ length: 18 }, (_, index) => {
         const date = new Date(); date.setDate(1); date.setMonth(date.getMonth() - index);
@@ -78,16 +91,18 @@ export default function PayrollPanel({ teamId }: { teamId: string }) {
     };
 
     const expand = (item: PayrollItem) => {
-        if (expandedId === item.memberId) { setExpandedId(null); return; }
+        if (expandedId === item.memberId) {
+            setExpandedId(null);
+            setRateEditingId(null);
+            return;
+        }
         setExpandedId(item.memberId);
+        setRateEditingId(null);
+    };
+
+    const prepareRateDraft = (item: PayrollItem) => {
         setRateDraft(inputMoney(item.hourlyRateVnd));
         setMultiplierDraft(item.overtimeMultiplier.toFixed(2).replace('.', ','));
-        setAdjustmentDraft({
-            allowanceVnd: inputMoney(item.allowanceVnd),
-            deductionVnd: inputMoney(item.deductionVnd),
-            advanceVnd: inputMoney(item.advanceVnd),
-            note: item.note || '',
-        });
     };
 
     const runAction = async (key: string, action: () => Promise<PayrollReport>) => {
@@ -98,21 +113,57 @@ export default function PayrollPanel({ teamId }: { teamId: string }) {
     };
 
     const saveRate = async (item: PayrollItem) => {
+        if (!report) return;
         const rate = parseMoney(rateDraft);
         const multiplier = Number(multiplierDraft.replace(',', '.'));
-        await runAction(`rate-${item.memberId}`, () => payrollService.updateProfile(
-            teamId, item.memberId, selectedMonth, rate, multiplier,
-        ));
+        const actionKey = `rate-${item.memberId}`;
+        setBusyAction(actionKey);
+        setError('');
+        try {
+            const updatedReport = await payrollService.updateProfile(
+                teamId, item.memberId, selectedMonth, rate, multiplier,
+            );
+            setReport(updatedReport);
+            setRateEditingId(null);
+        } catch (err) {
+            setError(errorMessage(err));
+            await load();
+        } finally {
+            setBusyAction('');
+        }
     };
 
-    const saveAdjustments = async (item: PayrollItem) => {
-        if (!report || !adjustmentDraft) return;
-        await runAction(`adjust-${item.memberId}`, () => payrollService.updateAdjustments(report.runId, item.memberId, {
-            allowanceVnd: parseMoney(adjustmentDraft.allowanceVnd),
-            deductionVnd: parseMoney(adjustmentDraft.deductionVnd),
-            advanceVnd: parseMoney(adjustmentDraft.advanceVnd),
-            note: adjustmentDraft.note,
-        }));
+    const openAdjustment = (item: PayrollItem) => {
+        const netAdjustment = item.allowanceVnd - item.deductionVnd - item.advanceVnd;
+        setAdjustingItem(item);
+        setAdjustmentType(netAdjustment < 0 ? 'DEDUCTION' : 'BONUS');
+        setAdjustmentAmount(inputMoney(Math.abs(netAdjustment)));
+        setAdjustmentReason(item.note || '');
+    };
+
+    const saveAdjustment = async () => {
+        if (!report || !adjustingItem) return;
+        const amount = parseMoney(adjustmentAmount);
+        if (amount > 0 && adjustmentReason.trim().length < 5) {
+            setError('Vui lòng nhập lý do điều chỉnh ít nhất 5 ký tự.');
+            return;
+        }
+        const actionKey = `adjust-${adjustingItem.memberId}`;
+        setBusyAction(actionKey);
+        setError('');
+        try {
+            setReport(await payrollService.updateAdjustments(report.runId, adjustingItem.memberId, {
+                allowanceVnd: adjustmentType === 'BONUS' ? amount : 0,
+                deductionVnd: adjustmentType === 'DEDUCTION' ? amount : 0,
+                advanceVnd: 0,
+                note: amount > 0 ? adjustmentReason.trim() : '',
+            }));
+            setAdjustingItem(null);
+        } catch (err) {
+            setError(errorMessage(err));
+        } finally {
+            setBusyAction('');
+        }
     };
 
     const exportExcel = async () => {
@@ -175,74 +226,96 @@ export default function PayrollPanel({ teamId }: { teamId: string }) {
 
                 {loading && !report ? <div className="payroll__loading"><span />Đang tổng hợp chấm công…</div> : report && summary ? <>
                     <div className="payroll__summary">
-                        <SummaryCard icon="people-outline" label="Nhân sự có lương" value={`${summary.paidMemberCount}/${summary.memberCount}`} hint="Không tính người chưa phát sinh giờ" tone="violet" />
-                        <SummaryCard icon="time-outline" label="Giờ thường" value={`${hours.format(summary.regularHours)}h`} hint={`${hours.format(summary.totalHours)}h tổng thời gian`} tone="blue" />
+                        <SummaryCard icon="people-outline" label="Tổng nhân viên" value={`${summary.memberCount}`} hint={`${summary.paidMemberCount} người có phát sinh lương`} tone="violet" />
+                        <SummaryCard icon="time-outline" label="Tổng giờ làm" value={`${hours.format(summary.totalHours)}h`} hint={`${hours.format(summary.regularHours)}h giờ thường`} tone="blue" />
                         <SummaryCard icon="flash-outline" label="Tăng ca" value={`${hours.format(summary.overtimeHours)}h`} hint="Hệ số theo từng nhân viên" tone="amber" />
-                        <SummaryCard icon="calendar-outline" label="Ngày công" value={`${summary.attendanceDays}`} hint="Tổng ngày công của nhân viên" tone="blue" />
-                        <SummaryCard icon="receipt-outline" label="Quỹ lương gộp" value={formatMoney(summary.grossPayVnd)} hint="Lương thường + tăng ca" tone="amber" />
-                        <SummaryCard icon="cash-outline" label="Tổng thực nhận" value={formatMoney(summary.netPayVnd)} hint="Sau phụ cấp và các khoản trừ" tone="green" />
-                    </div>
-
-                    <div className="payroll__insight">
-                        <span><ion-icon name="checkmark-done-outline" /> KPI công việc: <strong>{summary.completedTasks}/{summary.totalTasks} task hoàn thành</strong></span>
-                        <span>Chỉ dùng để đánh giá hiệu suất, không tự cộng hoặc trừ lương.</span>
+                        <SummaryCard icon="cash-outline" label="Tổng thực nhận" value={formatMoney(summary.netPayVnd)} hint="Sau thưởng và các khoản trừ" tone="green" />
                     </div>
 
                     <div className="payroll__table-wrap">
                         <table className="payroll__table">
                             <thead><tr>
-                                <th>Nhân viên</th><th>Chấm công</th><th>Đơn giá</th><th>Lương thường</th><th>Tăng ca</th><th>Điều chỉnh</th><th>Thực nhận</th><th aria-label="Chi tiết" />
+                                <th>Nhân viên</th><th>Chấm công</th><th>Lương thường</th><th>Tăng ca</th><th>Thưởng / Trừ</th><th>Thực nhận</th>
                             </tr></thead>
                             <tbody>
                                 {report.items.map((item, index) => {
                                     const expanded = expandedId === item.memberId;
+                                    const editingRate = rateEditingId === item.memberId;
                                     const adjustment = item.allowanceVnd - item.deductionVnd - item.advanceVnd;
+                                    const hasWarnings = item.lateDays > 0 || item.missingCheckoutDays > 0 || (item.totalTasks > 0 && item.completedTasks < item.totalTasks);
                                     return [
                                         <tr key={item.memberId} className={expanded ? 'is-expanded' : ''}>
                                             <td><button className="payroll__employee" type="button" onClick={() => expand(item)}>
                                                 <span className={`payroll__avatar payroll__avatar--${index % 6}`}>{initials(item.memberName)}</span>
                                                 <span><strong>{item.memberName}</strong><small>Mã: {item.memberId.slice(0, 8).toUpperCase()}</small></span>
+                                                <ion-icon className="payroll__employee-chevron" name={expanded ? 'chevron-up-outline' : 'chevron-down-outline'} />
                                             </button></td>
                                             <td><strong>{item.attendanceDays} ngày · {hours.format(item.regularHours)}h</strong><small className={item.overtimeHours > 0 ? 'is-overtime' : ''}>{item.overtimeHours > 0 ? `+ ${hours.format(item.overtimeHours)}h tăng ca` : 'Không tăng ca'}</small></td>
-                                            <td><strong>{formatMoney(item.hourlyRateVnd)}</strong><small>× {item.overtimeMultiplier.toFixed(2)} tăng ca</small></td>
-                                            <td><strong>{formatMoney(item.regularPayVnd)}</strong><small>{hours.format(item.regularHours)}h × đơn giá</small></td>
-                                            <td><strong>{formatMoney(item.overtimePayVnd)}</strong><small>{hours.format(item.overtimeHours)}h × hệ số</small></td>
-                                            <td><strong className={adjustment < 0 ? 'is-negative' : adjustment > 0 ? 'is-positive' : ''}>{adjustment > 0 ? '+' : ''}{formatMoney(adjustment)}</strong><small>Phụ cấp − các khoản trừ</small></td>
-                                            <td><strong className="payroll__net">{formatMoney(item.netPayVnd)}</strong>{item.missingCheckoutDays > 0 ? <small className="is-warning">{item.missingCheckoutDays} ca cần xử lý</small> : <small>Đã tính đủ dữ liệu hợp lệ</small>}</td>
-                                            <td><button className="payroll__expand" type="button" onClick={() => expand(item)} aria-expanded={expanded} aria-label={`Xem chi tiết ${item.memberName}`}><ion-icon name={expanded ? 'chevron-up-outline' : 'chevron-down-outline'} /></button></td>
+                                            <td><strong>{formatMoney(item.regularPayVnd)}</strong><small>{hours.format(item.regularHours)}h × {money.format(item.hourlyRateVnd)}đ</small></td>
+                                            <td className={item.overtimePayVnd > 0 ? '' : 'is-muted-value'}><strong>{formatMoney(item.overtimePayVnd)}</strong>{item.overtimePayVnd > 0 && <small>{hours.format(item.overtimeHours)}h × {item.overtimeMultiplier.toFixed(2)}</small>}</td>
+                                            <td className={adjustment === 0 ? 'is-muted-value' : ''}><strong className={adjustment < 0 ? 'is-negative' : adjustment > 0 ? 'is-positive' : ''}>{adjustment > 0 ? '+' : ''}{formatMoney(adjustment)}</strong>{adjustment !== 0 && <small>Thưởng − khoản trừ</small>}</td>
+                                            <td><strong className="payroll__net">{formatMoney(item.netPayVnd)}</strong><small className={hasWarnings ? 'is-warning' : 'is-ready'}>{hasWarnings ? 'Có dữ liệu cần đối soát' : 'Dữ liệu hợp lệ'}</small></td>
                                         </tr>,
-                                        expanded && <tr className="payroll__detail-row" key={`${item.memberId}-detail`}><td colSpan={8}>
+                                        expanded && <tr className="payroll__detail-row" key={`${item.memberId}-detail`}><td colSpan={6}>
                                             <div className="payroll__detail">
-                                                <div className="payroll__formula">
-                                                    <h4>Cách tính thực nhận</h4>
-                                                    <div className="payroll__formula-line"><span>Lương thường</span><code>{hours.format(item.regularHours)}h × {money.format(item.hourlyRateVnd)}đ</code><strong>{formatMoney(item.regularPayVnd)}</strong></div>
-                                                    <div className="payroll__formula-line"><span>Lương tăng ca</span><code>{hours.format(item.overtimeHours)}h × {money.format(item.hourlyRateVnd)}đ × {item.overtimeMultiplier.toFixed(2)}</code><strong>{formatMoney(item.overtimePayVnd)}</strong></div>
-                                                    <div className="payroll__formula-line payroll__formula-line--total"><span>Thực nhận</span><code>Lương + phụ cấp − khấu trừ − tạm ứng</code><strong>{formatMoney(item.netPayVnd)}</strong></div>
-                                                    <div className="payroll__kpi"><span>{item.completedTasks}/{item.totalTasks} task</span><span>{item.lateDays} ngày đi trễ</span><span>{item.missingCheckoutDays} ca thiếu giờ ra</span></div>
-                                                </div>
-                                                <div className="payroll__editor">
-                                                    <h4>Thiết lập lương</h4>
-                                                    <div className="payroll__fields payroll__fields--rate">
-                                                        <MoneyField label="Đơn giá/giờ" value={rateDraft} onChange={setRateDraft} disabled={!isEditable} />
-                                                        <label><span>Hệ số tăng ca</span><input value={multiplierDraft} onChange={event => setMultiplierDraft(event.target.value.replace(/[^\d,.]/g, '').slice(0, 4))} disabled={!isEditable} inputMode="decimal" /></label>
-                                                        <button type="button" onClick={() => void saveRate(item)} disabled={!isEditable || busyAction !== ''}>{busyAction === `rate-${item.memberId}` ? 'Đang lưu…' : 'Lưu đơn giá'}</button>
-                                                    </div>
-                                                    <h4>Điều chỉnh kỳ này</h4>
-                                                    {adjustmentDraft && <>
-                                                        <div className="payroll__fields">
-                                                            <MoneyField label="Phụ cấp" value={adjustmentDraft.allowanceVnd} onChange={value => setAdjustmentDraft({ ...adjustmentDraft, allowanceVnd: value })} disabled={!isEditable} />
-                                                            <MoneyField label="Khấu trừ" value={adjustmentDraft.deductionVnd} onChange={value => setAdjustmentDraft({ ...adjustmentDraft, deductionVnd: value })} disabled={!isEditable} />
-                                                            <MoneyField label="Tạm ứng" value={adjustmentDraft.advanceVnd} onChange={value => setAdjustmentDraft({ ...adjustmentDraft, advanceVnd: value })} disabled={!isEditable} />
+                                                <section className="payroll__pay-summary">
+                                                    <div className="payroll__detail-heading">
+                                                        <div><h4>Thực nhận kỳ này</h4><p>Tóm tắt những khoản thực sự ảnh hưởng đến lương.</p></div>
+                                                        <div className="payroll__detail-actions">
+                                                            {isEditable ? <>
+                                                            <button className="payroll__edit-toggle" type="button" onClick={() => openAdjustment(item)}><ion-icon name="add-circle-outline" /> Điều chỉnh</button>
+                                                            <button className="payroll__edit-toggle is-secondary" type="button" onClick={() => {
+                                                                prepareRateDraft(item);
+                                                                setRateEditingId(editingRate ? null : item.memberId);
+                                                            }}><ion-icon name="settings-outline" /> Thiết lập đơn giá</button>
+                                                            </> : <span className="payroll__locked"><ion-icon name="lock-closed-outline" /> Đã khóa</span>}
+                                                            {onEditAttendance && <button className="payroll__edit-toggle is-secondary" type="button" onClick={() => onEditAttendance(item.memberId, item.attendanceLines?.length ? item.attendanceLines[item.attendanceLines.length - 1].date : undefined)}><ion-icon name="time-outline" /> Sửa chấm công</button>}
                                                         </div>
-                                                        <label className="payroll__note"><span>Ghi chú</span><input value={adjustmentDraft.note} onChange={event => setAdjustmentDraft({ ...adjustmentDraft, note: event.target.value })} disabled={!isEditable} placeholder="Ví dụ: phụ cấp ca đêm" maxLength={500} /></label>
-                                                        {isEditable && <button className="payroll__save-adjustment" type="button" onClick={() => void saveAdjustments(item)} disabled={busyAction !== ''}>{busyAction === `adjust-${item.memberId}` ? 'Đang lưu…' : 'Lưu điều chỉnh'}</button>}
-                                                    </>}
-                                                </div>
-                                                <div className="payroll__attendance-detail">
-                                                    <div className="payroll__attendance-heading">
-                                                        <div><h4>Chi tiết chấm công và tăng ca</h4><p>Giờ tăng ca bắt đầu sau 8 giờ làm việc và thời gian nghỉ, kết thúc tại giờ ra ca.</p></div>
-                                                        <span>{item.attendanceLines?.length || 0} ca trong kỳ</span>
                                                     </div>
+                                                    <div className="payroll__breakdown">
+                                                        <div><span>Lương thường</span><strong>{formatMoney(item.regularPayVnd)}</strong></div>
+                                                        {item.overtimePayVnd > 0 && <div><span>Lương tăng ca</span><strong className="is-positive">+{formatMoney(item.overtimePayVnd)}</strong></div>}
+                                                        {item.allowanceVnd > 0 && <div><span>Thưởng</span><strong className="is-positive">+{formatMoney(item.allowanceVnd)}</strong></div>}
+                                                        {item.deductionVnd > 0 && <div><span>Khoản trừ</span><strong className="is-negative">−{formatMoney(item.deductionVnd)}</strong></div>}
+                                                        {item.advanceVnd > 0 && <div><span>Tạm ứng</span><strong className="is-negative">−{formatMoney(item.advanceVnd)}</strong></div>}
+                                                        <div className="payroll__breakdown-total"><span>Thực nhận</span><strong>{formatMoney(item.netPayVnd)}</strong></div>
+                                                    </div>
+                                                    <details className="payroll__formula-disclosure">
+                                                        <summary>Xem chi tiết cách tính <ion-icon name="chevron-down-outline" /></summary>
+                                                        <div className="payroll__formula">
+                                                            <div className="payroll__formula-line"><span>Lương thường</span><code>{hours.format(item.regularHours)}h × {money.format(item.hourlyRateVnd)}đ</code><strong>{formatMoney(item.regularPayVnd)}</strong></div>
+                                                            {item.overtimeHours > 0 && <div className="payroll__formula-line"><span>Lương tăng ca</span><code>{hours.format(item.overtimeHours)}h × {money.format(item.hourlyRateVnd)}đ × {item.overtimeMultiplier.toFixed(2)}</code><strong>{formatMoney(item.overtimePayVnd)}</strong></div>}
+                                                            <div className="payroll__formula-line payroll__formula-line--total"><span>Thực nhận</span><code>Lương + thưởng − khoản trừ</code><strong>{formatMoney(item.netPayVnd)}</strong></div>
+                                                        </div>
+                                                    </details>
+                                                    <div className={`payroll__data-check ${hasWarnings ? 'has-warning' : 'is-clear'}`}>
+                                                        <div><ion-icon name={hasWarnings ? 'alert-circle-outline' : 'checkmark-circle-outline'} /><strong>{hasWarnings ? 'Lưu ý' : 'Dữ liệu chấm công hợp lệ'}</strong></div>
+                                                        {hasWarnings && <div className="payroll__warning-tags">
+                                                            {item.totalTasks > 0 && item.completedTasks < item.totalTasks && <span>{item.completedTasks}/{item.totalTasks} công việc hoàn thành</span>}
+                                                            {item.lateDays > 0 && <span>{item.lateDays} ngày đi trễ</span>}
+                                                            {item.missingCheckoutDays > 0 && <span>{item.missingCheckoutDays} ca thiếu giờ ra</span>}
+                                                        </div>}
+                                                        <p>Thông tin này chỉ dùng để đối soát, không tự động cộng hoặc khấu trừ lương.</p>
+                                                    </div>
+                                                </section>
+                                                {editingRate && <section className="payroll__editor">
+                                                    <div className="payroll__detail-heading"><div><h4>Thiết lập đơn giá</h4><p>Áp dụng cho các lần tính lương tiếp theo; kỳ đã duyệt vẫn giữ nguyên số liệu.</p></div></div>
+                                                    <div className="payroll__editor-group">
+                                                        <div className="payroll__fields payroll__fields--rate">
+                                                            <MoneyField label="Đơn giá/giờ" value={rateDraft} onChange={setRateDraft} disabled={!isEditable} />
+                                                            <label><span>Hệ số tăng ca</span><input value={multiplierDraft} onChange={event => setMultiplierDraft(event.target.value.replace(/[^\d,.]/g, '').slice(0, 4))} disabled={!isEditable} inputMode="decimal" /></label>
+                                                        </div>
+                                                    </div>
+                                                    <div className="payroll__editor-actions">
+                                                        <button type="button" className="is-cancel" onClick={() => setRateEditingId(null)} disabled={busyAction !== ''}>Hủy</button>
+                                                        <button type="button" className="is-save" onClick={() => void saveRate(item)} disabled={busyAction !== ''}><ion-icon name="save-outline" />{busyAction === `rate-${item.memberId}` ? 'Đang lưu…' : 'Lưu đơn giá'}</button>
+                                                    </div>
+                                                </section>}
+                                                <details className="payroll__attendance-detail">
+                                                    <summary className="payroll__attendance-heading">
+                                                        <div><h4>Chi tiết chấm công và tăng ca</h4><p>Xem ngày làm, giờ vào/ra và thời gian tăng ca đã dùng để tính lương.</p></div>
+                                                        <span>{item.attendanceDays} ngày chấm công <ion-icon name="chevron-down-outline" /></span>
+                                                    </summary>
                                                     {item.attendanceLines?.length ? <div className="payroll__attendance-list">
                                                         {item.attendanceLines.map(line => <div className={`payroll__attendance-line ${line.overtimeHours > 0 ? 'has-overtime' : ''} ${!line.payable ? 'is-unpayable' : ''}`} key={line.id}>
                                                             <div><strong>{formatDate(line.date)}</strong><small>{line.shiftType ? `Ca ${line.shiftType.toLocaleLowerCase('vi-VN')}` : 'Ca làm việc'}</small></div>
@@ -253,13 +326,13 @@ export default function PayrollPanel({ teamId }: { teamId: string }) {
                                                             <div><span>Trạng thái</span><strong className={line.payable ? 'is-valid' : 'is-invalid'}>{attendanceStatus(line.attendanceStatus)}</strong></div>
                                                         </div>)}
                                                     </div> : <div className="payroll__no-attendance">Nhân viên chưa có ca làm trong kỳ này.</div>}
-                                                </div>
+                                                </details>
                                             </div>
                                         </td></tr>,
                                     ];
                                 })}
                             </tbody>
-                            <tfoot><tr><td>Tổng cộng</td><td><strong>{hours.format(summary.regularHours)}h</strong><small>+ {hours.format(summary.overtimeHours)}h tăng ca</small></td><td>—</td><td>{formatMoney(report.items.reduce((sum, item) => sum + item.regularPayVnd, 0))}</td><td>{formatMoney(report.items.reduce((sum, item) => sum + item.overtimePayVnd, 0))}</td><td>{formatMoney(summary.allowanceVnd - summary.deductionVnd - summary.advanceVnd)}</td><td>{formatMoney(summary.netPayVnd)}</td><td /></tr></tfoot>
+                            <tfoot><tr><td>Tổng cộng</td><td><strong>{hours.format(summary.regularHours)}h</strong><small>+ {hours.format(summary.overtimeHours)}h tăng ca</small></td><td>{formatMoney(report.items.reduce((sum, item) => sum + item.regularPayVnd, 0))}</td><td>{formatMoney(report.items.reduce((sum, item) => sum + item.overtimePayVnd, 0))}</td><td>{formatMoney(summary.allowanceVnd - summary.deductionVnd - summary.advanceVnd)}</td><td>{formatMoney(summary.netPayVnd)}</td></tr></tfoot>
                         </table>
                     </div>
 
@@ -281,6 +354,25 @@ export default function PayrollPanel({ teamId }: { teamId: string }) {
                         </div>
                     </footer>
                 </> : !loading && <div className="payroll__empty">Chưa có dữ liệu bảng lương cho kỳ này.</div>}
+            </div>}
+            {adjustingItem && <div className="payroll__modal-backdrop" role="presentation" onMouseDown={() => setAdjustingItem(null)}>
+                <section className="payroll__modal" role="dialog" aria-modal="true" aria-labelledby="payroll-adjustment-title" onMouseDown={event => event.stopPropagation()}>
+                    <header>
+                        <div><small>Điều chỉnh kỳ {selectedMonth.split('-').reverse().join('/')}</small><h3 id="payroll-adjustment-title">{adjustingItem.memberName}</h3></div>
+                        <button type="button" onClick={() => setAdjustingItem(null)} aria-label="Đóng"><ion-icon name="close-outline" /></button>
+                    </header>
+                    <div className="payroll__adjustment-types" role="group" aria-label="Loại điều chỉnh">
+                        <button type="button" className={adjustmentType === 'BONUS' ? 'is-active is-bonus' : ''} onClick={() => setAdjustmentType('BONUS')}><ion-icon name="add-circle-outline" /> Thưởng</button>
+                        <button type="button" className={adjustmentType === 'DEDUCTION' ? 'is-active is-deduction' : ''} onClick={() => setAdjustmentType('DEDUCTION')}><ion-icon name="remove-circle-outline" /> Trừ</button>
+                    </div>
+                    <MoneyField label="Số tiền" value={adjustmentAmount} onChange={setAdjustmentAmount} disabled={busyAction !== ''} />
+                    <label className="payroll__note"><span>Lý do</span><input value={adjustmentReason} onChange={event => setAdjustmentReason(event.target.value)} disabled={busyAction !== ''} placeholder="Ví dụ: thưởng hoàn thành đơn hàng" maxLength={500} /></label>
+                    <p className="payroll__modal-help">Khoản này chỉ áp dụng cho kỳ đang chọn. Chấm công, đi trễ và công việc không tự động thay đổi tiền lương.</p>
+                    <footer className="payroll__editor-actions">
+                        <button type="button" className="is-cancel" onClick={() => setAdjustingItem(null)} disabled={busyAction !== ''}>Hủy</button>
+                        <button type="button" className="is-save" onClick={() => void saveAdjustment()} disabled={busyAction !== ''}><ion-icon name="save-outline" />{busyAction === `adjust-${adjustingItem.memberId}` ? 'Đang lưu…' : 'Lưu điều chỉnh'}</button>
+                    </footer>
+                </section>
             </div>}
         </section>
     );
