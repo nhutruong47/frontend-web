@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { teamService, goalService, taskService, getTrialStatus, chatService, inventoryService, notificationService } from '../services/groupService';
 import { attendanceService } from '../services/attendanceService';
-import type { AttendanceDTO } from '../services/attendanceService';
+import type { AttendanceDTO, AttendanceSettingsDTO } from '../services/attendanceService';
 import type { AttendanceCorrectionDTO } from '../services/attendanceService';
 import { uploadFile } from '../services/api';
 import type { Team, Goal, Task, ChatMsg, SalaryReport, PlanUsage } from '../types/types';
@@ -34,6 +34,9 @@ function avatarColor(name: string) {
     let hash = 0;
     for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) % colors.length;
     return colors[hash];
+}
+function formatAttendanceHourValue(value: number | null | undefined) {
+    return Number(value || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
 }
 function getInventoryProductName(item: any) {
     return item?.productType?.trim() || item?.displayName?.trim() || item?.name?.trim() || 'Sản phẩm chưa đặt tên';
@@ -413,6 +416,22 @@ export default function GroupDetailPage() {
     const [attendanceError, setAttendanceError] = useState('');
     const [attendanceCorrections, setAttendanceCorrections] = useState<AttendanceCorrectionDTO[]>([]);
     const [editingAttendance, setEditingAttendance] = useState<{ id: string, checkInTime: string, checkOutTime: string, reason: string } | null>(null);
+    const [attendanceSettings, setAttendanceSettings] = useState<AttendanceSettingsDTO>({
+        workStartTime: '09:00',
+        workEndTime: '17:30',
+        standardHours: 7.5,
+        hourlyRateVnd: 50_000,
+        overtimeMultiplier: 1.5,
+    });
+    const [attendanceSettingsDraft, setAttendanceSettingsDraft] = useState<AttendanceSettingsDTO>({
+        workStartTime: '09:00',
+        workEndTime: '17:30',
+        standardHours: 7.5,
+        hourlyRateVnd: 50_000,
+        overtimeMultiplier: 1.5,
+    });
+    const [savingAttendanceSettings, setSavingAttendanceSettings] = useState(false);
+    const [attendanceSettingsSaved, setAttendanceSettingsSaved] = useState(false);
     const teamAttendanceModalRef = useRef<HTMLDivElement>(null);
     const attendanceRows = (team?.members || []).map(member => ({
         member,
@@ -423,8 +442,9 @@ export default function GroupDetailPage() {
         active: teamAttendanceData.filter(item => item.checkInTime && !item.checkOutTime).length,
         completed: teamAttendanceData.filter(item => item.checkOutTime).length,
         missing: attendanceRows.filter(row => !row.attendance).length,
-        overtime: teamAttendanceData.filter(item => (Number(item.overtimeHours) || 0) > 0).length,
         totalHours: teamAttendanceData.reduce((sum, item) => sum + (Number(item.actualWorkHours) || 0), 0),
+        regularHours: teamAttendanceData.reduce((sum, item) => sum + (Number(item.regularHours) || 0), 0),
+        overtimeHours: teamAttendanceData.reduce((sum, item) => sum + (Number(item.overtimeHours) || 0), 0),
     };
 
     useGSAP(() => {
@@ -500,7 +520,7 @@ export default function GroupDetailPage() {
         try {
             const att = await attendanceService.getTodayAttendance(id);
             setMyAttendance(att);
-        } catch (e) {
+        } catch {
             // silently fail; UI handles missing data
         }
     }, [id, user?.id]);
@@ -510,7 +530,7 @@ export default function GroupDetailPage() {
         try {
             const history = await attendanceService.getHistory(id);
             setAttendanceHistory(history || []);
-        } catch (e) {
+        } catch {
             // silently fail; UI handles missing data
         }
     }, [id, user?.id]);
@@ -519,12 +539,76 @@ export default function GroupDetailPage() {
         if (!id) return;
         try {
             setAttendanceError('');
-            const data = await attendanceService.getTeamDaily(id, attendanceDate);
+            const [data, settings] = await Promise.all([
+                attendanceService.getTeamDaily(id, attendanceDate),
+                attendanceService.getSettings(id),
+            ]);
             setTeamAttendanceData(data || []);
-        } catch (e) {
+            const normalizedSettings = {
+                ...settings,
+                workStartTime: settings.workStartTime.slice(0, 5),
+                workEndTime: settings.workEndTime.slice(0, 5),
+                hourlyRateVnd: settings.hourlyRateVnd ?? 50_000,
+                overtimeMultiplier: settings.overtimeMultiplier ?? 1.5,
+            };
+            setAttendanceSettings(normalizedSettings);
+            setAttendanceSettingsDraft(normalizedSettings);
+        } catch {
             setAttendanceError('Không tải được dữ liệu chấm công. Vui lòng thử lại.');
         }
     }, [id, attendanceDate]);
+
+    const saveAttendanceSettings = async () => {
+        if (!id) return;
+        if (!attendanceSettingsDraft.workStartTime || !attendanceSettingsDraft.workEndTime) {
+            setAttendanceError('Cần nhập đầy đủ giờ vào ca và giờ tan ca.');
+            return;
+        }
+        if (attendanceSettingsDraft.workEndTime <= attendanceSettingsDraft.workStartTime) {
+            setAttendanceError('Giờ tan ca phải sau giờ vào ca.');
+            return;
+        }
+        if (!Number.isFinite(attendanceSettingsDraft.standardHours)
+            || attendanceSettingsDraft.standardHours < 0.25
+            || attendanceSettingsDraft.standardHours > 24) {
+            setAttendanceError('Giờ làm chuẩn phải từ 0,25 đến 24 giờ.');
+            return;
+        }
+        if (!Number.isFinite(attendanceSettingsDraft.hourlyRateVnd)
+            || attendanceSettingsDraft.hourlyRateVnd < 1_000
+            || attendanceSettingsDraft.hourlyRateVnd > 10_000_000) {
+            setAttendanceError('Đơn giá phải từ 1.000đ đến 10.000.000đ mỗi giờ.');
+            return;
+        }
+        if (!Number.isFinite(attendanceSettingsDraft.overtimeMultiplier)
+            || attendanceSettingsDraft.overtimeMultiplier < 1
+            || attendanceSettingsDraft.overtimeMultiplier > 3) {
+            setAttendanceError('Hệ số tăng ca phải từ 1,00 đến 3,00.');
+            return;
+        }
+        setSavingAttendanceSettings(true);
+        setAttendanceSettingsSaved(false);
+        try {
+            setAttendanceError('');
+            const saved = await attendanceService.updateSettings(id, attendanceSettingsDraft);
+            const normalizedSettings = {
+                ...saved,
+                workStartTime: saved.workStartTime.slice(0, 5),
+                workEndTime: saved.workEndTime.slice(0, 5),
+                hourlyRateVnd: saved.hourlyRateVnd ?? 50_000,
+                overtimeMultiplier: saved.overtimeMultiplier ?? 1.5,
+            };
+            setAttendanceSettings(normalizedSettings);
+            setAttendanceSettingsDraft(normalizedSettings);
+            setAttendanceSettingsSaved(true);
+            window.setTimeout(() => setAttendanceSettingsSaved(false), 2400);
+        } catch (error) {
+            const apiError = error as { response?: { data?: { error?: string } } };
+            setAttendanceError(apiError.response?.data?.error || 'Không thể lưu cài đặt chấm công.');
+        } finally {
+            setSavingAttendanceSettings(false);
+        }
+    };
 
     const saveAttendanceCorrection = async () => {
         if (!editingAttendance) return;
@@ -3899,10 +3983,10 @@ export default function GroupDetailPage() {
                                             </span>
                                         </div>
                                         <div className="attendance-history-modal__details">
-                                            <div><ion-icon name="log-in-outline"></ion-icon><span>Vào ca</span><strong>{item.checkInTime ? new Date(item.checkInTime).toLocaleTimeString('vi-VN') : '--:--'}</strong></div>
-                                            <div><ion-icon name="log-out-outline"></ion-icon><span>Tan ca</span><strong>{item.checkOutTime ? new Date(item.checkOutTime).toLocaleTimeString('vi-VN') : '--:--'}</strong></div>
-                                            <div className="is-hours"><ion-icon name="timer-outline"></ion-icon><span>Tổng giờ</span><strong>{item.actualWorkHours !== undefined ? `${item.actualWorkHours} giờ` : '--'}</strong></div>
-                                            <div><ion-icon name="briefcase-outline"></ion-icon><span>Vai trò</span><strong>{item.productionStage || 'Thường'}</strong></div>
+                                            <div><ion-icon name="log-in-outline"></ion-icon><span>Vào ca</span><strong>{item.checkInTime ? new Date(item.checkInTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</strong></div>
+                                            <div><ion-icon name="log-out-outline"></ion-icon><span>Tan ca</span><strong>{item.checkOutTime ? new Date(item.checkOutTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</strong></div>
+                                            <div className="is-hours"><ion-icon name="timer-outline"></ion-icon><span>Giờ thường</span><strong>{item.regularHours !== undefined ? `${formatAttendanceHourValue(item.regularHours)} giờ` : '--'}</strong></div>
+                                            <div className="is-overtime"><ion-icon name="flash-outline"></ion-icon><span>Tăng ca</span><strong>{Number(item.overtimeHours) > 0 ? `+${formatAttendanceHourValue(item.overtimeHours)} giờ` : '0 giờ'}</strong></div>
                                         </div>
                                     </article>
                                 ))
@@ -3935,9 +4019,9 @@ export default function GroupDetailPage() {
                                     <ion-icon name="time-outline"></ion-icon>
                                 </span>
                                 <div>
-                                    <p>Vận hành nhân sự</p>
-                                    <h2 id="team-attendance-title">Quản lý chấm công</h2>
-                                    <span>Theo dõi thời gian làm việc của toàn bộ thành viên trong xưởng.</span>
+                                    <p>Chấm công &amp; lương</p>
+                                    <h2 id="team-attendance-title">Cài đặt và sửa chấm công</h2>
+                                    <span>Cấu hình một lần, hệ thống tự tính giờ thường, tăng ca và tiền lương.</span>
                                 </div>
                             </div>
                             <button
@@ -3948,21 +4032,114 @@ export default function GroupDetailPage() {
                             >
                                 <ion-icon name="close-outline"></ion-icon>
                             </button>
-                         </header>
+                        </header>
+
+                        <section className="attendance-modal__settings attendance-modal__animate" aria-labelledby="attendance-settings-title">
+                            <div className="attendance-modal__settings-heading">
+                                <div>
+                                    <p>Cài đặt chấm công &amp; lương</p>
+                                    <h3 id="attendance-settings-title">Một cấu hình chung cho toàn xưởng</h3>
+                                </div>
+                                <span>
+                                    Ca đã ghi nhận vẫn giữ cấu hình cũ
+                                </span>
+                            </div>
+                            <div className="attendance-modal__settings-form">
+                                <label>
+                                    <span>Giờ vào ca</span>
+                                    <input
+                                        type="time"
+                                        value={attendanceSettingsDraft.workStartTime}
+                                        onChange={event => setAttendanceSettingsDraft(current => ({ ...current, workStartTime: event.target.value }))}
+                                    />
+                                </label>
+                                <label>
+                                    <span>Giờ tan ca</span>
+                                    <input
+                                        type="time"
+                                        value={attendanceSettingsDraft.workEndTime}
+                                        onChange={event => setAttendanceSettingsDraft(current => ({ ...current, workEndTime: event.target.value }))}
+                                    />
+                                </label>
+                                <label>
+                                    <span>Giờ làm chuẩn</span>
+                                    <div className="attendance-modal__number-input">
+                                        <input
+                                            type="number"
+                                            min="0.25"
+                                            max="24"
+                                            step="0.25"
+                                            value={attendanceSettingsDraft.standardHours}
+                                            onChange={event => setAttendanceSettingsDraft(current => ({ ...current, standardHours: Number(event.target.value) }))}
+                                        />
+                                        <small>giờ/ngày</small>
+                                    </div>
+                                </label>
+                                <label>
+                                    <span>Đơn giá mỗi giờ</span>
+                                    <div className="attendance-modal__number-input">
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            value={attendanceSettingsDraft.hourlyRateVnd.toLocaleString('vi-VN')}
+                                            onChange={event => setAttendanceSettingsDraft(current => ({
+                                                ...current,
+                                                hourlyRateVnd: Number(event.target.value.replace(/\D/g, '').slice(0, 8)) || 0,
+                                            }))}
+                                        />
+                                        <small>đ/giờ</small>
+                                    </div>
+                                </label>
+                                <label>
+                                    <span>Hệ số tăng ca</span>
+                                    <div className="attendance-modal__number-input">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="3"
+                                            step="0.05"
+                                            value={attendanceSettingsDraft.overtimeMultiplier}
+                                            onChange={event => setAttendanceSettingsDraft(current => ({ ...current, overtimeMultiplier: Number(event.target.value) }))}
+                                        />
+                                        <small>lần</small>
+                                    </div>
+                                </label>
+                                <button
+                                    type="button"
+                                    className={`attendance-modal__settings-save ${attendanceSettingsSaved ? 'is-saved' : ''}`}
+                                    disabled={savingAttendanceSettings}
+                                    onClick={() => void saveAttendanceSettings()}
+                                >
+                                    <ion-icon name={attendanceSettingsSaved ? 'checkmark-circle-outline' : 'save-outline'}></ion-icon>
+                                    {savingAttendanceSettings ? 'Đang lưu…' : attendanceSettingsSaved ? 'Đã lưu' : 'Lưu cài đặt'}
+                                </button>
+                            </div>
+                            <p className="attendance-modal__settings-note">
+                                Ca hiện tại: <strong>{attendanceSettings.workStartTime}–{attendanceSettings.workEndTime}</strong>
+                                <span>•</span>
+                                Giờ chuẩn: <strong>{attendanceSettings.standardHours.toLocaleString('vi-VN')}h</strong>
+                                <span>•</span>
+                                OT tính từ <strong>{attendanceSettings.workEndTime}</strong>
+                                <span>•</span>
+                                Đơn giá: <strong>{attendanceSettings.hourlyRateVnd.toLocaleString('vi-VN')}đ/giờ</strong>
+                                <span>•</span>
+                                OT: <strong>×{attendanceSettings.overtimeMultiplier.toLocaleString('vi-VN')}</strong>
+                            </p>
+                        </section>
 
                         <div className="attendance-modal__date-filter attendance-modal__animate">
                             <div>
                                 <label htmlFor="attendance-date">Ngày cần xem</label>
                                 <input id="attendance-date" type="date" value={attendanceDate} onChange={event => setAttendanceDate(event.target.value)} />
                             </div>
-                            <span>Giờ công và tăng ca do hệ thống tính từ giờ vào/ra; nhân viên không thể tự sửa.</span>
+                            <span>Hệ thống tự tính giờ thường và OT từ giờ vào/ra. Nhân viên không thể tự sửa.</span>
                         </div>
 
                         <div className="attendance-modal__summary attendance-modal__animate" aria-label="Tổng quan chấm công">
                             <div className="attendance-modal__summary-card">
-                                <span>Nhân viên</span>
-                                <strong>{attendanceSummary.employees}</strong>
-                                <small>Tổng thành viên xưởng</small>
+                                <span>Đã chấm công</span>
+                                <strong>{teamAttendanceData.length}/{attendanceSummary.employees}</strong>
+                                <small>{attendanceSummary.missing} người chưa vào ca</small>
                             </div>
                             <div className="attendance-modal__summary-card is-active">
                                 <span>Đang làm việc</span>
@@ -3974,20 +4151,10 @@ export default function GroupDetailPage() {
                                 <strong>{attendanceSummary.completed}</strong>
                                 <small>Đã ghi nhận tan ca</small>
                             </div>
-                            <div className="attendance-modal__summary-card is-missing">
-                                <span>Chưa vào ca</span>
-                                <strong>{attendanceSummary.missing}</strong>
-                                <small>Chưa có lần chấm công</small>
-                            </div>
-                            <div className="attendance-modal__summary-card is-overtime">
-                                <span>Có tăng ca</span>
-                                <strong>{attendanceSummary.overtime}</strong>
-                                <small>Nhân viên phát sinh OT</small>
-                            </div>
                             <div className="attendance-modal__summary-card is-hours">
-                                <span>Tổng giờ</span>
-                                <strong>{attendanceSummary.totalHours.toLocaleString('vi-VN', { maximumFractionDigits: 2 })}</strong>
-                                <small>Giờ được ghi nhận</small>
+                                <span>Giờ ghi nhận</span>
+                                <strong>{formatAttendanceHourValue(attendanceSummary.totalHours)}h</strong>
+                                <small>{formatAttendanceHourValue(attendanceSummary.regularHours)}h thường · {formatAttendanceHourValue(attendanceSummary.overtimeHours)}h OT</small>
                             </div>
                         </div>
 
@@ -4008,21 +4175,18 @@ export default function GroupDetailPage() {
                                         <thead>
                                             <tr>
                                                 <th>Nhân viên</th>
-                                                <th>Vào ca</th>
-                                                <th>Tan ca</th>
-                                                <th>Giờ thường</th>
-                                                <th>Tăng ca</th>
-                                                <th>Trạng thái</th>
-                                                <th>Thao tác</th>
+                                                 <th>Vào ca</th>
+                                                 <th>Tan ca</th>
+                                                 <th>Tổng giờ</th>
+                                                 <th>Giờ thường</th>
+                                                 <th>Tăng ca</th>
+                                                 <th>Thao tác</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                         {attendanceRows.map(({ member, attendance: item }) => {
                                             const isEditing = Boolean(item && editingAttendance?.id === item.id);
                                             const employeeName = member.fullName || member.username;
-                                            const isActiveShift = Boolean(item?.checkInTime && !item?.checkOutTime);
-                                            const statusLabel = !item ? 'Chưa vào ca' : isActiveShift ? 'Đang làm việc' : item.attendanceStatus === 'MISSING_CHECKOUT' ? 'Thiếu giờ ra' : item.attendanceStatus === 'LATE' ? 'Đi trễ' : 'Đã checkout';
-                                            const statusClass = !item ? 'is-pending' : item.attendanceStatus === 'MISSING_CHECKOUT' ? 'is-danger' : isActiveShift ? 'is-active' : 'is-complete';
                                             return <Fragment key={member.userId}>
                                                 <tr>
                                                     <td>
@@ -4034,19 +4198,17 @@ export default function GroupDetailPage() {
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td>{item?.checkInTime ? new Date(item.checkInTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
-                                                    <td>{item?.checkOutTime ? new Date(item.checkOutTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
-                                                    <td className="attendance-modal__hours">
-                                                        {item?.regularHours !== undefined ? `${item.regularHours}h` : '--'}
+                                                     <td>{item?.checkInTime ? new Date(item.checkInTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
+                                                     <td>{item?.checkOutTime ? new Date(item.checkOutTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
+                                                     <td className="attendance-modal__hours">
+                                                         {item?.workedHours !== undefined || item?.actualWorkHours !== undefined
+                                                             ? `${formatAttendanceHourValue(item.workedHours ?? item.actualWorkHours)}h` : '--'}
+                                                     </td>
+                                                     <td className="attendance-modal__hours">
+                                                        {item?.regularHours !== undefined ? `${formatAttendanceHourValue(item.regularHours)}h` : '--'}
                                                     </td>
                                                     <td className="attendance-modal__overtime">
-                                                        {(Number(item?.overtimeHours) || 0) > 0 ? `+${item?.overtimeHours}h` : '--'}
-                                                    </td>
-                                                    <td>
-                                                        <span className={`attendance-modal__status ${statusClass}`}>
-                                                            <i aria-hidden="true"></i>
-                                                            {statusLabel}
-                                                        </span>
+                                                        {(Number(item?.overtimeHours) || 0) > 0 ? `+${formatAttendanceHourValue(item?.overtimeHours)}h` : '--'}
                                                     </td>
                                                     <td className="attendance-modal__actions-cell">
                                                         {item && <button onClick={() => {

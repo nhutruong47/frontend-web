@@ -17,9 +17,16 @@ export interface AttendanceDTO {
     orderId?: string;
     orderTitle?: string;
     breakMinutes?: number;
+    standardHours?: number;
     actualWorkHours?: number;
+    workedHours?: number;
     regularHours?: number;
     overtimeHours?: number;
+    hourlyRateVnd?: number;
+    overtimeMultiplier?: number;
+    regularPayVnd?: number;
+    overtimePayVnd?: number;
+    totalPayVnd?: number;
     attendanceStatus?: string;
     notes?: string;
 }
@@ -28,6 +35,14 @@ export interface CheckInPayload {
     shiftType: ShiftType;
     stage: ProductionStage;
     orderId?: string;
+}
+
+export interface AttendanceSettingsDTO {
+    workStartTime: string;
+    workEndTime: string;
+    standardHours: number;
+    hourlyRateVnd: number;
+    overtimeMultiplier: number;
 }
 
 export interface AttendanceCorrectionDTO {
@@ -59,6 +74,12 @@ export const attendanceService = {
 
     getTeamAttendanceToday: (teamId: string) =>
         api.get<AttendanceDTO[]>(`/api/attendance/team-today/${teamId}`).then(r => r.data),
+
+    getSettings: (teamId: string) =>
+        api.get<AttendanceSettingsDTO>(`/api/attendance/settings/${teamId}`).then(r => r.data),
+
+    updateSettings: (teamId: string, payload: AttendanceSettingsDTO) =>
+        api.put<AttendanceSettingsDTO>(`/api/attendance/settings/${teamId}`, payload).then(r => r.data),
 
     getTeamDaily: (teamId: string, date: string) =>
         api.get<AttendanceDTO[]>(`/api/attendance/team-daily/${teamId}`, { params: { date } }).then(r => r.data),

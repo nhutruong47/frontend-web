@@ -110,21 +110,6 @@ function toSalaryMonthParams(salaryMonth?: string) {
 export const payrollService = {
     getReport: (teamId: string, salaryMonth: string) =>
         api.get<PayrollReport>(`/api/payroll/teams/${teamId}`, { params: toSalaryMonthParams(salaryMonth) }).then(r => r.data),
-    updateProfile: (teamId: string, userId: string, salaryMonth: string, hourlyRateVnd: number, overtimeMultiplier: number) =>
-        api.put<PayrollReport>(`/api/payroll/teams/${teamId}/profiles/${userId}`,
-            { hourlyRateVnd, overtimeMultiplier }, { params: toSalaryMonthParams(salaryMonth) }).then(r => r.data),
-    updateAdjustments: (runId: string, userId: string, data: { allowanceVnd: number; deductionVnd: number; advanceVnd: number; note?: string }) =>
-        api.patch<PayrollReport>(`/api/payroll/runs/${runId}/items/${userId}`, data).then(r => r.data),
-    recalculate: (runId: string) =>
-        api.post<PayrollReport>(`/api/payroll/runs/${runId}/recalculate`).then(r => r.data),
-    finalize: (runId: string) =>
-        api.post<PayrollReport>(`/api/payroll/runs/${runId}/finalize`).then(r => r.data),
-    approve: (runId: string) =>
-        api.post<PayrollReport>(`/api/payroll/runs/${runId}/approve`).then(r => r.data),
-    reopen: (runId: string) =>
-        api.post<PayrollReport>(`/api/payroll/runs/${runId}/reopen`).then(r => r.data),
-    markPaid: (runId: string) =>
-        api.post<PayrollReport>(`/api/payroll/runs/${runId}/mark-paid`).then(r => r.data),
     exportExcel: (teamId: string, salaryMonth: string) =>
         api.get(`/api/payroll/teams/${teamId}/export-excel`, {
             params: toSalaryMonthParams(salaryMonth), responseType: 'blob'

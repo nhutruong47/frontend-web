@@ -512,6 +512,7 @@ export interface PayrollItem {
     itemId: string;
     memberId: string;
     memberName: string;
+    memberCode: string;
     regularHours: number;
     overtimeHours: number;
     attendanceDays: number;
@@ -539,6 +540,12 @@ export interface PayrollAttendanceLine {
     overtimeStartTime?: string | null;
     regularHours: number;
     overtimeHours: number;
+    workedHours: number;
+    hourlyRateVnd: number;
+    overtimeMultiplier: number;
+    regularPayVnd: number;
+    overtimePayVnd: number;
+    totalPayVnd: number;
     attendanceStatus?: string | null;
     shiftType?: string | null;
     productionStage?: string | null;

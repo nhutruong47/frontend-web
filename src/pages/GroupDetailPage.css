@@ -2131,7 +2131,7 @@ mark.tone-muted { background: var(--bg-input); color: var(--text-secondary); }
 }
 
 .attendance-modal__panel {
-  width: min(1080px, 100%);
+  width: min(1160px, 100%);
   max-height: min(88dvh, 820px);
   display: flex;
   flex-direction: column;
@@ -2279,6 +2279,155 @@ mark.tone-muted { background: var(--bg-input); color: var(--text-secondary); }
   background: color-mix(in srgb, var(--primary, #c57d1d) 8%, transparent);
 }
 
+.attendance-modal__settings {
+  margin: 16px 28px 0;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--primary, #c57d1d) 28%, var(--border, #e4cfaa));
+  border-radius: 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary, #c57d1d) 8%, var(--bg-card, #fffdf8)), var(--bg-card, #fffdf8) 62%);
+}
+
+.attendance-modal__settings-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 13px;
+}
+
+.attendance-modal__settings-heading p,
+.attendance-modal__settings-heading h3 {
+  margin: 0;
+}
+
+.attendance-modal__settings-heading p {
+  margin-bottom: 3px;
+  color: var(--primary, #b96f13);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.attendance-modal__settings-heading h3 {
+  color: var(--text-primary, #24170d);
+  font-size: 14px;
+  font-weight: 820;
+}
+
+.attendance-modal__settings-heading > span {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(5, 150, 105, .09);
+  color: #087a59;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.attendance-modal__settings-form {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(125px, 1fr)) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.attendance-modal__settings-form label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-secondary, #765f4b);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.attendance-modal__settings-form input {
+  width: 100%;
+  height: 40px;
+  box-sizing: border-box;
+  border: 1px solid var(--border, #e4cfaa);
+  border-radius: 9px;
+  background: var(--bg-card, #fffdf8);
+  color: var(--text-primary, #24170d);
+  padding: 0 11px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  outline: none;
+}
+
+.attendance-modal__settings-form input:focus {
+  border-color: var(--primary, #b96f13);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary, #c57d1d) 13%, transparent);
+}
+
+.attendance-modal__number-input {
+  position: relative;
+}
+
+.attendance-modal__number-input input {
+  padding-right: 76px;
+}
+
+.attendance-modal__number-input small {
+  position: absolute;
+  top: 50%;
+  right: 11px;
+  color: var(--text-muted, #9a8776);
+  font-size: 10px;
+  font-weight: 700;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.attendance-modal__settings-save {
+  min-width: 132px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--primary, #b96f13);
+  border-radius: 9px;
+  background: var(--primary, #b96f13);
+  color: #fff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 820;
+  cursor: pointer;
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.attendance-modal__settings-save:hover:not(:disabled),
+.attendance-modal__settings-save:focus-visible {
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.attendance-modal__settings-save:disabled {
+  cursor: wait;
+  opacity: .7;
+}
+
+.attendance-modal__settings-save.is-saved {
+  border-color: #07815d;
+  background: #07815d;
+}
+
+.attendance-modal__settings-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 11px 0 0;
+  color: var(--text-secondary, #765f4b);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.attendance-modal__settings-note strong {
+  color: var(--text-primary, #24170d);
+}
+
 .attendance-day-complete {
   display: inline-flex;
   align-items: center;
@@ -2314,7 +2463,7 @@ mark.tone-muted { background: var(--bg-input); color: var(--text-secondary); }
   font-weight: 700;
 }
 .attendance-modal__date-filter > span { max-width: 520px; color: var(--text-secondary); font-size: 11px; line-height: 1.5; }
-.attendance-modal__summary { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.attendance-modal__summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .attendance-modal__summary-card.is-missing { border-color: rgba(148, 111, 65, .25); background: rgba(148, 111, 65, .06); }
 .attendance-modal__summary-card.is-overtime { border-color: rgba(217, 119, 6, .28); background: rgba(217, 119, 6, .07); }
 .attendance-modal__overtime { color: #c66e08; font-weight: 800; }
@@ -2354,12 +2503,18 @@ mark.tone-muted { background: var(--bg-input); color: var(--text-secondary); }
 .attendance-modal__correction-history p { margin: 0; color: var(--text-primary); }
 
 @media (max-width: 1180px) {
-  .attendance-modal__summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .attendance-modal__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .attendance-modal__settings-form { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .attendance-modal__settings-save { grid-column: 1 / -1; }
   .attendance-modal__correction { grid-template-columns: 1fr 1fr; }
   .attendance-modal__reason { grid-column: 1 / -1; }
 }
 
 @media (max-width: 700px) {
+  .attendance-modal__settings { margin: 12px 16px 0; }
+  .attendance-modal__settings-heading { flex-direction: column; }
+  .attendance-modal__settings-form { grid-template-columns: 1fr; }
+  .attendance-modal__settings-save { grid-column: auto; }
   .attendance-modal__date-filter { align-items: stretch; flex-direction: column; padding: 12px 16px 0; }
   .attendance-modal__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .attendance-modal__correction { grid-template-columns: 1fr; }
@@ -2701,6 +2856,9 @@ mark.tone-muted { background: var(--bg-input); color: var(--text-secondary); }
   .attendance-modal__table tbody tr,
   .attendance-modal__action,
   .attendance-modal__edit {
+    transition: none;
+  }
+  .attendance-modal__settings-save {
     transition: none;
   }
 }
