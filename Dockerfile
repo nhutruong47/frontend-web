@@ -4,7 +4,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-# You can customize the base URL for the API if needed via ARG/ENV
+# Set the API base URL to empty so axios uses relative paths, 
+# which Nginx will proxy to the backend container.
+ENV VITE_API_BASE_URL=""
 RUN npm run build
 
 # Stage 2: Serve the app with Nginx

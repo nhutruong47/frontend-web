@@ -93,11 +93,15 @@ export const taskService = {
     exportSalaryExcel: (teamId: string, salaryMonth?: string) =>
         api.get(`/api/tasks/salary/${teamId}/export-excel`, { params: toSalaryMonthParams(salaryMonth), responseType: 'blob' }),
     payoutSalary: (teamId: string, salaryMonth?: string) =>
-        api.post<{ checkoutUrl: string; txnRef: string }>(
+        api.post<{ checkoutUrl: string; txnRef: string; totalSalary: number; teamId: string }>(
             `/api/tasks/salary/${teamId}/payout`,
-            undefined,
+            null,
             { params: toSalaryMonthParams(salaryMonth) }
         ).then(r => r.data),
+    saveSalaryBonus: (teamId: string, data: { userId: string, year: number, month: number, amount: number, reason: string }) =>
+        api.post(`/api/tasks/salary/${teamId}/bonus`, data).then(r => r.data),
+    deleteSalaryBonus: (teamId: string, bonusId: string) =>
+        api.delete(`/api/tasks/salary/${teamId}/bonus/${bonusId}`).then(r => r.data),
 };
 
 function toSalaryMonthParams(salaryMonth?: string) {

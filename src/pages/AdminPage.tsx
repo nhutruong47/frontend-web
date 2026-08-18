@@ -191,22 +191,14 @@ const formatTime = (value: string | null | undefined) => {
  * Masks email address for privacy
  */
 const maskEmail = (email?: string | null) => {
-  if (!email) return '-';
-  const parts = email.split('@');
-  if (parts.length !== 2) return email;
-  const name = parts[0];
-  const domain = parts[1];
-  if (name.length <= 2) return `***@${domain}`;
-  return `${name.substring(0, 2)}***@${domain}`;
+  return email || '-';
 };
 
 /**
  * Masks business license for privacy
  */
 const maskLicense = (license?: string | null) => {
-  if (!license) return '-';
-  if (license.length <= 4) return '***';
-  return `${license.substring(0, 2)}***${license.substring(license.length - 2)}`;
+  return license || '-';
 };
 
 const paymentCustomerName = (payment: AdminPayment) => {
@@ -736,7 +728,7 @@ export default function AdminPage() {
                         <td>
                           <div style={{fontSize:'12px', color:'#6b7280'}}>
                             <div>GPKD: {maskLicense(item.businessLicense)}</div>
-                            <div>Địa chỉ: {item.businessAddress || '-'}</div>
+                            <div>Địa chỉ: {(item.businessAddress || '-').replace(/\s*\([Dd]ữ liệu minh h[oọ][aạ]\)/gi, '')}</div>
                           </div>
                         </td>
                         <td>{item.createdAt ? formatShortDate(item.createdAt) : '-'}</td>

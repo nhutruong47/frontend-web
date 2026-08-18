@@ -414,6 +414,9 @@ export interface SalaryReport {
     hourlyRate: number;
     overtimeRate?: number;
     estimatedSalary: number;
+    bonusId?: string;
+    bonusAmount?: number;
+    bonusReason?: string;
 }
 
 // === Inventory ===

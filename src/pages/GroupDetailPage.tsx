@@ -1709,8 +1709,8 @@ export default function GroupDetailPage() {
                     </div>
                 )}
 
-                <div className="group-task-table-shell">
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="group-task-table-shell" style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+                    <table style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ background: 'var(--bg-secondary)' }}>
                             {['Tên công việc', 'Tiến độ', 'Ưu tiên', 'Nhân viên chính', ''].map((h, i) => (
@@ -2071,6 +2071,7 @@ export default function GroupDetailPage() {
             {/* ===== BẢNG LƯƠNG ===== */}
             {isAdmin && (
                 <PayrollPanel
+                    key={id!}
                     teamId={id!}
                     onEditAttendance={(_memberId, date) => {
                         if (date) setAttendanceDate(date);
@@ -4281,6 +4282,12 @@ export function SalaryPanel({ teamId }: { teamId: string }) {
     const [editingRate, setEditingRate] = useState<string | null>(null);
     const [tempRate, setTempRate] = useState('');
 
+    // Bonus state
+    const [expandedRow, setExpandedRow] = useState<string | null>(null);
+    const [bonusAmount, setBonusAmount] = useState('');
+    const [bonusReason, setBonusReason] = useState('');
+    const [isSavingBonus, setIsSavingBonus] = useState(false);
+
     const loadSalary = async (month = selectedMonth) => {
         setLoadingSalary(true);
         try {
@@ -4314,6 +4321,38 @@ export function SalaryPanel({ teamId }: { teamId: string }) {
         setTempRate(digits ? Number(digits).toLocaleString('vi-VN') : '');
     };
 
+    const handleSaveBonus = async (userId: string) => {
+        if (!bonusAmount) return;
+        const [year, month] = selectedMonth.split('-').map(Number);
+        setIsSavingBonus(true);
+        try {
+            await taskService.saveSalaryBonus(teamId, {
+                userId, year, month,
+                amount: parseFloat(bonusAmount.replace(/,/g, '')),
+                reason: bonusReason
+            });
+            await loadSalary();
+            setExpandedRow(null);
+            setBonusAmount('');
+            setBonusReason('');
+        } catch (e) {
+            console.error("Failed to save bonus", e);
+        }
+        setIsSavingBonus(false);
+    };
+
+    const handleDeleteBonus = async (bonusId: string) => {
+        if (!window.confirm("Bạn có chắc muốn xóa khoản thưởng/phụ cấp này?")) return;
+        setIsSavingBonus(true);
+        try {
+            await taskService.deleteSalaryBonus(teamId, bonusId);
+            await loadSalary();
+        } catch (e) {
+            console.error("Failed to delete bonus", e);
+        }
+        setIsSavingBonus(false);
+    };
+
     const getEffectiveRate = (memberId: string, defaultRate: number) => {
         return hourlyRateOverride[memberId] || defaultRate;
     };
@@ -4331,7 +4370,8 @@ export function SalaryPanel({ teamId }: { teamId: string }) {
         const billableHours = getBillableRegularHours(report);
         const overtimeHours = report.overtimeHours || 0;
         const overtimeRate = report.overtimeRate || (rate * 1.5);
-        return Math.round((billableHours * rate) + (overtimeHours * overtimeRate));
+        const bonus = report.bonusAmount || 0;
+        return Math.round((billableHours * rate) + (overtimeHours * overtimeRate)) + bonus;
     };
 
     const totalSalary = salaryData.reduce((sum, s) => sum + calculateSalary(s), 0);
@@ -4477,14 +4517,16 @@ export function SalaryPanel({ teamId }: { teamId: string }) {
                                     const overtimeHours = s.overtimeHours || 0;
 
                                     return (
-                                        <div key={s.memberId} style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr 1.3fr',
-                                            gap: 12, padding: '14px 16px',
-                                            borderBottom: '1px solid var(--border)',
-                                            alignItems: 'center',
-                                            background: idx % 2 === 0 ? 'transparent' : 'var(--bg-input, rgba(255,255,255,0.02))'
-                                        }}>
+                                        <div key={s.memberId}>
+                                            <div style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr 1.3fr',
+                                                gap: 12, padding: '14px 16px',
+                                                borderBottom: '1px solid var(--border)',
+                                                alignItems: 'center',
+                                                background: expandedRow === s.memberId ? 'var(--bg-input, rgba(255,255,255,0.05))' : idx % 2 === 0 ? 'transparent' : 'var(--bg-input, rgba(255,255,255,0.02))',
+                                                cursor: 'pointer'
+                                            }} onClick={() => setExpandedRow(expandedRow === s.memberId ? null : s.memberId)}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                                 <div style={{
                                                     width: 40, height: 40, borderRadius: 12,
@@ -4614,6 +4656,71 @@ export function SalaryPanel({ teamId }: { teamId: string }) {
                                                     {salary.toLocaleString('vi-VN')} đ'
                                                 </div>
                                             </div>
+                                            </div>
+
+                                        {expandedRow === s.memberId && (
+                                            <div style={{ padding: '16px 24px', background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', fontSize: 14 }}>
+                                                <div style={{ fontWeight: 700, marginBottom: 12 }}>CÁCH TÍNH THỰC NHẬN</div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 150px', gap: 12, marginBottom: 8 }}>
+                                                    <div style={{ color: 'var(--text-secondary)' }}>Lương thường</div>
+                                                    <div style={{ color: 'var(--text-secondary)' }}>{regularHours.toFixed(1)}h × {getEffectiveRate(s.memberId, s.hourlyRate).toLocaleString('vi-VN')}đ</div>
+                                                    <div style={{ textAlign: 'right', fontWeight: 600 }}>{Math.round(regularHours * getEffectiveRate(s.memberId, s.hourlyRate)).toLocaleString('vi-VN')} đ</div>
+                                                </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 150px', gap: 12, marginBottom: 8 }}>
+                                                    <div style={{ color: 'var(--text-secondary)' }}>Tăng ca</div>
+                                                    <div style={{ color: 'var(--text-secondary)' }}>{overtimeHours.toFixed(1)}h × {getEffectiveRate(s.memberId, s.hourlyRate).toLocaleString('vi-VN')}đ × 150%</div>
+                                                    <div style={{ textAlign: 'right', fontWeight: 600 }}>{Math.round(overtimeHours * getEffectiveRate(s.memberId, s.hourlyRate) * 1.5).toLocaleString('vi-VN')} đ</div>
+                                                </div>
+                                                
+                                                {s.bonusAmount ? (
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 150px', gap: 12, marginBottom: 8, alignItems: 'center' }}>
+                                                        <div style={{ color: '#10b981', fontWeight: 600 }}>Thưởng / phụ cấp</div>
+                                                        <div style={{ color: 'var(--text-secondary)' }}>{s.bonusReason} 
+                                                            <button onClick={() => handleDeleteBonus(s.bonusId!)} disabled={isSavingBonus} style={{ marginLeft: 12, background: 'transparent', color: '#ef4444', border: 'none', cursor: 'pointer', fontSize: 12, textDecoration: 'underline' }}>Xóa</button>
+                                                        </div>
+                                                        <div style={{ textAlign: 'right', fontWeight: 600, color: '#10b981' }}>+ {s.bonusAmount.toLocaleString('vi-VN')} đ</div>
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px dashed var(--border)' }}>
+                                                        {!isSavingBonus ? (
+                                                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, max-content) 1fr 1.5fr auto', gap: 12, alignItems: 'center' }}>
+                                                                <span style={{ fontSize: 13, fontWeight: 600, color: '#10b981', whiteSpace: 'nowrap' }}>+ Thêm thưởng</span>
+                                                                <input 
+                                                                    type="text" 
+                                                                    placeholder="Số tiền (VD: 500,000)" 
+                                                                    value={bonusAmount} 
+                                                                    onClick={e => e.stopPropagation()} 
+                                                                    onChange={e => {
+                                                                        const val = e.target.value.replace(/\D/g, '');
+                                                                        setBonusAmount(val ? Number(val).toLocaleString('en-US') : '');
+                                                                    }} 
+                                                                    style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: 14, fontWeight: 'bold' }} 
+                                                                />
+                                                                <input 
+                                                                    type="text" 
+                                                                    placeholder="Lý do (VD: Thưởng KPIs)..." 
+                                                                    value={bonusReason} 
+                                                                    onClick={e => e.stopPropagation()} 
+                                                                    onChange={e => setBonusReason(e.target.value)} 
+                                                                    style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} 
+                                                                />
+                                                                <button 
+                                                                    onClick={(e) => { e.stopPropagation(); handleSaveBonus(s.memberId); }} 
+                                                                    disabled={isSavingBonus || !bonusAmount} 
+                                                                    style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, opacity: (!bonusAmount || isSavingBonus) ? 0.6 : 1 }}
+                                                                >Lưu</button>
+                                                            </div>
+                                                        ) : <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Đang lưu...</div>}
+                                                    </div>
+                                                )}
+                                                
+                                                <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 150px', gap: 12, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                                                    <div style={{ fontWeight: 700 }}>THỰC NHẬN</div>
+                                                    <div></div>
+                                                    <div style={{ textAlign: 'right', fontWeight: 800, color: '#d4a574' }}>{salary.toLocaleString('vi-VN')} đ</div>
+                                                </div>
+                                            </div>
+                                        )}
                                         </div>
                                     );
                                 })}

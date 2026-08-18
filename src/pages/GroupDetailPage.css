@@ -1773,7 +1773,6 @@ mark.tone-muted { background: var(--bg-input); color: var(--text-secondary); }
   min-height: 0;
   flex: 1;
   overflow: auto;
-  overscroll-behavior: contain;
 }
 
 .group-task-table-shell > table {
